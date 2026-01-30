@@ -1,0 +1,78 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply antialiased;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background-color: #000000;
+    color: #a1a1aa;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #09090b;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #27272a;
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #3f3f46;
+  }
+}
+
+@layer components {
+  /* Button variants */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply btn bg-white text-black hover:bg-zinc-200;
+  }
+
+  .btn-secondary {
+    @apply btn bg-transparent text-white border border-zinc-800 hover:bg-zinc-900 hover:border-zinc-700;
+  }
+
+  .btn-ghost {
+    @apply btn text-zinc-400 hover:text-white hover:bg-zinc-900;
+  }
+
+  /* Input styles */
+  .input {
+    @apply w-full bg-zinc-900 border border-zinc-800 text-white text-sm rounded-lg px-4 py-2.5 focus:outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 transition-all placeholder:text-zinc-600;
+  }
+
+  /* Label */
+  .label {
+    @apply block text-sm font-medium text-zinc-400 mb-1.5;
+  }
+
+  /* Card */
+  .card {
+    @apply rounded-lg border border-white/10 bg-zinc-900/20;
+  }
+
+  .card-header {
+    @apply px-4 py-3 border-b border-white/5;
+  }
+
+  .card-body {
+    @apply p-4;
+  }
+}
