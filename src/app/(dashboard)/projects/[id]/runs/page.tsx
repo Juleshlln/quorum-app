@@ -31,8 +31,14 @@ export default async function ProjectRunsPage({ params }: { params: Promise<{ id
     .single();
 
   if (projectError || !project) {
-    notFound();
+    return notFound();
   }
+
+  // Type assertion
+  const projectData = project as {
+    id: string;
+    name: string;
+  };
 
   // Get all runs for this project
   const { data: runs } = await supabase
@@ -56,9 +62,9 @@ export default async function ProjectRunsPage({ params }: { params: Promise<{ id
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-white">Historique des analyses</h1>
-          <p className="text-zinc-400 mt-1">{project.name}</p>
+          <p className="text-zinc-400 mt-1">{projectData.name}</p>
         </div>
-        <StartRunButton projectId={projectId} projectName={project.name} />
+        <StartRunButton projectId={projectId} projectName={projectData.name} />
       </div>
 
       {/* Runs list */}
@@ -129,7 +135,7 @@ export default async function ProjectRunsPage({ params }: { params: Promise<{ id
           <p className="text-zinc-400 mb-8 max-w-md mx-auto">
             Lancez votre première analyse pour voir comment les IA perçoivent votre marque.
           </p>
-          <StartRunButton projectId={projectId} projectName={project.name} />
+          <StartRunButton projectId={projectId} projectName={projectData.name} />
         </div>
       )}
     </div>

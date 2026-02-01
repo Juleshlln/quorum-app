@@ -6,62 +6,70 @@ import {
   LayoutDashboard, 
   FolderKanban, 
   Settings,
-  HelpCircle,
+  Sparkles
 } from 'lucide-react';
 
-const navigation = [
-  { 
-    name: 'Dashboard', 
-    href: '/dashboard', 
-    icon: LayoutDashboard 
-  },
-  { 
-    name: 'Projets', 
-    href: '/projects', 
-    icon: FolderKanban 
-  },
-  { 
-    name: 'Paramètres', 
-    href: '/settings', 
-    icon: Settings 
-  },
+const navItems = [
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/projects', label: 'Projets', icon: FolderKanban },
+  { href: '/settings', label: 'Paramètres', icon: Settings },
 ];
 
 export function DashboardNav() {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden lg:flex lg:flex-col lg:w-56 lg:border-r lg:border-white/5 lg:bg-black lg:min-h-[calc(100vh-3.5rem)]">
-      <nav className="flex-1 px-3 py-6 space-y-1">
-        {navigation.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+    <aside className="w-64 flex-shrink-0 border-r border-white/[0.06] bg-[#0a0a0f]/50 backdrop-blur-xl hidden lg:flex flex-col">
+      {/* Logo */}
+      <div className="h-16 flex items-center px-6 border-b border-white/[0.06]">
+        <Link href="/dashboard" className="flex items-center gap-3">
+          <div className="w-9 h-9 bg-gradient-to-br from-blue-500 via-cyan-400 to-violet-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+            <span className="text-white font-bold text-sm">Q</span>
+          </div>
+          <span className="font-semibold text-lg text-white tracking-tight">Quorum</span>
+        </Link>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 px-4 py-6 space-y-1">
+        {navItems.map((item) => {
+          const isActive = pathname === item.href || 
+            (item.href !== '/dashboard' && pathname.startsWith(item.href));
           
           return (
             <Link
-              key={item.name}
+              key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
                 isActive
-                  ? 'bg-zinc-900/50 text-white border border-white/5'
-                  : 'text-zinc-400 hover:text-white hover:bg-zinc-900/30'
+                  ? 'bg-gradient-to-r from-blue-500/10 via-cyan-500/10 to-violet-500/10 text-white border border-blue-500/20'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/[0.03]'
               }`}
             >
-              <item.icon className={`w-4 h-4 ${isActive ? 'text-lime-400' : ''}`} />
-              {item.name}
+              <item.icon className={`w-5 h-5 ${isActive ? 'text-cyan-400' : ''}`} />
+              {item.label}
             </Link>
           );
         })}
       </nav>
 
-      {/* Help section */}
-      <div className="p-3 border-t border-white/5">
-        <Link
-          href="/help"
-          className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-zinc-400 hover:text-white hover:bg-zinc-900/30 transition-colors"
-        >
-          <HelpCircle className="w-4 h-4" />
-          Aide & Support
-        </Link>
+      {/* Upgrade card */}
+      <div className="p-4">
+        <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-500/10 via-cyan-500/10 to-violet-500/10 border border-white/[0.08]">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="w-5 h-5 text-cyan-400" />
+            <span className="text-sm font-medium text-white">Passer à Pro</span>
+          </div>
+          <p className="text-xs text-zinc-400 mb-4">
+            Débloquez les analyses illimitées et tous les modèles IA
+          </p>
+          <Link 
+            href="/settings" 
+            className="block text-center text-sm font-medium py-2 rounded-lg bg-gradient-to-r from-blue-500 via-cyan-500 to-violet-500 text-white hover:opacity-90 transition-all"
+          >
+            Upgrade
+          </Link>
+        </div>
       </div>
     </aside>
   );

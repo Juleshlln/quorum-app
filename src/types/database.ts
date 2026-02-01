@@ -25,6 +25,7 @@ export interface Project {
   id: string;
   user_id: string;
   name: string;
+  brand_name: string | null;
   website: string | null;
   description: string | null;
   industry: string | null;

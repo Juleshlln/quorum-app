@@ -3,6 +3,33 @@ import { createClient } from '@/lib/supabase/server';
 import { runAnalysis, calculateScores } from '@/lib/ai/providers';
 import { getTemplatesForProject } from '@/lib/constants/prompt-templates';
 
+// Types explicites pour éviter les erreurs TypeScript
+type ProjectRow = {
+  id: string;
+  user_id: string;
+  name: string;
+  website: string | null;
+  industry: string | null;
+  description: string | null;
+  brand_name: string | null;
+};
+
+type CompetitorRow = {
+  name: string;
+  website: string | null;
+};
+
+type PromptTemplateRow = {
+  id: string;
+  prompt_text: string;
+};
+
+type RunRow = {
+  id: string;
+  project_id: string;
+  status: string;
+};
+
 export async function POST(request: NextRequest) {
   console.log('🚀 Starting run...');
   
@@ -24,23 +51,38 @@ export async function POST(request: NextRequest) {
     }
     console.log('✅ Project ID:', projectId);
 
-    // Get project with competitors
-    const { data: project, error: projectError } = await supabase
+    // Get project
+    const { data: projectData, error: projectError } = await supabase
       .from('projects')
-      .select(`
-        *,
-        competitors (name, website),
-        prompt_templates (id, prompt_text)
-      `)
+      .select('*')
       .eq('id', projectId)
       .eq('user_id', user.id)
       .single();
+
+    // Cast explicite
+    const project = projectData as ProjectRow | null;
 
     if (projectError || !project) {
       console.log('❌ Project error:', projectError);
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
     console.log('✅ Project found:', project.name);
+
+    // Get competitors
+    const { data: competitorsData } = await supabase
+      .from('competitors')
+      .select('name, website')
+      .eq('project_id', projectId);
+    
+    const competitors = (competitorsData as CompetitorRow[] | null) || [];
+
+    // Get prompt templates
+    const { data: templatesData } = await supabase
+      .from('prompt_templates')
+      .select('id, prompt_text')
+      .eq('project_id', projectId);
+    
+    const promptTemplates = (templatesData as PromptTemplateRow[] | null) || [];
 
     // Check if OpenAI API key is configured
     const apiKey = process.env.OPENAI_API_KEY;
@@ -53,7 +95,7 @@ export async function POST(request: NextRequest) {
     console.log('✅ OpenAI API key found (starts with):', apiKey.substring(0, 10) + '...');
 
     // Create run record
-    const { data: run, error: runError } = await supabase
+    const { data: runData, error: runError } = await supabase
       .from('runs')
       .insert({
         project_id: projectId,
@@ -61,6 +103,9 @@ export async function POST(request: NextRequest) {
       })
       .select()
       .single();
+
+    // Cast explicite
+    const run = runData as RunRow | null;
 
     if (runError || !run) {
       console.log('❌ Run creation error:', runError);
@@ -72,11 +117,11 @@ export async function POST(request: NextRequest) {
     let prompts: string[] = [];
     
     // Get competitor names for prompt replacement
-    const competitorNames = project.competitors?.map((c: any) => c.name) || [];
+    const competitorNames = competitors.map((c) => c.name);
     const competitorsStr = competitorNames.length > 0 ? competitorNames.join(', ') : 'ses concurrents';
     
-    if (project.prompt_templates && project.prompt_templates.length > 0) {
-      prompts = project.prompt_templates.map((t: any) => t.prompt_text);
+    if (promptTemplates.length > 0) {
+      prompts = promptTemplates.map((t) => t.prompt_text);
       console.log('📝 Using custom prompts:', prompts.length);
     } else {
       // Use default templates, replacing placeholders
@@ -97,7 +142,6 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('📝 Prompts to analyze:', prompts);
-
     console.log('🏢 Competitors:', competitorNames);
 
     // Run the analysis
@@ -168,10 +212,11 @@ export async function POST(request: NextRequest) {
       resultsCount: results.length,
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'An error occurred';
     console.error('❌ Run error:', error);
     return NextResponse.json({ 
-      error: error.message || 'An error occurred' 
+      error: errorMessage 
     }, { status: 500 });
   }
 }

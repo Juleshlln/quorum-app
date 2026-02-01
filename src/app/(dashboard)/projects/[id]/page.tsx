@@ -1,394 +1,386 @@
-import Link from 'next/link';
-import { notFound } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
-import { 
-  ArrowLeft, 
-  Settings, 
-  Play, 
-  Globe, 
-  Calendar,
-  Target,
-  Users,
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
+import {
+  ArrowLeft,
   TrendingUp,
-  BarChart3,
-  Zap
-} from 'lucide-react';
-import { formatDate } from '@/lib/utils';
-import { DeleteProjectButton } from '@/components/projects/delete-project-button';
-import { StartRunButton } from '@/components/runs/start-run-button';
-import { ScoreChart } from '@/components/charts/score-chart';
-import { MetricsBreakdown } from '@/components/charts/metrics-breakdown';
+  Eye,
+  Target,
+  Heart,
+  ChevronRight,
+  Settings,
+} from "lucide-react";
+import { StartRunButton } from "@/components/runs/start-run-button";
 
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+// Types explicites pour éviter les erreurs TypeScript
+type ProjectRow = {
+  id: string;
+  name: string;
+  brand_name?: string | null;
+  website?: string | null;
+  industry?: string | null;
+  description?: string | null;
+  brand?: string | null;
+  keywords?: string[] | null;
+  created_at: string;
+};
+
+type RunRow = {
+  id: string;
+  project_id: string;
+  status: string;
+  created_at: string;
+  score_overall: number | null;
+  score_visibility: number | null;
+  score_accuracy: number | null;
+  score_sentiment: number | null;
+};
+
+export default async function ProjectPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id: projectId } = await params;
   const supabase = await createClient();
-  const { data: project } = await supabase
-    .from('projects')
-    .select('name')
-    .eq('id', id)
-    .single();
-  
-  return {
-    title: project?.name || 'Projet',
-  };
-}
 
-export default async function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const supabase = await createClient();
-
-  // Get project with related data
-  const { data: project, error } = await supabase
-    .from('projects')
-    .select(`
-      *,
-      competitors (*),
-      runs (
-        id,
-        status,
-        score_overall,
-        score_visibility,
-        score_accuracy,
-        score_sentiment,
-        created_at
-      ),
-      prompt_templates (*)
-    `)
-    .eq('id', id)
+  // Fetch project
+  const { data: projectData, error: projectError } = await supabase
+    .from("projects")
+    .select("*")
+    .eq("id", projectId)
     .single();
 
-  if (error || !project) {
-    notFound();
+  // Cast explicite pour TypeScript
+  const project = projectData as ProjectRow | null;
+
+  if (projectError || !project) {
+    return (
+      <div className="space-y-6">
+        <Link
+          href="/projects"
+          className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Retour aux projets
+        </Link>
+
+        <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-6">
+          <h1 className="text-xl font-semibold text-white">Projet introuvable</h1>
+          <p className="mt-2 text-sm text-zinc-300">
+            La page n'arrive pas à charger le projet. Causes fréquentes :
+          </p>
+          <ul className="mt-3 list-disc pl-6 text-sm text-zinc-300 space-y-1">
+            <li>Le projet n'existe pas (id incorrect).</li>
+            <li>RLS Supabase bloque la lecture (droits).</li>
+            <li>Table / schéma différent.</li>
+          </ul>
+          <div className="mt-4 text-xs text-zinc-400 space-y-1">
+            <div>
+              <span className="text-zinc-500">projectId:</span> {projectId}
+            </div>
+            <div>
+              <span className="text-zinc-500">Détail Supabase:</span>{" "}
+              {projectError?.message || "Aucun message"}
+            </div>
+          </div>
+          <div className="mt-6">
+            <Link
+              href="/projects"
+              className="inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:from-blue-400 hover:to-cyan-400"
+            >
+              Revenir à la liste des projets
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
   }
 
-  const lastRun = project.runs?.[0];
-  const runCount = project.runs?.length || 0;
-  const competitorCount = project.competitors?.length || 0;
+  // Fetch runs
+  const { data: runsData, error: runsError } = await supabase
+    .from("runs")
+    .select("id, project_id, status, created_at, score_overall, score_visibility, score_accuracy, score_sentiment")
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  // Cast explicite
+  const safeRuns: RunRow[] = runsError || !runsData ? [] : (runsData as RunRow[]);
+  const lastCompletedRun = safeRuns.find((r) => r.status === "completed") ?? null;
+
+  const scoreOverall = lastCompletedRun?.score_overall ?? 0;
+  const scoreVisibility = lastCompletedRun?.score_visibility ?? 0;
+  const scoreAccuracy = lastCompletedRun?.score_accuracy ?? 0;
+  const scoreSentiment = lastCompletedRun?.score_sentiment ?? 0;
+
+  // Mini chart : 10 derniers runs complétés
+  const history = safeRuns
+    .filter((r) => r.status === "completed" && r.score_overall !== null)
+    .slice(0, 10)
+    .reverse();
+
+  const historyPoints = history.map((r) => r.score_overall ?? 0);
+
+  // Champs safe
+  const projectName = project.name ?? "Projet";
+  const projectWebsite = project.website ?? null;
+  const projectIndustry = project.industry ?? null;
+  const projectBrandText = project.brand_name ?? project.description ?? null;
 
   return (
     <div className="space-y-8">
-      {/* Back link */}
-      <Link
-        href="/projects"
-        className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Retour aux projets
-      </Link>
-
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-        <div className="flex items-start gap-4">
-          <div className="w-14 h-14 bg-zinc-900 border border-white/10 rounded-xl flex items-center justify-center flex-shrink-0">
-            <span className="text-white font-semibold text-xl">
-              {project.name.charAt(0).toUpperCase()}
-            </span>
-          </div>
-          <div>
-            <h1 className="text-2xl font-semibold text-white">{project.name}</h1>
-            <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-zinc-400">
-              {project.website && (
-                <a 
-                  href={project.website} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 hover:text-white transition-colors"
-                >
-                  <Globe className="w-4 h-4" />
-                  {project.website.replace(/^https?:\/\//, '')}
-                </a>
-              )}
-              {project.industry && (
-                <span className="flex items-center gap-1.5">
-                  <Target className="w-4 h-4" />
-                  {project.industry}
-                </span>
-              )}
-              <span className="flex items-center gap-1.5">
-                <Calendar className="w-4 h-4" />
-                Créé le {formatDate(project.created_at)}
-              </span>
-            </div>
-          </div>
-        </div>
+      {/* Top bar */}
+      <div className="flex items-center justify-between gap-4">
+        <Link
+          href="/projects"
+          className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Retour aux projets
+        </Link>
 
         <div className="flex items-center gap-3">
+          <StartRunButton projectId={projectId} projectName={projectName} />
           <Link
-            href={`/projects/${project.id}/edit`}
-            className="px-4 py-2 text-sm font-medium text-zinc-400 hover:text-white border border-zinc-800 rounded-lg hover:border-zinc-700 transition-colors flex items-center gap-2"
+            href={`/projects/${projectId}/edit`}
+            className="inline-flex items-center gap-2 rounded-xl border border-white/[0.08] bg-zinc-900/30 px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-900/50 hover:text-white transition-colors"
           >
             <Settings className="w-4 h-4" />
             Modifier
           </Link>
-          <StartRunButton projectId={project.id} projectName={project.name} />
         </div>
       </div>
 
-      {/* Description */}
-      {project.description && (
-        <p className="text-zinc-400 max-w-3xl">{project.description}</p>
-      )}
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard
-          icon={<BarChart3 className="w-5 h-5" />}
-          label="Analyses"
-          value={runCount.toString()}
-        />
-        <StatCard
-          icon={<Users className="w-5 h-5" />}
-          label="Concurrents"
-          value={competitorCount.toString()}
-        />
-        <StatCard
-          icon={<TrendingUp className="w-5 h-5" />}
-          label="Dernier score"
-          value={lastRun?.score_overall !== null && lastRun?.score_overall !== undefined 
-            ? `${lastRun.score_overall}%` 
-            : '—'}
-          highlight={lastRun?.score_overall !== null}
-        />
-        <StatCard
-          icon={<Zap className="w-5 h-5" />}
-          label="Prompts"
-          value={(project.prompt_templates?.length || 0).toString()}
-        />
-      </div>
-
-      {/* Score Evolution & Metrics */}
-      {runCount > 0 && (
-        <div className="grid lg:grid-cols-2 gap-6">
-          {/* Score Evolution Chart */}
-          <div className="rounded-xl border border-white/10 bg-zinc-900/20 p-6">
-            <h2 className="text-sm font-medium text-white uppercase tracking-wider mb-4">
-              Évolution du score
-            </h2>
-            <ScoreChart 
-              data={(project.runs || [])
-                .filter((r: any) => r.score_overall !== null)
-                .slice(0, 10)
-                .reverse()
-                .map((r: any) => ({
-                  date: new Date(r.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }),
-                  score: r.score_overall,
-                  label: new Date(r.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }),
-                }))}
-              height={160}
-            />
-          </div>
-
-          {/* Metrics Breakdown */}
-          <div className="rounded-xl border border-white/10 bg-zinc-900/20 p-6">
-            <h2 className="text-sm font-medium text-white uppercase tracking-wider mb-4">
-              Détail des scores
-            </h2>
-            <MetricsBreakdown 
-              current={{
-                visibility: lastRun?.score_visibility ?? null,
-                accuracy: lastRun?.score_accuracy ?? null,
-                sentiment: lastRun?.score_sentiment ?? null,
-                overall: lastRun?.score_overall ?? null,
-              }}
-              previous={project.runs?.[1] ? {
-                visibility: project.runs[1].score_visibility ?? null,
-                accuracy: project.runs[1].score_accuracy ?? null,
-                sentiment: project.runs[1].score_sentiment ?? null,
-                overall: project.runs[1].score_overall ?? null,
-              } : undefined}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Keywords */}
-      {project.keywords && project.keywords.length > 0 && (
-        <div>
-          <h2 className="text-sm font-medium text-white uppercase tracking-wider mb-3">
-            Mots-clés
-          </h2>
-          <div className="flex flex-wrap gap-2">
-            {project.keywords.map((keyword: string) => (
-              <span
-                key={keyword}
-                className="px-3 py-1.5 bg-zinc-900 border border-zinc-800 text-zinc-300 text-sm rounded-lg"
-              >
-                {keyword}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Competitors */}
-      {project.competitors && project.competitors.length > 0 && (
-        <div>
-          <h2 className="text-sm font-medium text-white uppercase tracking-wider mb-3">
-            Concurrents ({project.competitors.length})
-          </h2>
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {project.competitors.map((competitor: any) => (
-              <div
-                key={competitor.id}
-                className="p-4 rounded-lg border border-white/10 bg-zinc-900/20"
-              >
-                <h3 className="font-medium text-white">{competitor.name}</h3>
-                {competitor.website && (
-                  <a
-                    href={competitor.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-zinc-400 hover:text-white transition-colors"
-                  >
-                    {competitor.website.replace(/^https?:\/\//, '')}
-                  </a>
+      {/* Header */}
+      <div className="flex items-start justify-between gap-6">
+        <div className="space-y-2">
+          <div className="flex items-center gap-4">
+            <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-blue-500/30 via-cyan-500/20 to-violet-500/20 border border-white/[0.08] flex items-center justify-center text-white font-bold text-xl">
+              {projectName.slice(0, 1).toUpperCase()}
+            </div>
+            <div>
+              <h1 className="text-3xl font-semibold text-white">{projectName}</h1>
+              <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-zinc-500">
+                {projectWebsite && (
+                  <span className="inline-flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-zinc-600" />
+                    {projectWebsite.replace(/^https?:\/\//, '')}
+                  </span>
+                )}
+                {projectIndustry && (
+                  <span className="inline-flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-zinc-600" />
+                    {projectIndustry}
+                  </span>
                 )}
               </div>
-            ))}
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* Recent Runs */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-medium text-white uppercase tracking-wider">
-            Analyses récentes
-          </h2>
-          {runCount > 0 && (
-            <Link
-              href={`/projects/${project.id}/runs`}
-              className="text-sm text-lime-400 hover:text-lime-300 transition-colors"
-            >
-              Voir tout
-            </Link>
+          {projectBrandText && (
+            <p className="text-zinc-400 max-w-2xl">{projectBrandText}</p>
           )}
         </div>
+      </div>
 
-        {runCount === 0 ? (
-          <div className="rounded-lg border border-white/10 bg-zinc-900/20 p-8 text-center">
-            <div className="w-12 h-12 bg-zinc-900 border border-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Play className="w-5 h-5 text-zinc-500" />
-            </div>
-            <h3 className="text-white font-medium mb-2">Aucune analyse</h3>
-            <p className="text-zinc-400 text-sm mb-4">
-              Lancez votre première analyse pour voir comment les IA perçoivent votre marque.
+      {/* Score cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <ScoreCard
+          label="Score Global"
+          value={scoreOverall}
+          icon={<TrendingUp className="w-5 h-5" />}
+          gradient="from-blue-500 to-cyan-500"
+        />
+        <ScoreCard
+          label="Visibilité"
+          value={scoreVisibility}
+          icon={<Eye className="w-5 h-5" />}
+          gradient="from-cyan-500 to-teal-500"
+        />
+        <ScoreCard
+          label="Position"
+          value={scoreAccuracy}
+          icon={<Target className="w-5 h-5" />}
+          gradient="from-violet-500 to-purple-500"
+        />
+        <ScoreCard
+          label="Sentiment"
+          value={scoreSentiment}
+          icon={<Heart className="w-5 h-5" />}
+          gradient="from-pink-500 to-rose-500"
+        />
+      </div>
+
+      {/* Evolution + détail */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/30 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-white uppercase tracking-wider">
+              Évolution du score
+            </h2>
+            <span className="text-xs text-zinc-500">
+              {history.length ? `${history.length} derniers runs` : "—"}
+            </span>
+          </div>
+          <ScoreHistoryChart points={historyPoints} />
+        </div>
+
+        <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/30 p-6">
+          <h2 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">
+            Détail des scores
+          </h2>
+          <div className="space-y-4">
+            <ProgressRow label="Score Global" value={scoreOverall} color="from-blue-500 to-cyan-500" />
+            <ProgressRow label="Visibilité" value={scoreVisibility} color="from-cyan-500 to-teal-500" />
+            <ProgressRow label="Position" value={scoreAccuracy} color="from-violet-500 to-purple-500" />
+            <ProgressRow label="Sentiment" value={scoreSentiment} color="from-pink-500 to-rose-500" />
+          </div>
+        </div>
+      </div>
+
+      {/* Analyses récentes */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-white uppercase tracking-wider">
+            Analyses récentes
+          </h2>
+          <Link
+            href={`/projects/${projectId}/runs`}
+            className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors inline-flex items-center gap-1"
+          >
+            Voir tout
+            <ChevronRight className="w-4 h-4" />
+          </Link>
+        </div>
+
+        {safeRuns.length === 0 ? (
+          <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/30 p-8 text-center">
+            <p className="text-zinc-400 mb-4">
+              Aucune analyse pour le moment. Lancez une analyse pour voir l'historique ici.
             </p>
-            <StartRunButton projectId={project.id} projectName={project.name} />
+            <StartRunButton projectId={projectId} projectName={projectName} />
           </div>
         ) : (
-          <div className="rounded-lg border border-white/10 bg-zinc-900/20 overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-white/5">
-                <tr className="text-left text-xs font-medium text-zinc-400 uppercase tracking-wider">
-                  <th className="px-4 py-3">Date</th>
-                  <th className="px-4 py-3">Statut</th>
-                  <th className="px-4 py-3">Visibilité</th>
-                  <th className="px-4 py-3">Précision</th>
-                  <th className="px-4 py-3">Sentiment</th>
-                  <th className="px-4 py-3 text-right">Score global</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {project.runs?.slice(0, 5).map((run: any) => (
-                  <tr key={run.id} className="hover:bg-white/[0.02] transition-colors">
-                    <td className="px-4 py-3 text-sm text-zinc-300">
-                      {formatDate(run.created_at)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <StatusBadge status={run.status} />
-                    </td>
-                    <td className="px-4 py-3 text-sm text-zinc-300">
-                      {run.score_visibility ?? '—'}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-zinc-300">
-                      {run.score_accuracy ?? '—'}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-zinc-300">
-                      {run.score_sentiment ?? '—'}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      {run.score_overall !== null ? (
-                        <span className={`text-sm font-medium ${
-                          run.score_overall >= 70 ? 'text-lime-400' :
-                          run.score_overall >= 50 ? 'text-yellow-400' :
-                          'text-red-400'
-                        }`}>
-                          {run.score_overall}%
-                        </span>
-                      ) : (
-                        <span className="text-zinc-500">—</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="space-y-3">
+            {safeRuns.slice(0, 8).map((run) => (
+              <Link
+                key={run.id}
+                href={`/projects/${projectId}/runs/${run.id}`}
+                className="block rounded-xl border border-white/[0.06] bg-zinc-900/30 hover:bg-zinc-900/50 hover:border-white/[0.1] transition-colors p-4"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="space-y-1">
+                    <div className="text-sm text-white font-medium">
+                      Analyse {run.id.slice(0, 8)}…
+                    </div>
+                    <div className="text-xs text-zinc-500">
+                      {new Date(run.created_at).toLocaleString("fr-FR")}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <StatusPill status={run.status} />
+                    <div className="text-sm font-semibold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
+                      {(run.score_overall ?? 0)}%
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-zinc-600" />
+                  </div>
+                </div>
+              </Link>
+            ))}
           </div>
         )}
       </div>
-
-      {/* Danger Zone */}
-      <div className="pt-8 border-t border-zinc-800">
-        <h2 className="text-sm font-medium text-red-400 uppercase tracking-wider mb-4">
-          Zone dangereuse
-        </h2>
-        <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-4 flex items-center justify-between">
-          <div>
-            <h3 className="text-white font-medium">Supprimer le projet</h3>
-            <p className="text-zinc-400 text-sm">
-              Cette action est irréversible. Toutes les données seront perdues.
-            </p>
-          </div>
-          <DeleteProjectButton projectId={project.id} projectName={project.name} />
-        </div>
-      </div>
     </div>
   );
 }
 
-function StatCard({ 
-  icon, 
-  label, 
-  value, 
-  highlight 
-}: { 
-  icon: React.ReactNode; 
-  label: string; 
-  value: string;
-  highlight?: boolean;
+/* ===== UI Components ===== */
+
+function ScoreCard({
+  label,
+  value,
+  icon,
+  gradient,
+}: {
+  label: string;
+  value: number;
+  icon: React.ReactNode;
+  gradient: string;
 }) {
   return (
-    <div className="p-4 rounded-lg border border-white/10 bg-zinc-900/20">
-      <div className="flex items-center gap-2 text-zinc-400 mb-2">
-        {icon}
-        <span className="text-xs font-medium uppercase tracking-wider">{label}</span>
+    <div className="p-5 rounded-2xl border border-white/[0.08] bg-zinc-900/30">
+      <div className={`w-10 h-10 bg-gradient-to-br ${gradient} rounded-xl flex items-center justify-center mb-3 shadow-lg`}>
+        <div className="text-white">{icon}</div>
       </div>
-      <span className={`text-2xl font-semibold ${highlight ? 'text-lime-400' : 'text-white'}`}>
-        {value}
-      </span>
+      <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">{label}</p>
+      <p className={`text-2xl font-semibold bg-gradient-to-r ${gradient} bg-clip-text text-transparent`}>
+        {Math.round(value)}%
+      </p>
     </div>
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const styles = {
-    pending: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20',
-    running: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-    completed: 'bg-lime-500/10 text-lime-400 border-lime-500/20',
-    failed: 'bg-red-500/10 text-red-400 border-red-500/20',
-  };
-
-  const labels = {
-    pending: 'En attente',
-    running: 'En cours',
-    completed: 'Terminé',
-    failed: 'Échec',
-  };
-
+function ProgressRow({
+  label,
+  value,
+  color,
+}: {
+  label: string;
+  value: number;
+  color: string;
+}) {
+  const v = Math.max(0, Math.min(100, Math.round(value)));
   return (
-    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded border ${styles[status as keyof typeof styles] || styles.pending}`}>
-      {labels[status as keyof typeof labels] || status}
+    <div className="space-y-2">
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-zinc-300">{label}</span>
+        <span className={`font-medium bg-gradient-to-r ${color} bg-clip-text text-transparent`}>{v}%</span>
+      </div>
+      <div className="h-2 rounded-full bg-zinc-800 overflow-hidden">
+        <div
+          className={`h-full rounded-full bg-gradient-to-r ${color} transition-all duration-500`}
+          style={{ width: `${v}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function StatusPill({ status }: { status: string }) {
+  const map: Record<string, string> = {
+    completed: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
+    running: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+    failed: "bg-red-500/10 text-red-400 border-red-500/20",
+    pending: "bg-zinc-500/10 text-zinc-400 border-zinc-500/20",
+  };
+  const labels: Record<string, string> = {
+    completed: "Terminé",
+    running: "En cours",
+    failed: "Échec",
+    pending: "En attente",
+  };
+  const cls = map[status] ?? map.pending;
+  return (
+    <span className={`text-xs px-2.5 py-1 rounded-lg border ${cls}`}>
+      {labels[status] ?? status}
     </span>
+  );
+}
+
+function ScoreHistoryChart({ points }: { points: number[] }) {
+  const safe = points.length ? points : [0, 0, 0, 0, 0, 0, 0, 0];
+  return (
+    <div className="h-32 flex items-end gap-2">
+      {safe.map((v, i) => (
+        <div
+          key={i}
+          className="flex-1 rounded-t bg-gradient-to-t from-blue-600 via-cyan-500 to-violet-500 hover:opacity-80 transition-opacity cursor-pointer group relative"
+          style={{ height: `${Math.max(6, Math.min(100, v))}%` }}
+        >
+          <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity">
+            {v}%
+          </span>
+        </div>
+      ))}
+    </div>
   );
 }

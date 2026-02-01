@@ -29,14 +29,25 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
     .single();
 
   if (error || !project) {
-    notFound();
+    return notFound();
   }
+
+  // Type assertion
+  const projectData = project as {
+    id: string;
+    name: string;
+    brand_name: string | null;
+    website: string | null;
+    description: string | null;
+    industry: string | null;
+    keywords: string[] | null;
+  };
 
   return (
     <div className="max-w-3xl mx-auto">
       {/* Back link */}
       <Link
-        href={`/projects/${project.id}`}
+        href={`/projects/${projectData.id}`}
         className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors mb-6"
       >
         <ArrowLeft className="w-4 h-4" />
@@ -53,7 +64,7 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
 
       {/* Form */}
       <div className="rounded-xl border border-white/10 bg-zinc-900/20 p-6 md:p-8">
-        <ProjectForm project={project} mode="edit" />
+        <ProjectForm project={projectData} mode="edit" />
       </div>
     </div>
   );

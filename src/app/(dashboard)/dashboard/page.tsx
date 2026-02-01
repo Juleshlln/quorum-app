@@ -1,12 +1,10 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import { Plus, FolderOpen, Play, TrendingUp, ArrowRight, ArrowUpRight } from 'lucide-react';
+import { Plus, FolderOpen, TrendingUp, ArrowRight, ArrowUpRight, BarChart3, Zap, Target } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
-import { StatsOverview } from '@/components/charts/stats-overview';
-import { ScoreChart } from '@/components/charts/score-chart';
 
 export const metadata = {
-  title: 'Dashboard',
+  title: 'Dashboard | Quorum',
 };
 
 export default async function DashboardPage() {
@@ -68,7 +66,6 @@ export default async function DashboardPage() {
     .map(run => ({
       date: new Date(run.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }),
       score: run.score_overall || 0,
-      label: new Date(run.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }),
     }));
 
   // Get recent runs for activity feed
@@ -91,14 +88,14 @@ export default async function DashboardPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-white">Dashboard</h1>
+          <h1 className="text-3xl font-semibold text-white">Dashboard</h1>
           <p className="text-zinc-400 mt-1">
             Bienvenue ! Gérez vos projets et analysez votre visibilité IA.
           </p>
         </div>
         <Link 
           href="/projects/new" 
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-white text-black text-sm font-medium rounded-lg hover:bg-zinc-200 transition-colors"
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-500 via-cyan-500 to-violet-500 text-white text-sm font-medium rounded-xl hover:opacity-90 transition-all hover:shadow-lg hover:shadow-blue-500/25"
         >
           <Plus className="w-4 h-4" />
           Nouveau projet
@@ -107,11 +104,11 @@ export default async function DashboardPage() {
 
       {/* Empty state */}
       {!hasProjects && (
-        <div className="rounded-xl border border-white/10 bg-zinc-900/20 p-12 text-center">
-          <div className="w-16 h-16 bg-zinc-900 border border-zinc-800 rounded-full flex items-center justify-center mx-auto mb-6">
-            <FolderOpen className="w-8 h-8 text-zinc-500" />
+        <div className="rounded-3xl border border-white/[0.08] bg-gradient-to-b from-zinc-900/50 to-transparent p-12 text-center">
+          <div className="w-20 h-20 bg-gradient-to-br from-blue-500/20 via-cyan-500/20 to-violet-500/20 border border-white/[0.1] rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <FolderOpen className="w-10 h-10 text-cyan-400" />
           </div>
-          <h2 className="text-xl font-semibold text-white mb-2">
+          <h2 className="text-2xl font-semibold text-white mb-3">
             Créez votre premier projet
           </h2>
           <p className="text-zinc-400 mb-8 max-w-md mx-auto">
@@ -120,9 +117,9 @@ export default async function DashboardPage() {
           </p>
           <Link 
             href="/projects/new" 
-            className="inline-flex items-center gap-2 px-6 py-3 bg-white text-black text-sm font-medium rounded-lg hover:bg-zinc-200 transition-colors"
+            className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-500 via-cyan-500 to-violet-500 text-white font-medium rounded-xl hover:opacity-90 transition-all hover:shadow-lg hover:shadow-blue-500/25"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-5 h-5" />
             Créer un projet
           </Link>
         </div>
@@ -132,81 +129,108 @@ export default async function DashboardPage() {
       {hasProjects && (
         <>
           {/* Stats Overview */}
-          <StatsOverview
-            totalProjects={totalProjects}
-            totalRuns={totalRuns}
-            avgScore={avgScore}
-            successRate={successRate}
-          />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <StatCard 
+              icon={<FolderOpen className="w-5 h-5" />}
+              label="Projets"
+              value={totalProjects.toString()}
+              gradient="from-blue-500 to-blue-600"
+            />
+            <StatCard 
+              icon={<Zap className="w-5 h-5" />}
+              label="Analyses"
+              value={totalRuns.toString()}
+              gradient="from-violet-500 to-violet-600"
+            />
+            <StatCard 
+              icon={<TrendingUp className="w-5 h-5" />}
+              label="Score moyen"
+              value={avgScore !== null ? `${avgScore}%` : '—'}
+              gradient="from-cyan-500 to-cyan-600"
+            />
+            <StatCard 
+              icon={<Target className="w-5 h-5" />}
+              label="Taux de succès"
+              value={`${successRate}%`}
+              gradient="from-emerald-500 to-emerald-600"
+            />
+          </div>
 
           {/* Charts and Activity Row */}
           <div className="grid lg:grid-cols-3 gap-6">
             {/* Score Evolution Chart */}
-            <div className="lg:col-span-2 rounded-xl border border-white/10 bg-zinc-900/20 p-6">
+            <div className="lg:col-span-2 rounded-2xl border border-white/[0.08] bg-zinc-900/30 p-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="font-medium text-white">Évolution du score</h2>
+                <h2 className="font-semibold text-white">Évolution du score</h2>
                 <span className="text-xs text-zinc-500">10 dernières analyses</span>
               </div>
               {chartData.length > 0 ? (
-                <ScoreChart data={chartData} height={180} />
+                <div className="space-y-4">
+                  <div className="flex items-end gap-2 h-40">
+                    {chartData.map((point, i) => (
+                      <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
+                        <span className="text-xs text-zinc-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {point.score}%
+                        </span>
+                        <div
+                          className="w-full bg-gradient-to-t from-blue-600 via-cyan-500 to-violet-500 rounded-t transition-all hover:opacity-80"
+                          style={{ height: `${point.score}%` }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    {chartData.map((point, i) => (
+                      <div key={i} className="flex-1 text-center text-xs text-zinc-500">
+                        {point.date}
+                      </div>
+                    ))}
+                  </div>
+                </div>
               ) : (
-                <div className="h-[180px] flex items-center justify-center text-zinc-500 text-sm">
+                <div className="h-40 flex items-center justify-center text-zinc-500 text-sm">
                   Lancez une analyse pour voir l'évolution
                 </div>
               )}
             </div>
 
             {/* Recent Activity */}
-            <div className="rounded-xl border border-white/10 bg-zinc-900/20 overflow-hidden">
-              <div className="px-4 py-3 border-b border-white/5">
-                <h2 className="font-medium text-white">Activité récente</h2>
+            <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/30 overflow-hidden">
+              <div className="px-5 py-4 border-b border-white/[0.06]">
+                <h2 className="font-semibold text-white">Activité récente</h2>
               </div>
-              <div className="p-4 space-y-4">
+              <div className="p-4 space-y-3">
                 {recentRuns && recentRuns.length > 0 ? (
                   recentRuns.map((run) => (
                     <Link
                       key={run.id}
                       href={`/projects/${run.project?.id}/runs/${run.id}`}
-                      className="flex items-start gap-3 group"
+                      className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/[0.03] transition-colors group"
                     >
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                        run.status === 'completed' ? 'bg-lime-500/10 border border-lime-500/20' :
-                        run.status === 'running' ? 'bg-blue-500/10 border border-blue-500/20' :
-                        run.status === 'failed' ? 'bg-red-500/10 border border-red-500/20' : 
-                        'bg-zinc-800 border border-zinc-700'
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                        run.status === 'completed' 
+                          ? 'bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/20' 
+                          : 'bg-zinc-800 border border-zinc-700'
                       }`}>
-                        {run.status === 'completed' ? (
-                          <TrendingUp className="w-4 h-4 text-lime-400" />
-                        ) : run.status === 'running' ? (
-                          <Play className="w-4 h-4 text-blue-400" />
-                        ) : (
-                          <Play className="w-4 h-4 text-zinc-500" />
-                        )}
+                        <TrendingUp className={`w-5 h-5 ${run.status === 'completed' ? 'text-cyan-400' : 'text-zinc-500'}`} />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-white truncate group-hover:text-lime-400 transition-colors">
+                        <p className="text-sm font-medium text-white truncate group-hover:text-cyan-400 transition-colors">
                           {run.project?.name || 'Projet'}
                         </p>
                         <p className="text-xs text-zinc-500">
-                          {run.status === 'completed' ? 'Terminée' :
-                           run.status === 'running' ? 'En cours' :
-                           run.status === 'failed' ? 'Échec' : 'En attente'}
-                          {' • '}
                           {formatDate(run.created_at)}
                         </p>
                       </div>
                       {run.score_overall !== null && (
-                        <span className={`text-xs font-medium ${
-                          run.score_overall >= 70 ? 'text-lime-400' : 
-                          run.score_overall >= 50 ? 'text-yellow-400' : 'text-red-400'
-                        }`}>
+                        <span className="text-sm font-semibold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
                           {run.score_overall}%
                         </span>
                       )}
                     </Link>
                   ))
                 ) : (
-                  <p className="text-sm text-zinc-500 text-center py-4">
+                  <p className="text-sm text-zinc-500 text-center py-8">
                     Aucune activité récente
                   </p>
                 )}
@@ -217,7 +241,7 @@ export default async function DashboardPage() {
           {/* Projects Grid */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-medium text-white">Mes projets</h2>
+              <h2 className="font-semibold text-white">Mes projets</h2>
               <Link 
                 href="/projects" 
                 className="text-sm text-zinc-400 hover:text-white transition-colors flex items-center gap-1"
@@ -241,10 +265,10 @@ export default async function DashboardPage() {
                   <Link
                     key={project.id}
                     href={`/projects/${project.id}`}
-                    className="group p-5 rounded-xl border border-white/10 bg-zinc-900/20 hover:bg-zinc-900/40 hover:border-white/20 transition-all"
+                    className="group p-5 rounded-2xl border border-white/[0.08] bg-zinc-900/30 hover:bg-zinc-900/50 hover:border-white/[0.12] transition-all"
                   >
                     <div className="flex items-start justify-between mb-4">
-                      <div className="w-12 h-12 bg-zinc-800 border border-zinc-700 rounded-xl flex items-center justify-center group-hover:border-zinc-600 transition-colors">
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500/20 via-cyan-500/20 to-violet-500/20 border border-white/[0.1] rounded-xl flex items-center justify-center group-hover:border-cyan-500/30 transition-colors">
                         <span className="text-white font-semibold text-lg">
                           {project.name.charAt(0).toUpperCase()}
                         </span>
@@ -252,32 +276,26 @@ export default async function DashboardPage() {
                       <ArrowUpRight className="w-5 h-5 text-zinc-600 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
 
-                    <h3 className="font-semibold text-white mb-1 group-hover:text-lime-400 transition-colors">
+                    <h3 className="font-semibold text-white mb-1 group-hover:text-cyan-400 transition-colors">
                       {project.name}
                     </h3>
                     <p className="text-sm text-zinc-500 mb-4">
                       {project.industry || 'Secteur non défini'}
                     </p>
 
-                    <div className="flex items-center justify-between pt-4 border-t border-zinc-800">
+                    <div className="flex items-center justify-between pt-4 border-t border-white/[0.06]">
                       <span className="text-xs text-zinc-500">
                         {project.runs?.length || 0} analyse{(project.runs?.length || 0) !== 1 ? 's' : ''}
                       </span>
                       
                       <div className="flex items-center gap-2">
                         {scoreDiff !== null && scoreDiff !== 0 && (
-                          <span className={`text-xs ${scoreDiff > 0 ? 'text-lime-400' : 'text-red-400'}`}>
+                          <span className={`text-xs ${scoreDiff > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                             {scoreDiff > 0 ? '+' : ''}{scoreDiff}
                           </span>
                         )}
                         {lastRun?.score_overall !== null && lastRun?.score_overall !== undefined ? (
-                          <span className={`text-sm font-semibold px-2 py-0.5 rounded ${
-                            lastRun.score_overall >= 70 
-                              ? 'bg-lime-400/10 text-lime-400' 
-                              : lastRun.score_overall >= 50 
-                              ? 'bg-yellow-400/10 text-yellow-400'
-                              : 'bg-red-400/10 text-red-400'
-                          }`}>
+                          <span className="text-sm font-semibold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
                             {lastRun.score_overall}%
                           </span>
                         ) : (
@@ -292,6 +310,28 @@ export default async function DashboardPage() {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+function StatCard({ 
+  icon, 
+  label, 
+  value, 
+  gradient 
+}: { 
+  icon: React.ReactNode; 
+  label: string; 
+  value: string;
+  gradient: string;
+}) {
+  return (
+    <div className="p-5 rounded-2xl border border-white/[0.08] bg-zinc-900/30">
+      <div className={`w-11 h-11 bg-gradient-to-br ${gradient} rounded-xl flex items-center justify-center mb-4 shadow-lg`}>
+        <div className="text-white">{icon}</div>
+      </div>
+      <p className="text-3xl font-semibold text-white mb-1">{value}</p>
+      <p className="text-sm text-zinc-500">{label}</p>
     </div>
   );
 }

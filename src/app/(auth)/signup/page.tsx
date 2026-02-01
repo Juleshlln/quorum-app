@@ -1,302 +1,181 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, Loader2, CheckCircle, Check } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { Mail, Lock, User, ArrowRight, Loader2, Check } from 'lucide-react';
 
 export default function SignupPage() {
-  const router = useRouter();
-
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+  const supabase = createClient();
 
-  // Password validation
-  const passwordChecks = {
-    length: password.length >= 8,
-    hasNumber: /\d/.test(password),
-    hasLetter: /[a-zA-Z]/.test(password),
-  };
-  const isPasswordValid = Object.values(passwordChecks).every(Boolean);
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
+    setLoading(true);
+    setError('');
 
-    if (!isPasswordValid) {
-      setError('Le mot de passe ne respecte pas les critères requis');
+    if (password.length < 6) {
+      setError('Le mot de passe doit contenir au moins 6 caractères');
+      setLoading(false);
       return;
     }
 
-    if (password !== confirmPassword) {
-      setError('Les mots de passe ne correspondent pas');
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      const supabase = createClient();
-
-      const { error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-          },
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
         },
-      });
+      },
+    });
 
-      if (signUpError) {
-        if (signUpError.message.includes('already registered')) {
-          setError('Cet email est déjà utilisé. Essayez de vous connecter.');
-        } else {
-          setError(signUpError.message);
-        }
-        return;
-      }
-
-      setSuccess(true);
-    } catch (err) {
-      setError('Une erreur est survenue. Veuillez réessayer.');
-    } finally {
-      setIsLoading(false);
+    if (error) {
+      setError(error.message);
+      setLoading(false);
+    } else {
+      router.push('/dashboard');
+      router.refresh();
     }
   };
-
-  // Success screen
-  if (success) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background px-4">
-        <div className="absolute inset-0 bg-grid opacity-30" />
-        
-        <div className="w-full max-w-md relative text-center">
-          <div className="card p-8">
-            <div className="w-16 h-16 bg-green-500/10 border border-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-              <CheckCircle className="w-8 h-8 text-green-400" />
-            </div>
-            <h1 className="text-2xl font-semibold text-text-primary mb-2">
-              Vérifiez votre email
-            </h1>
-            <p className="text-text-secondary mb-8">
-              Nous avons envoyé un lien de confirmation à{' '}
-              <span className="text-text-primary font-medium">{email}</span>
-            </p>
-            <div className="space-y-3">
-              <Link href="/login" className="btn-primary w-full py-3 block">
-                Aller à la connexion
-              </Link>
-              <button
-                onClick={() => setSuccess(false)}
-                className="btn-ghost w-full py-3"
-              >
-                Utiliser un autre email
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-12">
-      {/* Background effects */}
-      <div className="absolute inset-0 bg-grid opacity-30" />
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-white/5 rounded-full blur-3xl" />
-      
+    <div className="min-h-screen bg-[#050508] flex items-center justify-center px-4 relative overflow-hidden">
+      {/* Background gradients */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-[-30%] right-[-10%] w-[600px] h-[600px] bg-violet-600/20 rounded-full blur-[150px]" />
+        <div className="absolute bottom-[-20%] left-[-10%] w-[500px] h-[500px] bg-blue-600/20 rounded-full blur-[130px]" />
+        <div className="absolute top-[30%] left-[20%] w-[300px] h-[300px] bg-cyan-500/10 rounded-full blur-[100px]" />
+      </div>
+
       <div className="w-full max-w-md relative">
         {/* Logo */}
-        <div className="text-center mb-10">
-          <Link href="/" className="logo text-2xl inline-block mb-2">
-            QUORUM
+        <div className="text-center mb-8">
+          <Link href="/" className="inline-flex items-center gap-3">
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 via-cyan-400 to-violet-500 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/25">
+              <span className="text-white font-bold text-xl">Q</span>
+            </div>
           </Link>
-          <h1 className="text-2xl font-semibold text-text-primary mt-6">
+          <h1 className="mt-6 text-3xl font-semibold text-white">
             Créer un compte
           </h1>
-          <p className="text-text-secondary mt-2">
+          <p className="mt-2 text-zinc-400">
             Commencez à analyser votre visibilité IA
           </p>
         </div>
 
-        {/* Form */}
-        <div className="card p-8">
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Error message */}
+        {/* Form Card */}
+        <div className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-3xl p-8">
+          <form onSubmit={handleSignup} className="space-y-5">
             {error && (
-              <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg text-sm">
+              <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-400 text-sm">
                 {error}
               </div>
             )}
 
-            {/* Full name */}
-            <div>
-              <label htmlFor="fullName" className="label">
-                Nom complet
-              </label>
-              <input
-                id="fullName"
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                className="input"
-                placeholder="Jean Dupont"
-                required
-                autoComplete="name"
-                disabled={isLoading}
-              />
-            </div>
-
-            {/* Email */}
-            <div>
-              <label htmlFor="email" className="label">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="input"
-                placeholder="vous@exemple.com"
-                required
-                autoComplete="email"
-                disabled={isLoading}
-              />
-            </div>
-
-            {/* Password */}
-            <div>
-              <label htmlFor="password" className="label">
-                Mot de passe
-              </label>
+            <div className="space-y-2">
+              <label className="text-sm text-zinc-400 block">Nom complet</label>
               <div className="relative">
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
                 <input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Jean Dupont"
+                  className="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl pl-12 pr-4 py-3.5 text-white placeholder:text-zinc-600 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm text-zinc-400 block">Email</label>
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="vous@exemple.com"
+                  className="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl pl-12 pr-4 py-3.5 text-white placeholder:text-zinc-600 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm text-zinc-400 block">Mot de passe</label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+                <input
+                  type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="input pr-10"
                   placeholder="••••••••"
+                  className="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl pl-12 pr-4 py-3.5 text-white placeholder:text-zinc-600 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all"
                   required
-                  autoComplete="new-password"
-                  disabled={isLoading}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-secondary transition-colors"
-                  tabIndex={-1}
-                >
-                  {showPassword ? (
-                    <EyeOff className="w-5 h-5" />
-                  ) : (
-                    <Eye className="w-5 h-5" />
-                  )}
-                </button>
               </div>
-              
-              {/* Password strength indicators */}
-              {password && (
-                <div className="mt-3 space-y-1.5">
-                  <PasswordCheck checked={passwordChecks.length} text="Au moins 8 caractères" />
-                  <PasswordCheck checked={passwordChecks.hasLetter} text="Au moins une lettre" />
-                  <PasswordCheck checked={passwordChecks.hasNumber} text="Au moins un chiffre" />
-                </div>
-              )}
+              <p className="text-xs text-zinc-500">Minimum 6 caractères</p>
             </div>
 
-            {/* Confirm password */}
-            <div>
-              <label htmlFor="confirmPassword" className="label">
-                Confirmer le mot de passe
-              </label>
-              <input
-                id="confirmPassword"
-                type={showPassword ? 'text' : 'password'}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className={`input ${
-                  confirmPassword && confirmPassword !== password
-                    ? 'border-red-500/50 focus:border-red-500'
-                    : ''
-                }`}
-                placeholder="••••••••"
-                required
-                autoComplete="new-password"
-                disabled={isLoading}
-              />
-              {confirmPassword && confirmPassword !== password && (
-                <p className="mt-2 text-sm text-red-400">
-                  Les mots de passe ne correspondent pas
-                </p>
-              )}
-            </div>
-
-            {/* Submit button */}
             <button
               type="submit"
-              disabled={isLoading || !isPasswordValid || password !== confirmPassword}
-              className="btn-primary w-full py-3"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-blue-500 via-cyan-500 to-violet-500 text-white font-medium py-3.5 rounded-xl hover:opacity-90 transition-all hover:shadow-lg hover:shadow-blue-500/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  Création du compte...
-                </>
+              {loading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
-                'Créer mon compte'
+                <>
+                  Créer mon compte
+                  <ArrowRight className="w-5 h-5" />
+                </>
               )}
             </button>
           </form>
 
-          {/* Login link */}
-          <div className="mt-6 text-center text-sm">
-            <span className="text-text-secondary">Déjà un compte ?</span>{' '}
-            <Link href="/login" className="text-white hover:text-neutral-300 font-medium transition-colors">
-              Se connecter
-            </Link>
+          {/* Features list */}
+          <div className="mt-6 pt-6 border-t border-white/[0.06] space-y-3">
+            <p className="text-xs text-zinc-500 uppercase tracking-wider mb-3">Inclus gratuitement</p>
+            <div className="flex items-center gap-2 text-sm text-zinc-400">
+              <Check className="w-4 h-4 text-cyan-400" />
+              <span>1 projet gratuit</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-zinc-400">
+              <Check className="w-4 h-4 text-cyan-400" />
+              <span>5 analyses par mois</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-zinc-400">
+              <Check className="w-4 h-4 text-cyan-400" />
+              <span>Aucune carte requise</span>
+            </div>
+          </div>
+
+          <div className="mt-6 pt-6 border-t border-white/[0.06]">
+            <p className="text-center text-zinc-400 text-sm">
+              Déjà un compte ?{' '}
+              <Link href="/login" className="text-cyan-400 hover:text-cyan-300 font-medium transition-colors">
+                Se connecter
+              </Link>
+            </p>
           </div>
         </div>
 
-        {/* Legal */}
-        <p className="mt-6 text-center text-xs text-text-tertiary">
+        {/* Footer */}
+        <p className="mt-8 text-center text-xs text-zinc-600">
           En créant un compte, vous acceptez nos{' '}
-          <Link href="/terms" className="text-text-secondary hover:text-text-primary transition-colors">
-            Conditions
-          </Link>{' '}
-          et notre{' '}
-          <Link href="/privacy" className="text-text-secondary hover:text-text-primary transition-colors">
-            Politique de confidentialité
-          </Link>
+          <Link href="/terms" className="text-zinc-500 hover:text-zinc-400 transition-colors">CGU</Link>
+          {' '}et notre{' '}
+          <Link href="/privacy" className="text-zinc-500 hover:text-zinc-400 transition-colors">Politique de confidentialité</Link>
         </p>
       </div>
-    </div>
-  );
-}
-
-function PasswordCheck({ checked, text }: { checked: boolean; text: string }) {
-  return (
-    <div className={`flex items-center gap-2 text-sm transition-colors ${
-      checked ? 'text-green-400' : 'text-text-tertiary'
-    }`}>
-      <div className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${
-        checked 
-          ? 'bg-green-500/20 border-green-500/50' 
-          : 'border-border'
-      }`}>
-        {checked && <Check className="w-2.5 h-2.5" />}
-      </div>
-      {text}
     </div>
   );
 }

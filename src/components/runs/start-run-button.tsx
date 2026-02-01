@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Play, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
+import { Play, Loader2 } from 'lucide-react';
 
 interface StartRunButtonProps {
   projectId: string;
@@ -10,83 +10,54 @@ interface StartRunButtonProps {
 }
 
 export function StartRunButton({ projectId, projectName }: StartRunButtonProps) {
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const [isRunning, setIsRunning] = useState(false);
-  const [status, setStatus] = useState<'idle' | 'running' | 'success' | 'error'>('idle');
-  const [message, setMessage] = useState('');
 
   const handleStartRun = async () => {
-    setIsRunning(true);
-    setStatus('running');
-    setMessage('Analyse en cours...');
+    if (loading) return;
+    
+    setLoading(true);
 
     try {
       const response = await fetch('/api/runs', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ projectId }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Une erreur est survenue');
+        throw new Error(data.error || 'Erreur lors du lancement de l\'analyse');
       }
 
-      setStatus('success');
-      setMessage(`Analyse terminée ! Score: ${data.scores.overall}%`);
-      
-      // Redirect to run results after a short delay
-      setTimeout(() => {
-        router.push(`/projects/${projectId}/runs/${data.runId}`);
-        router.refresh();
-      }, 1500);
-
-    } catch (error: any) {
-      setStatus('error');
-      setMessage(error.message || 'Une erreur est survenue');
-      setIsRunning(false);
+      router.push(`/projects/${projectId}/runs/${data.runId}`);
+      router.refresh();
+    } catch (error) {
+      console.error('Error starting run:', error);
+      alert(error instanceof Error ? error.message : 'Une erreur est survenue');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="space-y-3">
-      <button
-        onClick={handleStartRun}
-        disabled={isRunning}
-        className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${
-          isRunning
-            ? 'bg-zinc-800 text-zinc-400 cursor-not-allowed'
-            : 'bg-lime-400 text-black hover:bg-lime-300'
-        }`}
-      >
-        {status === 'running' ? (
-          <>
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Analyse en cours...
-          </>
-        ) : (
-          <>
-            <Play className="w-4 h-4" />
-            Lancer une analyse
-          </>
-        )}
-      </button>
-
-      {message && (
-        <div className={`flex items-center gap-2 text-sm ${
-          status === 'success' ? 'text-lime-400' :
-          status === 'error' ? 'text-red-400' :
-          'text-zinc-400'
-        }`}>
-          {status === 'success' && <CheckCircle className="w-4 h-4" />}
-          {status === 'error' && <AlertCircle className="w-4 h-4" />}
-          {status === 'running' && <Loader2 className="w-4 h-4 animate-spin" />}
-          {message}
-        </div>
+    <button
+      onClick={handleStartRun}
+      disabled={loading}
+      className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-500 via-cyan-500 to-violet-500 text-white text-sm font-medium rounded-xl hover:opacity-90 transition-all hover:shadow-lg hover:shadow-blue-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      {loading ? (
+        <>
+          <Loader2 className="w-4 h-4 animate-spin" />
+          Analyse en cours...
+        </>
+      ) : (
+        <>
+          <Play className="w-4 h-4" />
+          Lancer une analyse
+        </>
       )}
-    </div>
+    </button>
   );
 }

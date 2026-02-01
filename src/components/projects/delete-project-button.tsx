@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Trash2, Loader2, AlertTriangle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { Trash2, Loader2, AlertTriangle, X } from 'lucide-react';
 
 interface DeleteProjectButtonProps {
   projectId: string;
@@ -11,16 +11,16 @@ interface DeleteProjectButtonProps {
 }
 
 export function DeleteProjectButton({ projectId, projectName }: DeleteProjectButtonProps) {
-  const router = useRouter();
-  const [isOpen, setIsOpen] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [confirmText, setConfirmText] = useState('');
+  const router = useRouter();
+  const supabase = createClient();
 
   const handleDelete = async () => {
     if (confirmText !== projectName) return;
-
-    setIsDeleting(true);
-    const supabase = createClient();
+    
+    setLoading(true);
 
     try {
       const { error } = await supabase
@@ -34,85 +34,78 @@ export function DeleteProjectButton({ projectId, projectName }: DeleteProjectBut
       router.refresh();
     } catch (error) {
       console.error('Error deleting project:', error);
-      setIsDeleting(false);
+      alert('Erreur lors de la suppression du projet');
+    } finally {
+      setLoading(false);
+      setShowModal(false);
     }
   };
 
   return (
     <>
       <button
-        onClick={() => setIsOpen(true)}
-        className="px-4 py-2 text-sm font-medium text-red-400 border border-red-500/20 rounded-lg hover:bg-red-500/10 transition-colors flex items-center gap-2"
+        onClick={() => setShowModal(true)}
+        className="px-4 py-2.5 text-sm font-medium text-red-400 hover:text-red-300 border border-red-500/20 rounded-xl hover:border-red-500/40 transition-all flex items-center gap-2"
       >
         <Trash2 className="w-4 h-4" />
         Supprimer
       </button>
 
-      {/* Modal */}
-      {isOpen && (
+      {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          {/* Backdrop */}
-          <div 
-            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-            onClick={() => !isDeleting && setIsOpen(false)}
-          />
-
-          {/* Modal content */}
-          <div className="relative w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-xl p-6 shadow-2xl">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-red-500/10 border border-red-500/20 rounded-full flex items-center justify-center">
-                <AlertTriangle className="w-5 h-5 text-red-400" />
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowModal(false)} />
+          
+          <div className="relative w-full max-w-md bg-zinc-900 border border-white/[0.1] rounded-2xl shadow-2xl">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center justify-center">
+                  <AlertTriangle className="w-6 h-6 text-red-400" />
+                </div>
+                <button onClick={() => setShowModal(false)} className="p-2 text-zinc-400 hover:text-white transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <div>
-                <h3 className="text-lg font-semibold text-white">Supprimer le projet</h3>
-                <p className="text-sm text-zinc-400">Cette action est irréversible</p>
+
+              <h3 className="text-xl font-semibold text-white mb-2">Supprimer le projet</h3>
+              <p className="text-zinc-400 text-sm mb-6">
+                Cette action est irréversible. Toutes les données associées seront définitivement supprimées.
+              </p>
+
+              <div className="space-y-2 mb-6">
+                <label className="text-sm text-zinc-400">
+                  Tapez <span className="font-medium text-white">{projectName}</span> pour confirmer
+                </label>
+                <input
+                  type="text"
+                  value={confirmText}
+                  onChange={(e) => setConfirmText(e.target.value)}
+                  placeholder={projectName}
+                  className="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl px-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:border-red-500/50 transition-colors"
+                />
               </div>
-            </div>
 
-            <p className="text-zinc-300 mb-4">
-              Êtes-vous sûr de vouloir supprimer <strong className="text-white">{projectName}</strong> ? 
-              Toutes les analyses, prompts et données associées seront définitivement supprimés.
-            </p>
-
-            <div className="mb-6">
-              <label className="block text-sm text-zinc-400 mb-2">
-                Tapez <strong className="text-white">{projectName}</strong> pour confirmer
-              </label>
-              <input
-                type="text"
-                value={confirmText}
-                onChange={(e) => setConfirmText(e.target.value)}
-                className="w-full bg-zinc-800 border border-zinc-700 text-white text-sm rounded-lg px-4 py-2.5 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all"
-                placeholder={projectName}
-                disabled={isDeleting}
-              />
-            </div>
-
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setIsOpen(false)}
-                disabled={isDeleting}
-                className="px-4 py-2 text-sm font-medium text-zinc-400 hover:text-white transition-colors"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={confirmText !== projectName || isDeleting}
-                className="px-4 py-2 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                {isDeleting ? (
-                  <>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="flex-1 px-4 py-3 text-sm font-medium text-zinc-300 bg-zinc-800 rounded-xl hover:bg-zinc-700 transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={confirmText !== projectName || loading}
+                  className="flex-1 px-4 py-3 text-sm font-medium text-white bg-red-600 rounded-xl hover:bg-red-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {loading ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Suppression...
-                  </>
-                ) : (
-                  <>
-                    <Trash2 className="w-4 h-4" />
-                    Supprimer définitivement
-                  </>
-                )}
-              </button>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4" />
+                      Supprimer
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
