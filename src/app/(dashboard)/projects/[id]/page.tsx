@@ -8,10 +8,11 @@ import {
   Heart,
   ChevronRight,
   Settings,
+  Play,
+  MessageSquare,
 } from "lucide-react";
-import { StartRunButton } from "@/components/runs/start-run-button";
 
-// Types explicites pour éviter les erreurs TypeScript
+// ===== TYPES =====
 type ProjectRow = {
   id: string;
   name: string;
@@ -19,8 +20,6 @@ type ProjectRow = {
   website?: string | null;
   industry?: string | null;
   description?: string | null;
-  brand?: string | null;
-  keywords?: string[] | null;
   created_at: string;
 };
 
@@ -40,18 +39,19 @@ export default async function ProjectPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  // ✅ CORRECTION : await params avant d'utiliser .id
   const { id: projectId } = await params;
+  
   const supabase = await createClient();
 
-  // Fetch project
+  // --- Project ---
   const { data: projectData, error: projectError } = await supabase
     .from("projects")
     .select("*")
     .eq("id", projectId)
     .single();
 
-  // Cast explicite pour TypeScript
-  const project = projectData as ProjectRow | null;
+  const project = (projectData as ProjectRow | null) ?? null;
 
   if (projectError || !project) {
     return (
@@ -63,69 +63,38 @@ export default async function ProjectPage({
           <ArrowLeft className="w-4 h-4" />
           Retour aux projets
         </Link>
-
         <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-6">
           <h1 className="text-xl font-semibold text-white">Projet introuvable</h1>
-          <p className="mt-2 text-sm text-zinc-300">
-            La page n'arrive pas à charger le projet. Causes fréquentes :
-          </p>
-          <ul className="mt-3 list-disc pl-6 text-sm text-zinc-300 space-y-1">
-            <li>Le projet n'existe pas (id incorrect).</li>
-            <li>RLS Supabase bloque la lecture (droits).</li>
-            <li>Table / schéma différent.</li>
-          </ul>
-          <div className="mt-4 text-xs text-zinc-400 space-y-1">
-            <div>
-              <span className="text-zinc-500">projectId:</span> {projectId}
-            </div>
-            <div>
-              <span className="text-zinc-500">Détail Supabase:</span>{" "}
-              {projectError?.message || "Aucun message"}
-            </div>
-          </div>
-          <div className="mt-6">
-            <Link
-              href="/projects"
-              className="inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:from-blue-400 hover:to-cyan-400"
-            >
-              Revenir à la liste des projets
-            </Link>
-          </div>
+          <p className="mt-2 text-sm text-zinc-300">ID: {projectId}</p>
         </div>
       </div>
     );
   }
 
-  // Fetch runs
-  const { data: runsData, error: runsError } = await supabase
+  // --- Runs ---
+  const { data: runsData } = await supabase
     .from("runs")
     .select("id, project_id, status, created_at, score_overall, score_visibility, score_accuracy, score_sentiment")
     .eq("project_id", projectId)
     .order("created_at", { ascending: false })
     .limit(50);
 
-  // Cast explicite
-  const safeRuns: RunRow[] = runsError || !runsData ? [] : (runsData as RunRow[]);
-  const lastCompletedRun = safeRuns.find((r) => r.status === "completed") ?? null;
+  const safeRuns: RunRow[] = Array.isArray(runsData) ? (runsData as RunRow[]) : [];
+
+  const completedRuns = safeRuns.filter(
+    (r) => r && r.status === "completed" && r.score_overall !== null
+  );
+
+  const lastCompletedRun = completedRuns.length > 0 ? completedRuns[0] : null;
 
   const scoreOverall = lastCompletedRun?.score_overall ?? 0;
   const scoreVisibility = lastCompletedRun?.score_visibility ?? 0;
   const scoreAccuracy = lastCompletedRun?.score_accuracy ?? 0;
   const scoreSentiment = lastCompletedRun?.score_sentiment ?? 0;
 
-  // Mini chart : 10 derniers runs complétés
-  const history = safeRuns
-    .filter((r) => r.status === "completed" && r.score_overall !== null)
-    .slice(0, 10)
-    .reverse();
-
-  const historyPoints = history.map((r) => r.score_overall ?? 0);
-
-  // Champs safe
   const projectName = project.name ?? "Projet";
   const projectWebsite = project.website ?? null;
   const projectIndustry = project.industry ?? null;
-  const projectBrandText = project.brand_name ?? project.description ?? null;
 
   return (
     <div className="space-y-8">
@@ -140,7 +109,23 @@ export default async function ProjectPage({
         </Link>
 
         <div className="flex items-center gap-3">
-          <StartRunButton projectId={projectId} projectName={projectName} />
+          {/* Bouton Lancer une analyse */}
+          <Link
+            href={`/projects/${projectId}/runs/new`}
+            className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:opacity-90"
+          >
+            <Play className="w-4 h-4" />
+            Lancer une analyse
+          </Link>
+
+          <Link
+            href={`/projects/${projectId}/prompts`}
+            className="inline-flex items-center gap-2 rounded-xl border border-white/[0.08] bg-zinc-900/30 px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-900/50 hover:text-white transition-colors"
+          >
+            <MessageSquare className="w-4 h-4" />
+            Prompts
+          </Link>
+
           <Link
             href={`/projects/${projectId}/edit`}
             className="inline-flex items-center gap-2 rounded-xl border border-white/[0.08] bg-zinc-900/30 px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-900/50 hover:text-white transition-colors"
@@ -152,33 +137,26 @@ export default async function ProjectPage({
       </div>
 
       {/* Header */}
-      <div className="flex items-start justify-between gap-6">
-        <div className="space-y-2">
-          <div className="flex items-center gap-4">
-            <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-blue-500/30 via-cyan-500/20 to-violet-500/20 border border-white/[0.08] flex items-center justify-center text-white font-bold text-xl">
-              {projectName.slice(0, 1).toUpperCase()}
-            </div>
-            <div>
-              <h1 className="text-3xl font-semibold text-white">{projectName}</h1>
-              <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-zinc-500">
-                {projectWebsite && (
-                  <span className="inline-flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 rounded-full bg-zinc-600" />
-                    {projectWebsite.replace(/^https?:\/\//, '')}
-                  </span>
-                )}
-                {projectIndustry && (
-                  <span className="inline-flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 rounded-full bg-zinc-600" />
-                    {projectIndustry}
-                  </span>
-                )}
-              </div>
-            </div>
+      <div className="flex items-center gap-4">
+        <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-blue-500/30 via-cyan-500/20 to-violet-500/20 border border-white/[0.08] flex items-center justify-center text-white font-bold text-xl">
+          {projectName.slice(0, 1).toUpperCase()}
+        </div>
+        <div>
+          <h1 className="text-3xl font-semibold text-white">{projectName}</h1>
+          <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-zinc-500">
+            {projectWebsite && (
+              <span className="inline-flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-zinc-600" />
+                {projectWebsite.replace(/^https?:\/\//, "")}
+              </span>
+            )}
+            {projectIndustry && (
+              <span className="inline-flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-zinc-600" />
+                {projectIndustry}
+              </span>
+            )}
           </div>
-          {projectBrandText && (
-            <p className="text-zinc-400 max-w-2xl">{projectBrandText}</p>
-          )}
         </div>
       </div>
 
@@ -210,54 +188,32 @@ export default async function ProjectPage({
         />
       </div>
 
-      {/* Evolution + détail */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/30 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-white uppercase tracking-wider">
-              Évolution du score
-            </h2>
-            <span className="text-xs text-zinc-500">
-              {history.length ? `${history.length} derniers runs` : "—"}
-            </span>
-          </div>
-          <ScoreHistoryChart points={historyPoints} />
-        </div>
-
-        <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/30 p-6">
-          <h2 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">
-            Détail des scores
-          </h2>
-          <div className="space-y-4">
-            <ProgressRow label="Score Global" value={scoreOverall} color="from-blue-500 to-cyan-500" />
-            <ProgressRow label="Visibilité" value={scoreVisibility} color="from-cyan-500 to-teal-500" />
-            <ProgressRow label="Position" value={scoreAccuracy} color="from-violet-500 to-purple-500" />
-            <ProgressRow label="Sentiment" value={scoreSentiment} color="from-pink-500 to-rose-500" />
-          </div>
-        </div>
-      </div>
-
-      {/* Analyses récentes */}
+      {/* Recent Analyses */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-white uppercase tracking-wider">
             Analyses récentes
           </h2>
-          <Link
-            href={`/projects/${projectId}/runs`}
-            className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors inline-flex items-center gap-1"
-          >
-            Voir tout
-            <ChevronRight className="w-4 h-4" />
-          </Link>
+          {safeRuns.length > 0 && (
+            <Link
+              href={`/projects/${projectId}/runs`}
+              className="text-sm text-cyan-400 hover:text-cyan-300 inline-flex items-center gap-1"
+            >
+              Voir tout
+              <ChevronRight className="w-4 h-4" />
+            </Link>
+          )}
         </div>
 
         {safeRuns.length === 0 ? (
           <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/30 p-8 text-center">
-            <p className="text-zinc-400 mb-4">
-              Aucune analyse pour le moment. Lancez une analyse pour voir l'historique ici.
+            <div className="w-14 h-14 bg-gradient-to-br from-blue-500/20 via-cyan-500/20 to-violet-500/20 border border-white/[0.1] rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Play className="w-6 h-6 text-cyan-400" />
+            </div>
+            <h3 className="text-white font-medium mb-2">Aucune analyse</h3>
+            <p className="text-zinc-400 text-sm">
+              Lancez votre première analyse pour voir comment les IA perçoivent votre marque.
             </p>
-            <StartRunButton projectId={projectId} projectName={projectName} />
           </div>
         ) : (
           <div className="space-y-3">
@@ -279,7 +235,7 @@ export default async function ProjectPage({
                   <div className="flex items-center gap-3">
                     <StatusPill status={run.status} />
                     <div className="text-sm font-semibold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
-                      {(run.score_overall ?? 0)}%
+                      {run.score_overall ?? 0}%
                     </div>
                     <ChevronRight className="w-4 h-4 text-zinc-600" />
                   </div>
@@ -293,7 +249,7 @@ export default async function ProjectPage({
   );
 }
 
-/* ===== UI Components ===== */
+// ===== COMPOSANTS LOCAUX =====
 
 function ScoreCard({
   label,
@@ -319,32 +275,6 @@ function ScoreCard({
   );
 }
 
-function ProgressRow({
-  label,
-  value,
-  color,
-}: {
-  label: string;
-  value: number;
-  color: string;
-}) {
-  const v = Math.max(0, Math.min(100, Math.round(value)));
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between text-sm">
-        <span className="text-zinc-300">{label}</span>
-        <span className={`font-medium bg-gradient-to-r ${color} bg-clip-text text-transparent`}>{v}%</span>
-      </div>
-      <div className="h-2 rounded-full bg-zinc-800 overflow-hidden">
-        <div
-          className={`h-full rounded-full bg-gradient-to-r ${color} transition-all duration-500`}
-          style={{ width: `${v}%` }}
-        />
-      </div>
-    </div>
-  );
-}
-
 function StatusPill({ status }: { status: string }) {
   const map: Record<string, string> = {
     completed: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
@@ -363,24 +293,5 @@ function StatusPill({ status }: { status: string }) {
     <span className={`text-xs px-2.5 py-1 rounded-lg border ${cls}`}>
       {labels[status] ?? status}
     </span>
-  );
-}
-
-function ScoreHistoryChart({ points }: { points: number[] }) {
-  const safe = points.length ? points : [0, 0, 0, 0, 0, 0, 0, 0];
-  return (
-    <div className="h-32 flex items-end gap-2">
-      {safe.map((v, i) => (
-        <div
-          key={i}
-          className="flex-1 rounded-t bg-gradient-to-t from-blue-600 via-cyan-500 to-violet-500 hover:opacity-80 transition-opacity cursor-pointer group relative"
-          style={{ height: `${Math.max(6, Math.min(100, v))}%` }}
-        >
-          <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity">
-            {v}%
-          </span>
-        </div>
-      ))}
-    </div>
   );
 }

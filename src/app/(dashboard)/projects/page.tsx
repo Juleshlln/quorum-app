@@ -1,17 +1,49 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { Plus, FolderOpen, ArrowUpRight, TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { formatDate } from '@/lib/utils';
 
 export const metadata = {
   title: 'Projets | Quorum',
+};
+
+// Helper function pour formater la date
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString("fr-FR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+// Types
+type Run = {
+  id: string;
+  status: string;
+  score_overall: number | null;
+  created_at: string;
+};
+
+type Project = {
+  id: string;
+  name: string;
+  industry: string | null;
+  website: string | null;
+  runs: Run[] | null;
 };
 
 export default async function ProjectsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const { data: projects } = await supabase
+  if (!user) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-zinc-400">Veuillez vous connecter pour voir vos projets.</p>
+      </div>
+    );
+  }
+
+  const { data: projectsData } = await supabase
     .from('projects')
     .select(`
       *,
@@ -22,8 +54,10 @@ export default async function ProjectsPage() {
         created_at
       )
     `)
-    .eq('user_id', user!.id)
+    .eq('user_id', user.id)
     .order('created_at', { ascending: false });
+
+  const projects = (projectsData as Project[] | null) || [];
 
   return (
     <div className="space-y-8">
@@ -45,19 +79,35 @@ export default async function ProjectsPage() {
       </div>
 
       {/* Projects Grid */}
-      {projects && projects.length > 0 ? (
+      {projects.length > 0 ? (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {projects.map((project) => {
-            const completedRuns = project.runs?.filter((r: any) => r.status === 'completed') || [];
-            const lastRun = completedRuns[0];
-            const previousRun = completedRuns[1];
+            // Filtrer les runs complétés avec protection null
+            const allRuns = project.runs || [];
+            const completedRuns = allRuns.filter((r) => r && r.status === 'completed');
             
-            const scoreDiff = lastRun?.score_overall !== null && previousRun?.score_overall !== null
-              ? lastRun.score_overall - previousRun.score_overall
-              : null;
+            // Récupérer les 2 derniers runs (avec protection)
+            const lastRun = completedRuns.length > 0 ? completedRuns[0] : null;
+            const previousRun = completedRuns.length > 1 ? completedRuns[1] : null;
+            
+            // Calculer la différence de score
+            const scoreDiff =
+              lastRun?.score_overall != null && previousRun?.score_overall != null
+                ? lastRun.score_overall - previousRun.score_overall
+                : null;
 
-            const TrendIcon = scoreDiff && scoreDiff > 0 ? TrendingUp : scoreDiff && scoreDiff < 0 ? TrendingDown : Minus;
-            const trendColor = scoreDiff && scoreDiff > 0 ? 'text-emerald-400' : scoreDiff && scoreDiff < 0 ? 'text-red-400' : 'text-zinc-500';
+            // Déterminer l'icône et la couleur de tendance
+            const TrendIcon = scoreDiff !== null && scoreDiff > 0 
+              ? TrendingUp 
+              : scoreDiff !== null && scoreDiff < 0 
+                ? TrendingDown 
+                : Minus;
+            
+            const trendColor = scoreDiff !== null && scoreDiff > 0 
+              ? 'text-emerald-400' 
+              : scoreDiff !== null && scoreDiff < 0 
+                ? 'text-red-400' 
+                : 'text-zinc-500';
 
             return (
               <Link
@@ -94,13 +144,13 @@ export default async function ProjectsPage() {
                   <div className="flex items-center justify-between pt-4 border-t border-white/[0.06]">
                     <div className="flex items-center gap-4">
                       <div className="text-center">
-                        <p className="text-lg font-semibold text-white">{project.runs?.length || 0}</p>
+                        <p className="text-lg font-semibold text-white">{allRuns.length}</p>
                         <p className="text-xs text-zinc-500">Analyses</p>
                       </div>
-                      {lastRun && (
+                      {lastRun && lastRun.score_overall !== null && (
                         <div className="text-center">
                           <p className="text-lg font-semibold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
-                            {lastRun.score_overall ?? '—'}%
+                            {lastRun.score_overall}%
                           </p>
                           <p className="text-xs text-zinc-500">Score</p>
                         </div>

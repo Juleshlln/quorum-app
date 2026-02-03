@@ -1,19 +1,54 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import { Plus, FolderOpen, TrendingUp, ArrowRight, ArrowUpRight, BarChart3, Zap, Target } from 'lucide-react';
-import { formatDate } from '@/lib/utils';
+import { Plus, FolderOpen, TrendingUp, ArrowRight, ArrowUpRight, Zap, Target } from 'lucide-react';
 
 export const metadata = {
   title: 'Dashboard | Quorum',
+};
+
+// Helper function pour formater la date
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString("fr-FR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+// Types
+type Run = {
+  id: string;
+  status: string;
+  score_overall: number | null;
+  score_visibility: number | null;
+  score_accuracy: number | null;
+  score_sentiment: number | null;
+  created_at: string;
+  project?: { id: string; name: string } | null;
+};
+
+type Project = {
+  id: string;
+  name: string;
+  industry: string | null;
+  runs: Run[] | null;
 };
 
 export default async function DashboardPage() {
   const supabase = await createClient();
   
   const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-zinc-400">Veuillez vous connecter.</p>
+      </div>
+    );
+  }
   
   // Get user projects with runs
-  const { data: projects } = await supabase
+  const { data: projectsData } = await supabase
     .from('projects')
     .select(`
       *,
@@ -27,11 +62,13 @@ export default async function DashboardPage() {
         created_at
       )
     `)
-    .eq('user_id', user!.id)
+    .eq('user_id', user.id)
     .order('created_at', { ascending: false });
 
+  const projects = (projectsData as Project[] | null) || [];
+
   // Get all completed runs for stats
-  const { data: allRuns } = await supabase
+  const { data: allRunsData } = await supabase
     .from('runs')
     .select(`
       id,
@@ -42,26 +79,33 @@ export default async function DashboardPage() {
         user_id
       )
     `)
-    .eq('project.user_id', user!.id)
+    .eq('project.user_id', user.id)
     .eq('status', 'completed')
     .order('created_at', { ascending: true });
 
+  const allRuns = (allRunsData || []) as Array<{
+    id: string;
+    status: string;
+    score_overall: number | null;
+    created_at: string;
+  }>;
+
   // Calculate stats
-  const totalProjects = projects?.length || 0;
-  const totalRuns = allRuns?.length || 0;
+  const totalProjects = projects.length;
+  const totalRuns = allRuns.length;
   
-  const completedRuns = allRuns?.filter(r => r.score_overall !== null) || [];
-  const avgScore = completedRuns.length > 0
-    ? Math.round(completedRuns.reduce((sum, r) => sum + (r.score_overall || 0), 0) / completedRuns.length)
+  const completedRunsWithScore = allRuns.filter(r => r && r.score_overall !== null);
+  const avgScore = completedRunsWithScore.length > 0
+    ? Math.round(completedRunsWithScore.reduce((sum, r) => sum + (r.score_overall || 0), 0) / completedRunsWithScore.length)
     : null;
   
   const successRate = totalRuns > 0
-    ? Math.round((completedRuns.length / totalRuns) * 100)
+    ? Math.round((completedRunsWithScore.length / totalRuns) * 100)
     : 100;
 
   // Prepare chart data (last 10 runs)
-  const chartData = (allRuns || [])
-    .filter(r => r.score_overall !== null)
+  const chartData = allRuns
+    .filter(r => r && r.score_overall !== null)
     .slice(-10)
     .map(run => ({
       date: new Date(run.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }),
@@ -69,7 +113,7 @@ export default async function DashboardPage() {
     }));
 
   // Get recent runs for activity feed
-  const { data: recentRuns } = await supabase
+  const { data: recentRunsData } = await supabase
     .from('runs')
     .select(`
       *,
@@ -81,7 +125,9 @@ export default async function DashboardPage() {
     .order('created_at', { ascending: false })
     .limit(5);
 
-  const hasProjects = projects && projects.length > 0;
+  const recentRuns = (recentRunsData || []) as Run[];
+
+  const hasProjects = projects.length > 0;
 
   return (
     <div className="space-y-8">
@@ -174,7 +220,7 @@ export default async function DashboardPage() {
                         </span>
                         <div
                           className="w-full bg-gradient-to-t from-blue-600 via-cyan-500 to-violet-500 rounded-t transition-all hover:opacity-80"
-                          style={{ height: `${point.score}%` }}
+                          style={{ height: `${Math.max(5, point.score)}%` }}
                         />
                       </div>
                     ))}
@@ -200,11 +246,11 @@ export default async function DashboardPage() {
                 <h2 className="font-semibold text-white">Activité récente</h2>
               </div>
               <div className="p-4 space-y-3">
-                {recentRuns && recentRuns.length > 0 ? (
+                {recentRuns.length > 0 ? (
                   recentRuns.map((run) => (
                     <Link
                       key={run.id}
-                      href={`/projects/${run.project?.id}/runs/${run.id}`}
+                      href={`/projects/${run.project?.id || ''}/runs/${run.id}`}
                       className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/[0.03] transition-colors group"
                     >
                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
@@ -252,13 +298,18 @@ export default async function DashboardPage() {
             </div>
             
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {projects?.slice(0, 6).map((project) => {
-                const completedRuns = project.runs?.filter((r: any) => r.status === 'completed') || [];
-                const lastRun = completedRuns[0];
-                const previousRun = completedRuns[1];
+              {projects.slice(0, 6).map((project) => {
+                // Protection null complète
+                const allProjectRuns = project.runs || [];
+                const completedRuns = allProjectRuns.filter((r) => r && r.status === 'completed');
+                const lastRun = completedRuns.length > 0 ? completedRuns[0] : null;
+                const previousRun = completedRuns.length > 1 ? completedRuns[1] : null;
                 
-                const scoreDiff = lastRun?.score_overall !== null && previousRun?.score_overall !== null
-                  ? lastRun.score_overall - previousRun.score_overall
+                // Calcul sécurisé de scoreDiff
+                const lastScore = lastRun?.score_overall;
+                const prevScore = previousRun?.score_overall;
+                const scoreDiff = (lastScore != null && prevScore != null)
+                  ? lastScore - prevScore
                   : null;
 
                 return (
@@ -285,7 +336,7 @@ export default async function DashboardPage() {
 
                     <div className="flex items-center justify-between pt-4 border-t border-white/[0.06]">
                       <span className="text-xs text-zinc-500">
-                        {project.runs?.length || 0} analyse{(project.runs?.length || 0) !== 1 ? 's' : ''}
+                        {allProjectRuns.length} analyse{allProjectRuns.length !== 1 ? 's' : ''}
                       </span>
                       
                       <div className="flex items-center gap-2">
@@ -294,7 +345,7 @@ export default async function DashboardPage() {
                             {scoreDiff > 0 ? '+' : ''}{scoreDiff}
                           </span>
                         )}
-                        {lastRun?.score_overall !== null && lastRun?.score_overall !== undefined ? (
+                        {lastRun && lastRun.score_overall !== null ? (
                           <span className="text-sm font-semibold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
                             {lastRun.score_overall}%
                           </span>
