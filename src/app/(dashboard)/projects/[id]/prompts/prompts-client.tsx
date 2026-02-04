@@ -35,7 +35,7 @@ export function PromptsClient({
 
   const handleAddPrompt = async (promptText: string) => {
     try {
-      const response = await fetch("/api/prompts", {
+      const response = await fetch("/api/runs/prompts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ projectId, promptText }),
@@ -57,7 +57,7 @@ export function PromptsClient({
 
   const handleDeletePrompt = async (id: string) => {
     try {
-      await fetch(`/api/prompts/${id}`, { method: "DELETE" });
+      await fetch(`/api/runs/prompts/${id}`, { method: "DELETE" });
       setPrompts(prev => prev.filter(p => p.id !== id));
     } catch (err) {
       console.error(err);
@@ -66,7 +66,7 @@ export function PromptsClient({
 
   const handleUpdatePrompt = async (id: string, newText: string) => {
     try {
-      await fetch(`/api/prompts/${id}`, {
+      await fetch(`/api/runs/prompts/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ promptText: newText }),
@@ -79,7 +79,7 @@ export function PromptsClient({
 
   const handleToggleActive = async (id: string, isActive: boolean) => {
     try {
-      await fetch(`/api/prompts/${id}`, {
+      await fetch(`/api/runs/prompts/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isActive }),
@@ -134,7 +134,13 @@ export function PromptsClient({
       {activeTab === "custom" ? (
         <div className="space-y-6">
           <div className="p-6 rounded-2xl border border-white/[0.08] bg-zinc-900/30">
-            <PromptForm projectId={projectId} onSuccess={() => router.refresh()} />
+            <PromptForm
+              projectId={projectId}
+              onSuccess={(created) => {
+                setPrompts((prev) => [created, ...prev]);
+                router.refresh();
+              }}
+            />
           </div>
           <PromptList
             prompts={prompts}

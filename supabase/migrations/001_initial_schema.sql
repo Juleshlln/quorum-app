@@ -37,6 +37,7 @@ CREATE TABLE public.projects (
     name TEXT NOT NULL,
     website TEXT,
     description TEXT,
+    location TEXT,
     
     -- Context
     industry TEXT,

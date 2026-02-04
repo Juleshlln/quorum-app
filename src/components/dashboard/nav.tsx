@@ -4,14 +4,20 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
   LayoutDashboard, 
-  FolderKanban, 
   Settings,
-  Sparkles
+  Sparkles,
+  Sliders,
+  ListChecks,
+  Globe,
+  FlaskConical
 } from 'lucide-react';
 
 const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/projects', label: 'Projets', icon: FolderKanban },
+  { href: '/overview', label: 'Overview', icon: LayoutDashboard },
+  { href: '/prompts', label: 'Prompts', icon: ListChecks },
+  { href: '/sources', label: 'Sources', icon: Globe },
+  { href: '/analyses', label: 'Analyses', icon: FlaskConical },
+  { href: '/brand', label: 'Brand settings', icon: Sliders },
   { href: '/settings', label: 'Paramètres', icon: Settings },
 ];
 
@@ -22,7 +28,7 @@ export function DashboardNav() {
     <aside className="w-64 flex-shrink-0 border-r border-white/[0.06] bg-[#0a0a0f]/50 backdrop-blur-xl hidden lg:flex flex-col">
       {/* Logo */}
       <div className="h-16 flex items-center px-6 border-b border-white/[0.06]">
-        <Link href="/dashboard" className="flex items-center gap-3">
+        <Link href="/overview" className="flex items-center gap-3">
           <div className="w-9 h-9 bg-gradient-to-br from-blue-500 via-cyan-400 to-violet-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
             <span className="text-white font-bold text-sm">Q</span>
           </div>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { ResultsExplanationBanner } from "@/components/analysis/results-explanation-banner";
 import {
   ArrowLeft,
   Clock,
@@ -48,6 +49,12 @@ type RunRow = {
   project_id: string;
   status: string;
   created_at: string;
+  objectives?: string[] | null;
+  analysis_mode?: string | null;
+  run_count?: number | null;
+  error_message?: string | null;
+  total_prompts?: number | null;
+  completed_prompts?: number | null;
   score_overall: number | null;
   score_visibility: number | null;
   score_accuracy: number | null;
@@ -84,8 +91,8 @@ export default async function RunResultsPage({
 
   // ✅ REQUÊTE 1: Récupérer le run (SANS JOIN)
   const { data: runData, error: runError } = await supabase
-    .from("runs")
-    .select("id, project_id, status, created_at, score_overall, score_visibility, score_accuracy, score_sentiment")
+    .from("analyses")
+    .select("id, project_id, status, created_at, objectives, analysis_mode, run_count, error_message, total_prompts, completed_prompts")
     .eq("id", runId)
     .single();
 
@@ -97,7 +104,7 @@ export default async function RunResultsPage({
     return (
       <div className="space-y-6">
         <Link
-          href={`/projects/${projectId}`}
+          href="/overview"
           className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -129,14 +136,14 @@ export default async function RunResultsPage({
 
           <div className="mt-6 flex gap-3">
             <Link
-              href={`/projects/${projectId}`}
+              href="/overview"
               className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:opacity-90"
             >
               <ArrowLeft className="w-4 h-4" />
               Retour au projet
             </Link>
             <Link
-              href={`/projects/${projectId}/runs`}
+              href="/overview"
               className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium border border-white/[0.1] text-zinc-300 hover:bg-white/[0.05]"
             >
               Voir toutes les analyses
@@ -158,12 +165,26 @@ export default async function RunResultsPage({
 
   // ✅ REQUÊTE 3: Récupérer les run_items
   const { data: runItemsData } = await supabase
-    .from("run_items")
+    .from("analysis_items")
     .select("*")
-    .eq("run_id", runId)
+    .eq("analysis_id", runId)
     .order("created_at", { ascending: true });
 
   const items = (runItemsData as RunItemRow[] | null) || [];
+  const objectives = (run?.objectives && run.objectives.length > 0)
+    ? run.objectives
+    : ["visibility", "position", "sentiment", "global"];
+
+  const { data: moduleResultsData } = await supabase
+    .from("analysis_module_results")
+    .select("module_key, score, details")
+    .eq("analysis_id", runId);
+
+  const moduleResults = (moduleResultsData as Array<{ module_key: string; score: number | null }> | null) || [];
+  const moduleMap = new Map(moduleResults.map((m) => [m.module_key, m.score]));
+  const showEmptyWarning = items.length === 0;
+  const analysisMode = (run?.analysis_mode as 'trend' | 'simulation' | null) ?? 'trend';
+  const runCount = run?.run_count ?? 1;
 
   // Calculs
   const mentionedCount = items.filter(
@@ -176,7 +197,7 @@ export default async function RunResultsPage({
     <div className="space-y-8">
       {/* Back link */}
       <Link
-        href={`/projects/${projectId}`}
+        href="/overview"
         className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
@@ -199,59 +220,85 @@ export default async function RunResultsPage({
         <StatusBadge status={run.status} />
       </div>
 
-      {/* Score Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <ScoreCard
-          icon={<TrendingUp className="w-5 h-5" />}
-          label="Score Global"
-          value={run.score_overall}
-          gradient="from-blue-500 to-cyan-500"
-        />
-        <ScoreCard
-          icon={<Eye className="w-5 h-5" />}
-          label="Visibilité"
-          value={run.score_visibility}
-          gradient="from-cyan-500 to-teal-500"
-        />
-        <ScoreCard
-          icon={<Target className="w-5 h-5" />}
-          label="Position"
-          value={run.score_accuracy}
-          gradient="from-violet-500 to-purple-500"
-        />
-        <ScoreCard
-          icon={<Heart className="w-5 h-5" />}
-          label="Sentiment"
-          value={run.score_sentiment}
-          gradient="from-pink-500 to-rose-500"
-        />
-      </div>
+      <ResultsExplanationBanner mode={analysisMode} runCount={runCount} />
 
-      {/* Summary */}
-      <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/30 p-6">
-        <h2 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">
-          Résumé
-        </h2>
-        <div className="grid md:grid-cols-3 gap-6">
-          <div>
-            <p className="text-zinc-500 text-sm mb-1">Prompts analysés</p>
-            <p className="text-3xl font-semibold text-white">{totalItems}</p>
+      {analysisMode === 'trend' && (
+        <>
+          {/* Score Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {objectives.includes("global") && (
+              <ScoreCard
+                icon={<TrendingUp className="w-5 h-5" />}
+                label="Score Global"
+                value={moduleMap.get("global") ?? null}
+                gradient="from-blue-500 to-cyan-500"
+              />
+            )}
+            {objectives.includes("visibility") && (
+              <ScoreCard
+                icon={<Eye className="w-5 h-5" />}
+                label="Visibilité"
+                value={moduleMap.get("visibility") ?? null}
+                gradient="from-cyan-500 to-teal-500"
+              />
+            )}
+            {objectives.includes("position") && (
+              <ScoreCard
+                icon={<Target className="w-5 h-5" />}
+                label="Position"
+                value={moduleMap.get("position") ?? null}
+                gradient="from-violet-500 to-purple-500"
+              />
+            )}
+            {objectives.includes("sentiment") && (
+              <ScoreCard
+                icon={<Heart className="w-5 h-5" />}
+                label="Sentiment"
+                value={moduleMap.get("sentiment") ?? null}
+                gradient="from-pink-500 to-rose-500"
+              />
+            )}
           </div>
-          <div>
-            <p className="text-zinc-500 text-sm mb-1">Mentions de la marque</p>
-            <p className="text-3xl font-semibold text-white">
-              {mentionedCount}{" "}
-              <span className="text-lg text-zinc-500">/ {totalItems}</span>
-            </p>
+
+          {/* Summary */}
+          <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/30 p-6">
+            <h2 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">
+              Résumé
+            </h2>
+            <div className="grid md:grid-cols-3 gap-6">
+              <div>
+                <p className="text-zinc-500 text-sm mb-1">Prompts analysés</p>
+                <p className="text-3xl font-semibold text-white">{run?.total_prompts ?? totalItems}</p>
+                <p className="text-xs text-zinc-500 mt-1">{runCount} runs par prompt</p>
+              </div>
+              <div>
+                <p className="text-zinc-500 text-sm mb-1">Mentions de la marque</p>
+                <p className="text-3xl font-semibold text-white">
+                  {mentionedCount}{" "}
+                  <span className="text-lg text-zinc-500">/ {totalItems}</span>
+                </p>
+              </div>
+              <div>
+                <p className="text-zinc-500 text-sm mb-1">Taux de mention</p>
+                <p className="text-3xl font-semibold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
+                  {mentionRate}%
+                </p>
+              </div>
+            </div>
           </div>
-          <div>
-            <p className="text-zinc-500 text-sm mb-1">Taux de mention</p>
-            <p className="text-3xl font-semibold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
-              {mentionRate}%
-            </p>
-          </div>
+        </>
+      )}
+
+      {showEmptyWarning && (
+        <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-5 text-sm text-amber-200">
+          Aucun résultat n’a été enregistré pour cette analyse.
+          {run.error_message && (
+            <span className="block mt-2 text-amber-300/90">
+              Détail: {run.error_message}
+            </span>
+          )}
         </div>
-      </div>
+      )}
 
       {/* Run Items */}
       <div>

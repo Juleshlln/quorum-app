@@ -55,7 +55,7 @@ export function DashboardHeader({ user }: HeaderProps) {
       </button>
 
       {/* Mobile logo */}
-      <Link href="/dashboard" className="lg:hidden flex items-center gap-2">
+      <Link href="/overview" className="lg:hidden flex items-center gap-2">
         <div className="w-8 h-8 bg-gradient-to-br from-blue-500 via-cyan-400 to-violet-500 rounded-lg flex items-center justify-center">
           <span className="text-white font-bold text-xs">Q</span>
         </div>

@@ -30,7 +30,15 @@ export function DeleteProjectButton({ projectId, projectName }: DeleteProjectBut
 
       if (error) throw error;
 
-      router.push('/projects');
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase
+          .from('profiles')
+          .update({ active_project_id: null })
+          .eq('id', user.id);
+      }
+
+      router.push('/overview');
       router.refresh();
     } catch (error) {
       console.error('Error deleting project:', error);

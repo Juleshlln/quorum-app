@@ -23,6 +23,7 @@ export function ProjectForm({ project, mode }: ProjectFormProps) {
   const [website, setWebsite] = useState(project?.website || '');
   const [industry, setIndustry] = useState(project?.industry || '');
   const [description, setDescription] = useState(project?.description || '');
+  const [location, setLocation] = useState(project?.location || '');
   const [keywords, setKeywords] = useState<string[]>(project?.keywords || []);
   const [keywordInput, setKeywordInput] = useState('');
 
@@ -71,6 +72,17 @@ export function ProjectForm({ project, mode }: ProjectFormProps) {
       }
 
       if (mode === 'create') {
+        const { data: existingProjects } = await supabase
+          .from('projects')
+          .select('id')
+          .eq('user_id', user.id)
+          .limit(1);
+
+        if ((existingProjects || []).length > 0) {
+          setError('Vous avez déjà une marque active. Modifiez-la depuis Brand settings.');
+          return;
+        }
+
         // Create project
         const { data: newProject, error: projectError } = await supabase
           .from('projects')
@@ -80,12 +92,20 @@ export function ProjectForm({ project, mode }: ProjectFormProps) {
             website: website || null,
             industry: industry || null,
             description: description || null,
+            location: location || null,
             keywords: keywords.length > 0 ? keywords : null,
           })
           .select()
           .single();
 
         if (projectError) throw projectError;
+
+        if (newProject) {
+          await supabase
+            .from('profiles')
+            .update({ active_project_id: newProject.id })
+            .eq('id', user.id);
+        }
 
         // Add competitors if any
         if (competitors.length > 0 && newProject) {
@@ -102,7 +122,7 @@ export function ProjectForm({ project, mode }: ProjectFormProps) {
           if (competitorError) throw competitorError;
         }
 
-        router.push(`/projects/${newProject.id}`);
+        router.push(`/brand`);
       } else if (mode === 'edit' && project) {
         // Update project
         const { error: updateError } = await supabase
@@ -112,13 +132,14 @@ export function ProjectForm({ project, mode }: ProjectFormProps) {
             website: website || null,
             industry: industry || null,
             description: description || null,
+            location: location || null,
             keywords: keywords.length > 0 ? keywords : null,
           })
           .eq('id', project.id);
 
         if (updateError) throw updateError;
 
-        router.push(`/projects/${project.id}`);
+        router.push(`/brand`);
       }
 
       router.refresh();
@@ -209,23 +230,41 @@ export function ProjectForm({ project, mode }: ProjectFormProps) {
           </select>
         </div>
 
+        {/* Location */}
+        <div>
+          <label htmlFor="location" className="block text-sm font-medium text-zinc-400 mb-2">
+            Localisation (ville / région)
+          </label>
+          <input
+            id="location"
+            type="text"
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            className="w-full bg-zinc-900 border border-zinc-800 text-white text-sm rounded-lg px-4 py-3 focus:outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 transition-all placeholder:text-zinc-600"
+            placeholder="Béthune (62)"
+          />
+        </div>
+
         {/* Description */}
         <div>
           <label htmlFor="description" className="block text-sm font-medium text-zinc-400 mb-2">
             Description
           </label>
-          <div className="relative">
-            <FileText className="absolute left-3 top-3 w-4 h-4 text-zinc-500" />
-            <textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              className="w-full bg-zinc-900 border border-zinc-800 text-white text-sm rounded-lg pl-10 pr-4 py-3 focus:outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 transition-all placeholder:text-zinc-600 resize-none"
-              placeholder="Décrivez brièvement votre entreprise et ce qu'elle fait..."
-            />
-          </div>
+        <div className="relative">
+          <FileText className="absolute left-3 top-3 w-4 h-4 text-zinc-500" />
+          <textarea
+            id="description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={3}
+            className="w-full bg-zinc-900 border border-zinc-800 text-white text-sm rounded-lg pl-10 pr-4 py-3 focus:outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 transition-all placeholder:text-zinc-600 resize-none"
+            placeholder="Décrivez brièvement votre entreprise et ce qu'elle fait..."
+          />
         </div>
+        <p className="mt-2 text-xs text-zinc-500">
+          Utilisée pour contextualiser les prompts suggérés (ex : “primeur local à Béthune, produits frais, circuit court”).
+        </p>
+      </div>
       </div>
 
       {/* Keywords */}
@@ -234,7 +273,7 @@ export function ProjectForm({ project, mode }: ProjectFormProps) {
           Mots-clés
         </h3>
         <p className="text-sm text-zinc-500">
-          Ajoutez des mots-clés qui décrivent votre activité (ex: CRM, marketing automation, analytics)
+          Ces mots-clés servent à affiner les prompts suggérés et mieux capter comment l’IA décrit votre marque.
         </p>
 
         <div className="flex gap-2">

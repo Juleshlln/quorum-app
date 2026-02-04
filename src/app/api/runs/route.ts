@@ -144,10 +144,32 @@ export async function POST(request: NextRequest) {
     console.log('📝 Prompts to analyze:', prompts);
     console.log('🏢 Competitors:', competitorNames);
 
+    if (prompts.length === 0) {
+      await supabase
+        .from('runs')
+        .update({
+          status: 'failed',
+          error_message: 'No prompts available for this project',
+        })
+        .eq('id', run.id);
+      return NextResponse.json({ error: 'Aucun prompt disponible' }, { status: 400 });
+    }
+
     // Run the analysis
     console.log('🤖 Starting AI analysis...');
     const results = await runAnalysis(prompts, project.name, competitorNames);
     console.log('✅ Analysis complete. Results:', results.length);
+
+    if (results.length === 0) {
+      await supabase
+        .from('runs')
+        .update({
+          status: 'failed',
+          error_message: 'No results returned by AI providers',
+        })
+        .eq('id', run.id);
+      return NextResponse.json({ error: 'Aucun résultat retourné' }, { status: 500 });
+    }
     
     // Log each result
     results.forEach((r, i) => {
@@ -164,16 +186,30 @@ export async function POST(request: NextRequest) {
     // Save run items
     const runItems = results.map(result => ({
       run_id: run.id,
-      provider: result.provider,
-      model: result.model,
+      // Legacy column names (older schema)
       prompt: result.prompt,
       response: result.response,
-      brand_mentioned: result.mentioned,
-      position: result.position,
-      sentiment: result.sentiment,
-      competitors_mentioned: result.competitors_mentioned,
-      sources_cited: result.sources_cited,
+      model: result.model,
+      provider: result.provider,
       response_time_ms: result.response_time_ms,
+      // New schema columns
+      prompt_text: result.prompt,
+      ai_model: result.model,
+      ai_response: result.response,
+      brand_mentioned: result.mentioned,
+      brand_position: result.position,
+      competitors_mentioned: result.competitors_mentioned,
+      website_cited: result.sources_cited.length > 0,
+      latency_ms: result.response_time_ms,
+      error_message: result.error ?? null,
+      score_sentiment:
+        result.sentiment === 'positive'
+          ? 100
+          : result.sentiment === 'negative'
+            ? 0
+            : result.sentiment === 'neutral'
+              ? 50
+              : null,
     }));
 
     const { error: itemsError } = await supabase
@@ -182,6 +218,14 @@ export async function POST(request: NextRequest) {
 
     if (itemsError) {
       console.error('❌ Error saving run items:', itemsError);
+      await supabase
+        .from('runs')
+        .update({
+          status: 'failed',
+          error_message: itemsError.message,
+        })
+        .eq('id', run.id);
+      return NextResponse.json({ error: 'Erreur sauvegarde des résultats' }, { status: 500 });
     } else {
       console.log('✅ Run items saved:', runItems.length);
     }
@@ -195,6 +239,8 @@ export async function POST(request: NextRequest) {
         score_visibility: scores.visibility,
         score_accuracy: scores.accuracy,
         score_sentiment: scores.sentiment,
+        total_prompts: prompts.length,
+        completed_prompts: results.length,
         completed_at: new Date().toISOString(),
       })
       .eq('id', run.id);

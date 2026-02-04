@@ -5,7 +5,7 @@ import { Plus, Loader2, AlertCircle } from "lucide-react";
 
 interface PromptFormProps {
   projectId: string;
-  onSuccess: () => void;
+  onSuccess: (created: { id: string; prompt_text: string; is_active: boolean; created_at: string }) => void;
 }
 
 export function PromptForm({ projectId, onSuccess }: PromptFormProps) {
@@ -25,7 +25,7 @@ export function PromptForm({ projectId, onSuccess }: PromptFormProps) {
     setError(null);
 
     try {
-      const response = await fetch("/api/prompts", {
+      const response = await fetch("/api/runs/prompts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -39,8 +39,15 @@ export function PromptForm({ projectId, onSuccess }: PromptFormProps) {
         throw new Error(data.error || "Erreur lors de la sauvegarde");
       }
 
+      const data = await response.json();
+      const created = {
+        id: data.id,
+        prompt_text: promptText.trim(),
+        is_active: true,
+        created_at: new Date().toISOString(),
+      };
       setPromptText("");
-      onSuccess();
+      onSuccess(created);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Une erreur est survenue");
     } finally {

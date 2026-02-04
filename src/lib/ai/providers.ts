@@ -24,7 +24,7 @@ export interface AIQueryResult {
 
 // Available AI providers
 export const AI_PROVIDERS: AIProvider[] = [
-  { id: 'openai', name: 'ChatGPT', model: 'gpt-4o-mini', available: true },
+  { id: 'openai', name: 'ChatGPT', model: 'gpt-4o', available: true },
   { id: 'anthropic', name: 'Claude', model: 'claude-3-haiku', available: false }, // Future
   { id: 'google', name: 'Gemini', model: 'gemini-pro', available: false }, // Future
   { id: 'perplexity', name: 'Perplexity', model: 'pplx-7b', available: false }, // Future
@@ -44,7 +44,8 @@ function getOpenAIClient() {
 export async function queryOpenAI(
   prompt: string,
   brandName: string,
-  competitors: string[] = []
+  competitors: string[] = [],
+  context: string = ''
 ): Promise<AIQueryResult> {
   const startTime = Date.now();
   console.log(`\n🤖 Querying OpenAI for prompt: "${prompt.substring(0, 50)}..."`);
@@ -54,19 +55,23 @@ export async function queryOpenAI(
     
     console.log('📤 Sending request to OpenAI...');
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4o',
       messages: [
         {
           role: 'system',
-          content: 'You are a helpful assistant. Answer questions naturally and thoroughly. When recommending products or services, be specific about names and features.'
+          content: [
+            'You are a helpful assistant. Answer questions naturally and thoroughly. When recommending products or services, be specific about names and features.',
+            context ? `Context: ${context}` : ''
+          ].filter(Boolean).join('\n')
         },
         {
           role: 'user',
           content: prompt
         }
       ],
-      max_tokens: 1000,
-      temperature: 0.7,
+      max_tokens: 1200,
+      temperature: 0,
+      top_p: 1,
     });
 
     const response = completion.choices[0]?.message?.content || '';
@@ -81,7 +86,7 @@ export async function queryOpenAI(
 
     return {
       provider: 'openai',
-      model: 'gpt-4o-mini',
+      model: 'gpt-4o',
       prompt,
       response,
       mentioned: analysis.mentioned,
@@ -193,13 +198,14 @@ function analyzeResponse(
 export async function runAnalysis(
   prompts: string[],
   brandName: string,
-  competitors: string[] = []
+  competitors: string[] = [],
+  context: string = ''
 ): Promise<AIQueryResult[]> {
   const results: AIQueryResult[] = [];
 
   for (const prompt of prompts) {
     // For now, only OpenAI is available
-    const result = await queryOpenAI(prompt, brandName, competitors);
+    const result = await queryOpenAI(prompt, brandName, competitors, context);
     results.push(result);
     
     // Small delay between requests to avoid rate limiting
@@ -242,7 +248,7 @@ export function calculateScores(results: AIQueryResult[]): {
   const sentimentResults = validResults.filter(r => r.sentiment !== null);
   let sentimentScore = 50;
   if (sentimentResults.length > 0) {
-    const sentimentValues = sentimentResults.map(r => {
+    const sentimentValues: number[] = sentimentResults.map(r => {
       if (r.sentiment === 'positive') return 100;
       if (r.sentiment === 'negative') return 0;
       return 50;
