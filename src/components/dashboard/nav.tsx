@@ -14,7 +14,7 @@ import {
 
 const navItems = [
   { href: '/overview', label: 'Overview', icon: LayoutDashboard },
-  { href: '/prompts', label: 'Prompts', icon: ListChecks },
+  { href: '/prompts', label: 'Monitoring', icon: ListChecks },
   { href: '/sources', label: 'Sources', icon: Globe },
   { href: '/analyses', label: 'Analyses', icon: FlaskConical },
   { href: '/brand', label: 'Brand settings', icon: Sliders },

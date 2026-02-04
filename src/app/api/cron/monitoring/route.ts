@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { queryOpenAI } from '@/lib/ai/providers';
 import { computeModules, type ModuleKey, type RawItem } from '@/lib/analysis/modules';
+import { ingestCitations } from '@/lib/sources/ingest';
 import { getRunsForPlan } from '@/lib/plans';
 
 const ALL_MODULES: ModuleKey[] = ['visibility', 'position', 'sentiment', 'global'];
@@ -80,6 +81,47 @@ function computeTrendMetrics(results: Array<{ prompt: string; mentioned: boolean
   });
 }
 
+function computeTopicDailyMetrics(results: Array<{ topic_id: string | null; mentioned: boolean; sentiment: string | null; position: number | null }>, date: string) {
+  const aggregates = new Map<string, { runs: number; mentions: number; positive: number; neutral: number; negative: number; positionSum: number; positionMentions: number }>();
+
+  for (const result of results) {
+    if (!result.topic_id) continue;
+    const entry = aggregates.get(result.topic_id) || {
+      runs: 0,
+      mentions: 0,
+      positive: 0,
+      neutral: 0,
+      negative: 0,
+      positionSum: 0,
+      positionMentions: 0,
+    };
+    entry.runs += 1;
+    if (result.mentioned) {
+      entry.mentions += 1;
+      if (result.sentiment === 'positive') entry.positive += 1;
+      else if (result.sentiment === 'negative') entry.negative += 1;
+      else entry.neutral += 1;
+      if (typeof result.position === 'number') {
+        entry.positionSum += result.position;
+        entry.positionMentions += 1;
+      }
+    }
+    aggregates.set(result.topic_id, entry);
+  }
+
+  return Array.from(aggregates.entries()).map(([topic_id, entry]) => ({
+    topic_id,
+    date,
+    runs_count: entry.runs,
+    mentions_count: entry.mentions,
+    visibility_rate: entry.runs > 0 ? Math.round((entry.mentions / entry.runs) * 100) : null,
+    positive_count: entry.positive,
+    neutral_count: entry.neutral,
+    negative_count: entry.negative,
+    avg_position: entry.positionMentions > 0 ? Number((entry.positionSum / entry.positionMentions).toFixed(1)) : null,
+  }));
+}
+
 export async function POST(request: NextRequest) {
   const headerSecret = request.headers.get('x-cron-secret');
   const authHeader = request.headers.get('authorization') || '';
@@ -99,13 +141,22 @@ export async function POST(request: NextRequest) {
   const runsPerPrompt = getRunsForPlan();
 
   for (const project of projects || []) {
+    const { data: topicsData } = await supabase
+      .from('monitoring_topics')
+      .select('id, is_active')
+      .eq('project_id', project.id);
+
+    const activeTopicIds = new Set((topicsData || []).filter((t) => t.is_active).map((t) => t.id));
+
     const { data: promptsData } = await supabase
       .from('monitoring_prompts')
-      .select('id, prompt_text, is_active')
+      .select('id, prompt_text, is_active, topic_id')
       .eq('project_id', project.id)
       .eq('is_active', true);
 
-    if (!promptsData || promptsData.length === 0) {
+    const filteredPrompts = (promptsData || []).filter((p) => !p.topic_id || activeTopicIds.size === 0 || activeTopicIds.has(p.topic_id));
+
+    if (!filteredPrompts || filteredPrompts.length === 0) {
       continue;
     }
 
@@ -142,11 +193,14 @@ export async function POST(request: NextRequest) {
     const analysisId = analysisData.id as string;
 
     const results: Array<any> = [];
-    const runRows = promptsData.flatMap((p) =>
+    const runRows = filteredPrompts.flatMap((p) =>
       Array.from({ length: runsPerPrompt }).map((_, idx) => ({
         analysis_id: analysisId,
         prompt_text: p.prompt_text,
         run_index: idx + 1,
+        topic_id: p.topic_id,
+        run_type: 'monitoring',
+        run_origin: 'scheduler',
       }))
     );
 
@@ -157,7 +211,7 @@ export async function POST(request: NextRequest) {
 
     for (const run of insertedRuns || []) {
       const result = await queryOpenAI(run.prompt_text, project.name, competitors, context);
-      results.push(result);
+      results.push({ ...result, topic_id: run.topic_id });
 
       await supabase
         .from('analysis_runs')
@@ -195,6 +249,22 @@ export async function POST(request: NextRequest) {
             domain_type: classifyDomain(c.domain),
           }))
         );
+        await ingestCitations({
+          supabase,
+          projectId: project.id,
+          promptRunId: run.id,
+          citations: citations.map((c) => ({
+            url: c.url,
+            domain: c.domain,
+            domain_type: classifyDomain(c.domain),
+          })),
+          citedAt: new Date().toISOString(),
+          aiModel: result.model,
+          topicId: run.topic_id ?? null,
+          brandMentioned: result.mentioned,
+          competitorMentioned: result.competitors_mentioned?.length ? true : false,
+          positionInAnswer: result.position,
+        });
       }
     }
 
@@ -247,12 +317,37 @@ export async function POST(request: NextRequest) {
     );
     await supabase.from('analysis_metrics').insert(metrics.map((m) => ({ analysis_id: analysisId, ...m })));
 
+    const today = new Date().toISOString().slice(0, 10);
+    const topicMetrics = computeTopicDailyMetrics(
+      results.map((r) => ({
+        topic_id: r.topic_id ?? null,
+        mentioned: r.mentioned,
+        sentiment: r.sentiment,
+        position: r.position,
+      })),
+      today
+    );
+
+    if (topicMetrics.length > 0) {
+      const topicIds = topicMetrics.map((m) => m.topic_id);
+      await supabase
+        .from('topic_daily_metrics')
+        .delete()
+        .eq('project_id', project.id)
+        .eq('date', today)
+        .in('topic_id', topicIds);
+
+      await supabase
+        .from('topic_daily_metrics')
+        .insert(topicMetrics.map((m) => ({ project_id: project.id, ...m })));
+    }
+
     await supabase
       .from('analyses')
       .update({
         status: 'completed',
-        total_prompts: promptsData.length,
-        completed_prompts: promptsData.length,
+        total_prompts: filteredPrompts.length,
+        completed_prompts: filteredPrompts.length,
         completed_at: new Date().toISOString(),
       })
       .eq('id', analysisId);

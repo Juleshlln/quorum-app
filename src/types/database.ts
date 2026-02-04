@@ -127,11 +127,14 @@ export interface AnalysisRun {
   analysis_id: string;
   prompt_text: string;
   run_index: number;
+  run_type?: 'sandbox' | 'monitoring' | null;
+  run_origin?: string | null;
   model?: string | null;
   response_text?: string | null;
   brand_mentioned?: boolean | null;
   sentiment_label?: string | null;
   position_rank?: number | null;
+  topic_id?: string | null;
   created_at: string;
 }
 
@@ -180,6 +183,7 @@ export interface MonitoringTopic {
   id: string;
   project_id: string;
   name: string;
+  description?: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -193,8 +197,43 @@ export interface MonitoringPrompt {
   template_id: string | null;
   topic_id: string | null;
   is_active: boolean;
+  country?: string | null;
+  language?: string | null;
+  intent?: string | null;
+  tags?: string[] | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface TopicTemplate {
+  id: string;
+  slug: string;
+  title: string;
+  description: string | null;
+  sector_tag: string | null;
+  created_at: string;
+}
+
+export interface TopicDailyMetric {
+  id: string;
+  project_id: string;
+  topic_id: string;
+  date: string;
+  runs_count: number;
+  mentions_count: number;
+  visibility_rate: number | null;
+  positive_count: number;
+  neutral_count: number;
+  negative_count: number;
+  avg_position: number | null;
+  created_at: string;
+}
+
+export interface MonitoringTrigger {
+  id: string;
+  project_id: string;
+  triggered_at: string;
+  reason: string | null;
 }
 
 export interface ResponseCitation {
@@ -210,6 +249,41 @@ export interface DomainCatalog {
   domain: string;
   domain_type: string;
   updated_at: string;
+}
+
+export interface SourcesDomain {
+  id: string;
+  project_id: string;
+  domain: string;
+  domain_type: string;
+  is_owned: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SourcesUrl {
+  id: string;
+  project_id: string;
+  domain_id: string;
+  url: string;
+  url_type: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Citation {
+  id: string;
+  project_id: string;
+  prompt_run_id: string;
+  topic_id: string | null;
+  ai_model: string | null;
+  domain_id: string;
+  url_id: string | null;
+  cited_at: string;
+  brand_mentioned: boolean;
+  competitor_mentioned: boolean | null;
+  position_in_answer: number | null;
+  created_at: string;
 }
 
 export interface RunItem {
@@ -356,11 +430,14 @@ export interface AnalysisRunInsert {
   analysis_id: string;
   prompt_text: string;
   run_index: number;
+  run_type?: 'sandbox' | 'monitoring' | null;
+  run_origin?: string | null;
   model?: string | null;
   response_text?: string | null;
   brand_mentioned?: boolean | null;
   sentiment_label?: string | null;
   position_rank?: number | null;
+  topic_id?: string | null;
 }
 
 export interface AnalysisResponseInsert {
@@ -401,6 +478,7 @@ export interface AnalysisPromptInsert {
 export interface MonitoringTopicInsert {
   project_id: string;
   name: string;
+  description?: string | null;
   is_active?: boolean;
 }
 
@@ -411,6 +489,36 @@ export interface MonitoringPromptInsert {
   template_id?: string | null;
   topic_id?: string | null;
   is_active?: boolean;
+  country?: string | null;
+  language?: string | null;
+  intent?: string | null;
+  tags?: string[] | null;
+}
+
+export interface TopicTemplateInsert {
+  slug: string;
+  title: string;
+  description?: string | null;
+  sector_tag?: string | null;
+}
+
+export interface TopicDailyMetricInsert {
+  project_id: string;
+  topic_id: string;
+  date: string;
+  runs_count: number;
+  mentions_count: number;
+  visibility_rate?: number | null;
+  positive_count: number;
+  neutral_count: number;
+  negative_count: number;
+  avg_position?: number | null;
+}
+
+export interface MonitoringTriggerInsert {
+  project_id: string;
+  triggered_at?: string;
+  reason?: string | null;
 }
 
 export interface ResponseCitationInsert {
@@ -423,6 +531,33 @@ export interface ResponseCitationInsert {
 export interface DomainCatalogInsert {
   domain: string;
   domain_type?: string;
+}
+
+export interface SourcesDomainInsert {
+  project_id: string;
+  domain: string;
+  domain_type?: string;
+  is_owned?: boolean;
+}
+
+export interface SourcesUrlInsert {
+  project_id: string;
+  domain_id: string;
+  url: string;
+  url_type?: string;
+}
+
+export interface CitationInsert {
+  project_id: string;
+  prompt_run_id: string;
+  topic_id?: string | null;
+  ai_model?: string | null;
+  domain_id: string;
+  url_id?: string | null;
+  cited_at?: string;
+  brand_mentioned?: boolean;
+  competitor_mentioned?: boolean | null;
+  position_in_answer?: number | null;
 }
 
 export interface RecommendationInsert {
@@ -607,6 +742,24 @@ export type Database = {
         Update: Partial<Omit<MonitoringPrompt, 'id' | 'project_id' | 'created_at' | 'updated_at'>>;
         Relationships: [];
       };
+      topic_templates: {
+        Row: TopicTemplate;
+        Insert: TopicTemplateInsert;
+        Update: Partial<Omit<TopicTemplate, 'id' | 'created_at'>>;
+        Relationships: [];
+      };
+      topic_daily_metrics: {
+        Row: TopicDailyMetric;
+        Insert: TopicDailyMetricInsert;
+        Update: Partial<Omit<TopicDailyMetric, 'id' | 'project_id' | 'topic_id' | 'created_at'>>;
+        Relationships: [];
+      };
+      monitoring_triggers: {
+        Row: MonitoringTrigger;
+        Insert: MonitoringTriggerInsert;
+        Update: Partial<Omit<MonitoringTrigger, 'id' | 'project_id'>>;
+        Relationships: [];
+      };
       response_citations: {
         Row: ResponseCitation;
         Insert: ResponseCitationInsert;
@@ -617,6 +770,24 @@ export type Database = {
         Row: DomainCatalog;
         Insert: DomainCatalogInsert;
         Update: Partial<Omit<DomainCatalog, 'domain' | 'updated_at'>>;
+        Relationships: [];
+      };
+      sources_domains: {
+        Row: SourcesDomain;
+        Insert: SourcesDomainInsert;
+        Update: Partial<Omit<SourcesDomain, 'id' | 'project_id' | 'created_at' | 'updated_at'>>;
+        Relationships: [];
+      };
+      sources_urls: {
+        Row: SourcesUrl;
+        Insert: SourcesUrlInsert;
+        Update: Partial<Omit<SourcesUrl, 'id' | 'project_id' | 'created_at' | 'updated_at'>>;
+        Relationships: [];
+      };
+      citations: {
+        Row: Citation;
+        Insert: CitationInsert;
+        Update: Partial<Omit<Citation, 'id' | 'project_id' | 'created_at'>>;
         Relationships: [];
       };
       recommendations: {

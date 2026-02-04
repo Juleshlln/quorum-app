@@ -5,6 +5,7 @@ import { OverviewKpiCards } from '@/components/overview/overview-kpi-cards';
 import { CompetitiveSnapshot } from '@/components/overview/competitive-snapshot';
 import { InsightsWhyModule } from '@/components/overview/insights-why-module';
 import { UserSimulationSnippets } from '@/components/overview/user-simulation-snippets';
+import { TopicPerformance } from '@/components/overview/topic-performance';
 import Link from 'next/link';
 
 type AnalysisItemRow = {
@@ -16,6 +17,18 @@ type AnalysisItemRow = {
   brand_position: number | null;
   sentiment_label: string | null;
   competitors_mentioned: string[];
+};
+
+type TopicMetricRow = {
+  topic_id: string;
+  date: string;
+  runs_count: number;
+  mentions_count: number;
+  positive_count: number;
+  neutral_count: number;
+  negative_count: number;
+  avg_position: number | null;
+  topic: { name: string } | null;
 };
 
 function formatShortDate(dateStr: string) {
@@ -49,8 +62,12 @@ export default async function OverviewPage() {
   }
 
   const now = new Date();
-  const start30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
-  const start7 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const start30Date = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const start7Date = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const start30 = start30Date.toISOString();
+  const start7 = start7Date.toISOString();
+  const start30Day = start30Date.toISOString().slice(0, 10);
+  const start7Day = start7Date.toISOString().slice(0, 10);
 
   const { data: trendItemsData } = await supabase
     .from('analysis_items')
@@ -91,6 +108,66 @@ export default async function OverviewPage() {
 
   const simulationItems = (simulationItemsData || []) as AnalysisItemRow[];
   const hasMonitoringData = trendItems.length > 0;
+
+  const { data: topicMetricsData } = await supabase
+    .from('topic_daily_metrics')
+    .select('topic_id, date, runs_count, mentions_count, positive_count, neutral_count, negative_count, avg_position, topic:monitoring_topics(name)')
+    .eq('project_id', activeProject.id)
+    .gte('date', start30Day)
+    .order('date', { ascending: true });
+
+  const topicMetricsRows = (topicMetricsData || []) as TopicMetricRow[];
+
+  const aggregateTopicMetrics = (rows: TopicMetricRow[], startDay: string) => {
+    const filtered = rows.filter((row) => row.date >= startDay);
+    const aggregates = new Map<string, {
+      name: string;
+      runs: number;
+      mentions: number;
+      positive: number;
+      neutral: number;
+      negative: number;
+      positionSum: number;
+      positionMentions: number;
+    }>();
+
+    for (const row of filtered) {
+      const key = row.topic_id;
+      const existing = aggregates.get(key) || {
+        name: row.topic?.name || 'Topic',
+        runs: 0,
+        mentions: 0,
+        positive: 0,
+        neutral: 0,
+        negative: 0,
+        positionSum: 0,
+        positionMentions: 0,
+      };
+      existing.runs += row.runs_count;
+      existing.mentions += row.mentions_count;
+      existing.positive += row.positive_count;
+      existing.neutral += row.neutral_count;
+      existing.negative += row.negative_count;
+      if (row.avg_position !== null && row.mentions_count > 0) {
+        existing.positionSum += row.avg_position * row.mentions_count;
+        existing.positionMentions += row.mentions_count;
+      }
+      aggregates.set(key, existing);
+    }
+
+    return Array.from(aggregates.entries()).map(([topicId, entry]) => ({
+      topicId,
+      name: entry.name,
+      visibilityRate: entry.runs > 0 ? Math.round((entry.mentions / entry.runs) * 100) : null,
+      sentimentPositive: entry.mentions > 0 ? Math.round((entry.positive / entry.mentions) * 100) : null,
+      avgPosition: entry.positionMentions > 0 ? Number((entry.positionSum / entry.positionMentions).toFixed(1)) : null,
+      mentions: entry.mentions,
+      runs: entry.runs,
+    })).sort((a, b) => (b.visibilityRate || 0) - (a.visibilityRate || 0));
+  };
+
+  const topicMetrics7 = aggregateTopicMetrics(topicMetricsRows, start7Day);
+  const topicMetrics30 = aggregateTopicMetrics(topicMetricsRows, start30Day);
 
   const trendMap = new Map<string, { mentions: number; total: number }>();
   trendItems.forEach((item) => {
@@ -234,6 +311,8 @@ export default async function OverviewPage() {
       )}
 
       <CompetitiveSnapshot trendData={trendData} leaderboard={leaderboard} />
+
+      <TopicPerformance data7={topicMetrics7} data30={topicMetrics30} />
 
       <div className="grid gap-6 md:grid-cols-2">
         <InsightsWhyModule

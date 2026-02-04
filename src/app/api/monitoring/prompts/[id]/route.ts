@@ -12,6 +12,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   const updates: Record<string, unknown> = {};
   if (typeof body?.is_active === 'boolean') updates.is_active = body.is_active;
   if (body?.topic_id !== undefined) updates.topic_id = body.topic_id;
+  if (typeof body?.prompt_text === 'string') updates.prompt_text = body.prompt_text.trim();
 
   const { error } = await supabase
     .from('monitoring_prompts')

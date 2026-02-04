@@ -4,11 +4,24 @@ import type { Database } from '@/types/database';
 
 type CookieToSet = { name: string; value: string; options?: CookieOptions };
 
+function getSupabaseUrl() {
+  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+  if (!rawUrl) return '';
+  if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
+    return rawUrl;
+  }
+  return `https://${rawUrl}`;
+}
+
+function getServiceRoleKey() {
+  return process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE || '';
+}
+
 export async function createClient() {
   const cookieStore = await cookies();
 
   return createServerClient<Database, "public">(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    getSupabaseUrl(),
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
@@ -36,7 +49,7 @@ export async function createClientWithCookies(
   cookieStore: ReturnType<typeof cookies> extends Promise<infer T> ? T : never
 ) {
   return createServerClient<Database, "public">(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    getSupabaseUrl(),
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
@@ -60,8 +73,8 @@ export async function createClientWithCookies(
 // Server-only admin client (use for cron/scheduled jobs)
 export function createAdminClient() {
   return createServerClient<Database, "public">(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    getSupabaseUrl(),
+    getServiceRoleKey(),
     {
       cookies: {
         getAll() {

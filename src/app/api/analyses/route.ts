@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { queryOpenAI, type AIQueryResult } from '@/lib/ai/providers';
 import { computeModules, type ModuleKey, type RawItem } from '@/lib/analysis/modules';
+import { ingestCitations } from '@/lib/sources/ingest';
 
 const ALL_MODULES: ModuleKey[] = ['visibility', 'position', 'sentiment', 'global'];
 
@@ -235,6 +236,8 @@ export async function POST(request: NextRequest) {
         analysis_id: analysisId,
         prompt_text: prompt,
         run_index: idx + 1,
+        run_type: 'sandbox',
+        run_origin: 'analysis_page',
       }))
     );
 
@@ -301,6 +304,22 @@ export async function POST(request: NextRequest) {
           domain_type: classifyDomain(c.domain),
         }));
         await supabase.from('response_citations').insert(rows);
+        await ingestCitations({
+          supabase,
+          projectId: projectData.id,
+          promptRunId: run.id,
+          citations: citations.map((c) => ({
+            url: c.url,
+            domain: c.domain,
+            domain_type: classifyDomain(c.domain),
+          })),
+          citedAt: new Date().toISOString(),
+          aiModel: result.model,
+          topicId: null,
+          brandMentioned: result.mentioned,
+          competitorMentioned: result.competitors_mentioned?.length ? true : false,
+          positionInAnswer: result.position,
+        });
       }
     }
 
