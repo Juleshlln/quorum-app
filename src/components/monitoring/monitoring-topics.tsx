@@ -69,21 +69,6 @@ export function MonitoringTopics({
   const [message, setMessage] = useState<string | null>(null);
   const [testMessage, setTestMessage] = useState<string | null>(null);
 
-  const triggerMonitoringNow = async () => {
-    try {
-      setMessage('Monitoring lancé…');
-      const res = await fetch('/api/monitoring/run-now', { method: 'POST' });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setMessage(data?.error || 'Impossible de lancer le monitoring.');
-        return;
-      }
-      setMessage(data?.message || 'Monitoring lancé. Résultats dans quelques instants.');
-    } catch {
-      setMessage('Impossible de lancer le monitoring.');
-    }
-  };
-
   useEffect(() => {
     if (selectedTopicId && selectedTopicId !== 'unassigned') {
       setForm((prev) => ({ ...prev, topicId: selectedTopicId }));
@@ -189,7 +174,6 @@ export function MonitoringTopics({
       body: JSON.stringify({ is_active: isActive }),
     });
     setTopics((prev) => prev.map((t) => (t.id === topicId ? { ...t, is_active: isActive } : t)));
-    await triggerMonitoringNow();
   };
 
   const toggleQuestion = async (questionId: string, isActive: boolean) => {
@@ -199,7 +183,6 @@ export function MonitoringTopics({
       body: JSON.stringify({ is_active: isActive }),
     });
     setQuestions((prev) => prev.map((q) => (q.id === questionId ? { ...q, is_active: isActive } : q)));
-    await triggerMonitoringNow();
   };
 
   const assignQuestion = async (questionId: string, topicId: string) => {
@@ -209,7 +192,6 @@ export function MonitoringTopics({
       body: JSON.stringify({ topic_id: topicId }),
     });
     setQuestions((prev) => prev.map((q) => (q.id === questionId ? { ...q, topic_id: topicId } : q)));
-    await triggerMonitoringNow();
   };
 
   const runSandboxTest = async () => {
@@ -282,7 +264,6 @@ export function MonitoringTopics({
     setModalOpen(false);
     setForm({ ...form, text: '', tags: '' });
     setTestMessage(null);
-    await triggerMonitoringNow();
   };
 
   const addBulkQuestions = async () => {

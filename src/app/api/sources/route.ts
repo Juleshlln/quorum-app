@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await supabase
     .from('citations')
-    .select('id, cited_at, ai_model, brand_mentioned, competitor_mentioned, position_in_answer, prompt_run_id, topic_id, run:analysis_runs!inner(run_type), domain:sources_domains(domain, domain_type, is_owned), url:sources_urls(url, url_type)')
+    .select('id, cited_at, ai_model, brand_mentioned, competitor_mentioned, position_in_answer, prompt_run_id, topic_id, run:prompt_runs!inner(run_type), domain:sources_domains(domain, domain_type, is_owned), url:sources_urls(url, url_type)')
     .eq('project_id', project.id)
     .eq('run.run_type', 'monitoring')
     .gte('cited_at', startDate)

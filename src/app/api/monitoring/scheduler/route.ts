@@ -33,11 +33,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const projectId = body?.project_id ? String(body.project_id) : null;
-  if (!projectId) {
-    return NextResponse.json({ error: 'project_id required' }, { status: 400 });
-  }
-
   const envUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
   const envKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE || '';
   const overrideUrl = typeof body?.supabase_url === 'string' ? body.supabase_url.trim() : '';
@@ -65,29 +60,46 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-  const { data: project, error } = await supabase
-    .from('projects')
-    .select('id, name, description, location, industry, keywords')
-    .eq('id', projectId)
-    .single();
+  const projectId = body?.project_id ? String(body.project_id) : null;
 
-  if (error || !project) {
-    return NextResponse.json({ error: error?.message || 'Project not found' }, { status: 404 });
+  let query = supabase
+    .from('projects')
+    .select('id, name, description, location, industry, keywords');
+
+  if (projectId) {
+    query = query.eq('id', projectId);
   }
 
-  const { data: competitorsRows } = await supabase
-    .from('competitors')
-    .select('name')
-    .eq('project_id', project.id);
-  const competitors = (competitorsRows || []).map((row: { name: string }) => row.name);
-  const context = buildContext(project);
-  const summary = await runMonitoringForProject({
-    supabase,
-    projectId: project.id,
-    brandName: project.name,
-    competitors,
-    context,
-  });
+  const { data: projects, error } = await query;
 
-  return NextResponse.json({ ok: true, ...summary });
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  const results: Array<{ project_id: string; runs: number; answers: number }> = [];
+  try {
+    for (const project of projects || []) {
+      const { data: competitorsRows } = await supabase
+        .from('competitors')
+        .select('name')
+        .eq('project_id', project.id);
+      const competitors = (competitorsRows || []).map((row: { name: string }) => row.name);
+      const context = buildContext(project);
+      const summary = await runMonitoringForProject({
+        supabase,
+        projectId: project.id,
+        brandName: project.name,
+        competitors,
+        context,
+      });
+      results.push({ project_id: project.id, ...summary });
+    }
+  } catch (err: any) {
+    return NextResponse.json(
+      { error: 'Monitoring failed', details: err?.message || String(err) },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({ ok: true, results });
 }

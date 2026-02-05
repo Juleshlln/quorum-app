@@ -39,12 +39,26 @@ export async function POST(request: NextRequest) {
       intent,
       tags,
       is_active: true,
+      status: 'active',
     })
     .select('id')
     .single();
 
   if (error || !data) {
     return NextResponse.json({ error: error?.message || 'Insert failed' }, { status: 500 });
+  }
+
+  const { error: versionError } = await supabase
+    .from('prompt_versions')
+    .insert({
+      prompt_id: data.id,
+      version_number: 1,
+      prompt_text: text,
+      is_active: true,
+    });
+
+  if (versionError) {
+    return NextResponse.json({ error: versionError.message }, { status: 500 });
   }
 
   return NextResponse.json({ id: data.id });
