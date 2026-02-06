@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect } from 'react';
 
 export default function GlobalError({
@@ -19,7 +20,7 @@ export default function GlobalError({
       <div className="max-w-md w-full rounded-2xl border border-white/10 bg-zinc-900/40 p-6">
         <h1 className="text-xl font-semibold">Une erreur est survenue</h1>
         <p className="mt-2 text-sm text-zinc-400">
-          Réessaie ou reviens à la page d’accueil.
+          Réessaie ou reviens à la page d&apos;accueil.
         </p>
         <div className="mt-4 flex gap-3">
           <button
@@ -28,12 +29,12 @@ export default function GlobalError({
           >
             Réessayer
           </button>
-          <a
+          <Link
             href="/"
             className="px-4 py-2 rounded-xl border border-white/15 text-sm text-zinc-200 hover:bg-white/5"
           >
             Accueil
-          </a>
+          </Link>
         </div>
       </div>
     </div>

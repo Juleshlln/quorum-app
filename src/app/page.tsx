@@ -344,7 +344,7 @@ export default function HomePage() {
             </span>
           </h2>
           <p className="text-xl text-zinc-400 mb-10 max-w-xl mx-auto">
-            Rejoignez les entreprises qui optimisent déjà leur visibilité dans les réponses générées par l'IA.
+            Rejoignez les entreprises qui optimisent déjà leur visibilité dans les réponses générées par l&apos;IA.
           </p>
           <Link 
             href="/signup"

@@ -206,7 +206,7 @@ export function ProjectForm({ project, mode }: ProjectFormProps) {
         {/* Industry */}
         <div>
           <label htmlFor="industry" className="block text-sm font-medium text-zinc-400 mb-2">
-            Secteur d'activité
+            Secteur d&apos;activité
           </label>
           <select
             id="industry"
