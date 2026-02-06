@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getActiveProjectForUser } from '@/lib/projects/get-active-project';
 
-export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(
+  _: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
@@ -18,7 +22,7 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
     .from('monitoring_prompts')
     .select('id, prompt_text, is_active, source, topic_id, country, language, intent, tags')
     .eq('project_id', project.id)
-    .eq('topic_id', params.id)
+    .eq('topic_id', id)
     .order('created_at', { ascending: false });
 
   if (error) {
