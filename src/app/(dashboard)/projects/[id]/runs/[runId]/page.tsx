@@ -119,7 +119,7 @@ export default async function RunResultsPage({
             <div>
               <h1 className="text-xl font-semibold text-white">Analyse introuvable</h1>
               <p className="text-sm text-zinc-400 mt-1">
-                Cette analyse n'existe pas ou a été supprimée.
+                Cette analyse n&apos;existe pas ou a été supprimée.
               </p>
             </div>
           </div>
@@ -207,7 +207,7 @@ export default async function RunResultsPage({
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold text-white">Résultats de l'analyse</h1>
+          <h1 className="text-3xl font-semibold text-white">Résultats de l&apos;analyse</h1>
           <div className="flex items-center gap-3 mt-2 text-sm text-zinc-400">
             <span>{projectName}</span>
             <span>•</span>
