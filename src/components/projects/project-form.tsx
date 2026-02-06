@@ -4,10 +4,17 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, Plus, X, Globe, Building2, FileText } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import type { Project } from '@/types/database';
+type ProjectFormProject = {
+  name: string;
+  website: string | null;
+  industry: string | null;
+  description: string | null;
+  location: string | null;
+  keywords: string[] | null;
+};
 
 interface ProjectFormProps {
-  project?: Project;
+  project?: ProjectFormProject;
   mode: 'create' | 'edit';
 }
 
