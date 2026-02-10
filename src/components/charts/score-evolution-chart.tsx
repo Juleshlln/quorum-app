@@ -58,7 +58,7 @@ export function ScoreEvolutionChart({ data, height = 200 }: ScoreEvolutionChartP
           <TrendingUp className="w-7 h-7 text-cyan-400" />
         </div>
         <p className="text-zinc-400 text-sm mb-1">Aucune donnée disponible</p>
-        <p className="text-zinc-500 text-xs">Lancez une analyse pour voir l&apos;évolution</p>
+        <p className="text-zinc-500 text-xs">Lancez une analyse pour voir l évolution</p>
       </div>
     );
   }

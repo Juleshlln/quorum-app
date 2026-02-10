@@ -13,6 +13,11 @@ export interface AIQueryResult {
   model: string;
   prompt: string;
   response: string;
+  params: {
+    temperature: number;
+    top_p: number;
+    max_tokens: number;
+  };
   mentioned: boolean;
   position: number | null;
   sentiment: 'positive' | 'neutral' | 'negative' | null;
@@ -45,22 +50,36 @@ export async function queryOpenAI(
   prompt: string,
   brandName: string,
   competitors: string[] = [],
-  context: string = ''
+  context: string = '',
+  options?: {
+    model?: string;
+    temperature?: number;
+    top_p?: number;
+    max_tokens?: number;
+    require_sources?: boolean;
+  }
 ): Promise<AIQueryResult> {
   const startTime = Date.now();
   console.log(`\n🤖 Querying OpenAI for prompt: "${prompt.substring(0, 50)}..."`);
+  const model = options?.model || 'gpt-4o';
+  const temperature = options?.temperature ?? 0;
+  const top_p = options?.top_p ?? 1;
+  const max_tokens = options?.max_tokens ?? 1200;
   
   try {
     const openai = getOpenAIClient();
     
     console.log('📤 Sending request to OpenAI...');
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model,
       messages: [
         {
           role: 'system',
           content: [
             'You are a helpful assistant. Answer questions naturally and thoroughly. When recommending products or services, be specific about names and features.',
+            options?.require_sources
+              ? 'You MUST append a section titled "Sources (URLs)" with 2-3 exact https URLs. If you cannot, output "Sources (URLs): NONE".'
+              : '',
             context ? `Context: ${context}` : ''
           ].filter(Boolean).join('\n')
         },
@@ -69,9 +88,9 @@ export async function queryOpenAI(
           content: prompt
         }
       ],
-      max_tokens: 1200,
-      temperature: 0,
-      top_p: 1,
+      max_tokens,
+      temperature,
+      top_p,
     });
 
     const response = completion.choices[0]?.message?.content || '';
@@ -86,9 +105,10 @@ export async function queryOpenAI(
 
     return {
       provider: 'openai',
-      model: 'gpt-4o',
+      model,
       prompt,
       response,
+      params: { temperature, top_p, max_tokens },
       mentioned: analysis.mentioned,
       position: analysis.position,
       sentiment: analysis.sentiment,
@@ -105,6 +125,7 @@ export async function queryOpenAI(
       model: 'gpt-4o-mini',
       prompt,
       response: '',
+      params: { temperature, top_p, max_tokens },
       mentioned: false,
       position: null,
       sentiment: null,

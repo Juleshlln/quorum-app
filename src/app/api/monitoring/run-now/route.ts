@@ -87,6 +87,7 @@ export async function POST(request: NextRequest) {
     brandName: project.name,
     competitors,
     context,
+    runType: 'sandbox',
   });
 
   return NextResponse.json({ ok: true, ...summary });

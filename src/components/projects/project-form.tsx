@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Loader2, Plus, X, Globe, Building2, FileText } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 type ProjectFormProject = {
+  id?: string;
   name: string;
   website: string | null;
   industry: string | null;
@@ -38,6 +39,54 @@ export function ProjectForm({ project, mode }: ProjectFormProps) {
   const [competitors, setCompetitors] = useState<{ name: string; website: string }[]>([]);
   const [competitorName, setCompetitorName] = useState('');
   const [competitorWebsite, setCompetitorWebsite] = useState('');
+  const [createdProjectId, setCreatedProjectId] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<Array<{
+    id?: string;
+    name: string;
+    website?: string | null;
+    description?: string | null;
+    confidence?: number | null;
+    method?: string | null;
+    evidence?: Array<{ url?: string }>;
+    selected: boolean;
+  }>>([]);
+  const [isDetecting, setIsDetecting] = useState(false);
+  const [isSavingSuggestions, setIsSavingSuggestions] = useState(false);
+  const activeProjectId = createdProjectId || project?.id || null;
+
+  const runDetection = async (projectId: string) => {
+    setIsDetecting(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/competitors/detect`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      const list = Array.isArray(data?.suggestions) ? data.suggestions : [];
+      const formatted = list.map((s: any) => ({
+        id: s.id,
+        name: s.name,
+        website: s.website || null,
+        description: s.description || null,
+        confidence: s.confidence ?? null,
+        method: s.method || null,
+        evidence: s.evidence || [],
+        selected: true,
+      }));
+      setSuggestions(formatted);
+    } catch {
+      // ignore
+    } finally {
+      setIsDetecting(false);
+    }
+  };
+
+  const runConcurrentsDetection = async (projectId: string) => {
+    try {
+      await fetch(`/api/projects/${projectId}/concurrents/detect`, { method: 'POST' });
+    } catch {
+      // ignore
+    }
+  };
 
   const addKeyword = () => {
     if (keywordInput.trim() && !keywords.includes(keywordInput.trim())) {
@@ -114,22 +163,23 @@ export function ProjectForm({ project, mode }: ProjectFormProps) {
             .eq('id', user.id);
         }
 
-        // Add competitors if any
-        if (competitors.length > 0 && newProject) {
-          const competitorsData = competitors.map(c => ({
-            project_id: newProject.id,
-            name: c.name,
-            website: c.website || null,
-          }));
+        if (newProject) {
+          setCreatedProjectId(newProject.id);
+          await runDetection(newProject.id);
+          await runConcurrentsDetection(newProject.id);
 
-          const { error: competitorError } = await supabase
-            .from('competitors')
-            .insert(competitorsData);
-
-          if (competitorError) throw competitorError;
+          // Save manual competitors immediately (if any)
+          if (competitors.length > 0) {
+            const competitorsData = competitors.map(c => ({
+              project_id: newProject.id,
+              name: c.name,
+              website: c.website || null,
+            }));
+            await supabase.from('competitors').insert(competitorsData);
+          }
         }
 
-        router.push(`/brand`);
+        return;
       } else if (mode === 'edit' && project) {
         // Update project
         const { error: updateError } = await supabase
@@ -146,6 +196,7 @@ export function ProjectForm({ project, mode }: ProjectFormProps) {
 
         if (updateError) throw updateError;
 
+        await runConcurrentsDetection(project.id);
         router.push(`/brand`);
       }
 
@@ -380,6 +431,106 @@ export function ProjectForm({ project, mode }: ProjectFormProps) {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {(createdProjectId || mode === 'edit') && (
+        <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-6 space-y-4">
+          <h3 className="text-sm font-medium text-white uppercase tracking-wider">
+            Concurrents suggérés
+          </h3>
+          {mode === 'edit' && (
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => activeProjectId && runDetection(activeProjectId)}
+                className="rounded-xl border border-white/10 text-sm text-zinc-300 px-4 py-2"
+              >
+                Lancer la détection
+              </button>
+            </div>
+          )}
+          {isDetecting && (
+            <p className="text-sm text-zinc-400">Détection en cours...</p>
+          )}
+          {!isDetecting && suggestions.length === 0 && (
+            <p className="text-sm text-zinc-400">Aucune suggestion trouvée.</p>
+          )}
+          {!isDetecting && suggestions.length > 0 && (
+            <div className="space-y-3">
+              {suggestions.map((s, idx) => (
+                <div key={`${s.name}-${idx}`} className="flex items-start gap-3 rounded-lg border border-white/10 p-3">
+                  <input
+                    type="checkbox"
+                    checked={s.selected}
+                    onChange={(e) => {
+                      const next = [...suggestions];
+                      next[idx] = { ...s, selected: e.target.checked };
+                      setSuggestions(next);
+                    }}
+                  />
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <input
+                        value={s.name}
+                        onChange={(e) => {
+                          const next = [...suggestions];
+                          next[idx] = { ...s, name: e.target.value };
+                          setSuggestions(next);
+                        }}
+                        className="bg-zinc-900 border border-zinc-800 text-white text-sm rounded-lg px-2 py-1 w-full"
+                      />
+                      <span className="text-xs text-zinc-500">
+                        {s.confidence ? `${Math.round(s.confidence * 100)}%` : '—'}
+                      </span>
+                    </div>
+                    <input
+                      value={s.website || ''}
+                      onChange={(e) => {
+                        const next = [...suggestions];
+                        next[idx] = { ...s, website: e.target.value };
+                        setSuggestions(next);
+                      }}
+                      className="bg-zinc-900 border border-zinc-800 text-white text-xs rounded-lg px-2 py-1 w-full"
+                      placeholder="https://competitor.com"
+                    />
+                    {s.description && (
+                      <p className="text-xs text-zinc-400">{s.description}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={async () => {
+                if (!activeProjectId) return;
+                setIsSavingSuggestions(true);
+                const accepted = suggestions.filter((s) => s.selected);
+                const suggestionIds = accepted.map((s) => s.id).filter(Boolean);
+                await fetch(`/api/projects/${activeProjectId}/competitors/confirm`, {
+                  method: 'POST',
+                  headers: { 'content-type': 'application/json' },
+                  body: JSON.stringify({ accepted, suggestionIds }),
+                });
+                setIsSavingSuggestions(false);
+                if (mode === 'create') router.push('/brand');
+              }}
+              className="rounded-xl bg-white text-black text-sm font-medium px-4 py-2"
+              disabled={isSavingSuggestions}
+            >
+              {isSavingSuggestions ? 'Enregistrement...' : 'Enregistrer les concurrents'}
+            </button>
+            <button
+              type="button"
+              onClick={() => mode === 'create' ? router.push('/brand') : null}
+              className="rounded-xl border border-white/10 text-sm text-zinc-300 px-4 py-2"
+            >
+              Ignorer
+            </button>
+          </div>
         </div>
       )}
 

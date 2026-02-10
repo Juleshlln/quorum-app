@@ -8,27 +8,16 @@ import { UserSimulationSnippets } from '@/components/overview/user-simulation-sn
 import { TopicPerformance } from '@/components/overview/topic-performance';
 import Link from 'next/link';
 
-type AnalysisItemRow = {
-  created_at: string;
-  prompt_text: string;
-  ai_response: string | null;
+type MonitoringRunRow = {
+  scheduled_at: string;
   ai_model: string | null;
   brand_mentioned: boolean | null;
-  brand_position: number | null;
+  position_rank: number | null;
   sentiment_label: string | null;
-  competitors_mentioned: string[];
-};
-
-type TopicMetricRow = {
-  topic_id: string;
-  date: string;
-  runs_count: number;
-  mentions_count: number;
-  positive_count: number;
-  neutral_count: number;
-  negative_count: number;
-  avg_position: number | null;
-  topic: { name: string } | null;
+  competitors_mentioned: string[] | null;
+  prompt: { topic_id: string | null } | null;
+  prompt_version: { prompt_text: string } | null;
+  answers: Array<{ raw_answer_text: string | null }> | null;
 };
 
 function formatShortDate(dateStr: string) {
@@ -66,19 +55,16 @@ export default async function OverviewPage() {
   const start7Date = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const start30 = start30Date.toISOString();
   const start7 = start7Date.toISOString();
-  const start30Day = start30Date.toISOString().slice(0, 10);
-  const start7Day = start7Date.toISOString().slice(0, 10);
 
-  const { data: trendItemsData } = await supabase
-    .from('analysis_items')
-    .select('created_at, prompt_text, ai_response, ai_model, brand_mentioned, brand_position, sentiment_label, competitors_mentioned, analysis:analyses!inner(project_id, analysis_mode)')
-    .eq('analysis.project_id', activeProject.id)
-    .eq('analysis.kind', 'scheduled')
-    .eq('analysis.analysis_mode', 'trend')
-    .gte('created_at', start30)
-    .order('created_at', { ascending: true });
+  const { data: monitoringRunsData } = await supabase
+    .from('prompt_runs')
+    .select('scheduled_at, ai_model, brand_mentioned, position_rank, sentiment_label, competitors_mentioned, prompt:monitoring_prompts(topic_id), prompt_version:prompt_versions(prompt_text), answers:ai_answers(raw_answer_text)')
+    .eq('project_id', activeProject.id)
+    .eq('run_type', 'monitoring')
+    .gte('scheduled_at', start30)
+    .order('scheduled_at', { ascending: true });
 
-  const trendItems = (trendItemsData || []) as AnalysisItemRow[];
+  const monitoringRuns = (monitoringRunsData || []) as MonitoringRunRow[];
 
   const { data: competitorsData } = await supabase
     .from('competitors')
@@ -87,39 +73,32 @@ export default async function OverviewPage() {
 
   const competitorNames = (competitorsData || []).map((c: { name: string }) => c.name);
 
-  const { data: latestTrendAnalysis } = await supabase
-    .from('analyses')
-    .select('created_at, run_count, total_prompts')
+  const { data: sandboxRunsData } = await supabase
+    .from('prompt_runs')
+    .select('scheduled_at, ai_model, prompt_version:prompt_versions(prompt_text), answers:ai_answers(raw_answer_text)')
     .eq('project_id', activeProject.id)
-    .eq('kind', 'scheduled')
-    .eq('analysis_mode', 'trend')
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  const { data: simulationItemsData } = await supabase
-    .from('analysis_items')
-    .select('prompt_text, ai_response, ai_model, created_at, analysis:analyses!inner(project_id, analysis_mode)')
-    .eq('analysis.project_id', activeProject.id)
-    .eq('analysis.kind', 'sandbox')
-    .eq('analysis.analysis_mode', 'simulation')
-    .order('created_at', { ascending: false })
+    .eq('run_type', 'sandbox')
+    .order('scheduled_at', { ascending: false })
     .limit(3);
 
-  const simulationItems = (simulationItemsData || []) as AnalysisItemRow[];
-  const hasMonitoringData = trendItems.length > 0;
+  const sandboxRuns = (sandboxRunsData || []) as Array<{
+    scheduled_at: string;
+    ai_model: string | null;
+    prompt_version: { prompt_text: string } | null;
+    answers: Array<{ raw_answer_text: string | null }> | null;
+  }>;
 
-  const { data: topicMetricsData } = await supabase
-    .from('topic_daily_metrics')
-    .select('topic_id, date, runs_count, mentions_count, positive_count, neutral_count, negative_count, avg_position, topic:monitoring_topics(name)')
-    .eq('project_id', activeProject.id)
-    .gte('date', start30Day)
-    .order('date', { ascending: true });
+  const hasMonitoringData = monitoringRuns.length > 0;
 
-  const topicMetricsRows = (topicMetricsData || []) as TopicMetricRow[];
+  const { data: topicsData } = await supabase
+    .from('monitoring_topics')
+    .select('id, name')
+    .eq('project_id', activeProject.id);
 
-  const aggregateTopicMetrics = (rows: TopicMetricRow[], startDay: string) => {
-    const filtered = rows.filter((row) => row.date >= startDay);
+  const topicNameMap = new Map((topicsData || []).map((t: { id: string; name: string }) => [t.id, t.name]));
+
+  const aggregateTopicMetrics = (rows: MonitoringRunRow[], startDateStr: string) => {
+    const filtered = rows.filter((row) => row.scheduled_at >= startDateStr);
     const aggregates = new Map<string, {
       name: string;
       runs: number;
@@ -132,9 +111,10 @@ export default async function OverviewPage() {
     }>();
 
     for (const row of filtered) {
-      const key = row.topic_id;
-      const existing = aggregates.get(key) || {
-        name: row.topic?.name || 'Topic',
+      const topicId = row.prompt?.topic_id;
+      if (!topicId) continue;
+      const existing = aggregates.get(topicId) || {
+        name: topicNameMap.get(topicId) || 'Topic',
         runs: 0,
         mentions: 0,
         positive: 0,
@@ -143,16 +123,18 @@ export default async function OverviewPage() {
         positionSum: 0,
         positionMentions: 0,
       };
-      existing.runs += row.runs_count;
-      existing.mentions += row.mentions_count;
-      existing.positive += row.positive_count;
-      existing.neutral += row.neutral_count;
-      existing.negative += row.negative_count;
-      if (row.avg_position !== null && row.mentions_count > 0) {
-        existing.positionSum += row.avg_position * row.mentions_count;
-        existing.positionMentions += row.mentions_count;
+      existing.runs += 1;
+      if (row.brand_mentioned) {
+        existing.mentions += 1;
+        if (row.sentiment_label === 'positive') existing.positive += 1;
+        else if (row.sentiment_label === 'negative') existing.negative += 1;
+        else existing.neutral += 1;
+        if (typeof row.position_rank === 'number') {
+          existing.positionSum += row.position_rank;
+          existing.positionMentions += 1;
+        }
       }
-      aggregates.set(key, existing);
+      aggregates.set(topicId, existing);
     }
 
     return Array.from(aggregates.entries()).map(([topicId, entry]) => ({
@@ -166,12 +148,12 @@ export default async function OverviewPage() {
     })).sort((a, b) => (b.visibilityRate || 0) - (a.visibilityRate || 0));
   };
 
-  const topicMetrics7 = aggregateTopicMetrics(topicMetricsRows, start7Day);
-  const topicMetrics30 = aggregateTopicMetrics(topicMetricsRows, start30Day);
+  const topicMetrics7 = aggregateTopicMetrics(monitoringRuns, start7);
+  const topicMetrics30 = aggregateTopicMetrics(monitoringRuns, start30);
 
   const trendMap = new Map<string, { mentions: number; total: number }>();
-  trendItems.forEach((item) => {
-    const key = item.created_at.slice(0, 10);
+  monitoringRuns.forEach((item) => {
+    const key = item.scheduled_at.slice(0, 10);
     const entry = trendMap.get(key) || { mentions: 0, total: 0 };
     entry.total += 1;
     if (item.brand_mentioned) entry.mentions += 1;
@@ -185,27 +167,27 @@ export default async function OverviewPage() {
       visibilityRate: entry.total > 0 ? Math.round((entry.mentions / entry.total) * 100) : 0,
     }));
 
-  const items7d = trendItems.filter((i) => i.created_at >= start7);
+  const items7d = monitoringRuns.filter((i) => i.scheduled_at >= start7);
   const mention7 = items7d.filter((i) => i.brand_mentioned).length;
   const visibility7 = items7d.length > 0 ? Math.round((mention7 / items7d.length) * 100) : null;
 
-  const mentionedItems = trendItems.filter((i) => i.brand_mentioned);
+  const mentionedItems = monitoringRuns.filter((i) => i.brand_mentioned);
   const positiveCount = mentionedItems.filter((i) => i.sentiment_label === 'positive').length;
   const sentimentPositive = mentionedItems.length > 0
     ? Math.round((positiveCount / mentionedItems.length) * 100)
     : null;
 
-  const positions = mentionedItems.map((i) => i.brand_position).filter((p): p is number => typeof p === 'number');
+  const positions = mentionedItems.map((i) => i.position_rank).filter((p): p is number => typeof p === 'number');
   const avgPosition = positions.length > 0
     ? Number((positions.reduce((a, b) => a + b, 0) / positions.length).toFixed(1))
     : null;
 
-  const totalRuns = trendItems.length;
+  const totalRuns = monitoringRuns.length;
   const mainMentions = mentionedItems.length;
   const mainVisibility = totalRuns > 0 ? Math.round((mainMentions / totalRuns) * 100) : null;
 
   const competitorStats = competitorNames.map((name) => {
-    const mentions = trendItems.filter((i) =>
+    const mentions = monitoringRuns.filter((i) =>
       i.competitors_mentioned?.some((c) => c.toLowerCase() === name.toLowerCase())
     ).length;
     return {
@@ -230,8 +212,11 @@ export default async function OverviewPage() {
     ...competitorStats,
   ].sort((a, b) => (b.visibilityRate || 0) - (a.visibilityRate || 0));
 
-  const modelSet = new Set(trendItems.map((i) => i.ai_model).filter(Boolean) as string[]);
-  const domains = trendItems.flatMap((i) => extractDomains(i.ai_response));
+  const modelSet = new Set(monitoringRuns.map((i) => i.ai_model).filter(Boolean) as string[]);
+  const domains = monitoringRuns.flatMap((i) => {
+    const answerText = i.answers?.[0]?.raw_answer_text ?? null;
+    return extractDomains(answerText);
+  });
   const domainCounts = domains.reduce((acc, domain) => {
     acc[domain] = (acc[domain] || 0) + 1;
     return acc;
@@ -241,9 +226,10 @@ export default async function OverviewPage() {
     .slice(0, 3)
     .map(([domain]) => domain);
 
-  const promptCounts = trendItems.reduce((acc, item) => {
+  const promptCounts = monitoringRuns.reduce((acc, item) => {
     if (item.brand_mentioned) {
-      acc[item.prompt_text] = (acc[item.prompt_text] || 0) + 1;
+      const promptText = item.prompt_version?.prompt_text || 'Prompt';
+      acc[promptText] = (acc[promptText] || 0) + 1;
     }
     return acc;
   }, {} as Record<string, number>);
@@ -251,6 +237,16 @@ export default async function OverviewPage() {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 3)
     .map(([prompt]) => prompt);
+
+  const { count: promptCount } = await supabase
+    .from('monitoring_prompts')
+    .select('id', { count: 'exact', head: true })
+    .eq('project_id', activeProject.id)
+    .eq('is_active', true);
+
+  const lastRunAt = monitoringRuns.length > 0
+    ? monitoringRuns[monitoringRuns.length - 1].scheduled_at
+    : null;
 
   const actions = [
     topDomains[0]
@@ -289,10 +285,10 @@ export default async function OverviewPage() {
         sentimentPositive={sentimentPositive}
         avgPosition={avgPosition}
         coverage={{
-          runsPerPrompt: latestTrendAnalysis?.run_count || 5,
-          promptCount: latestTrendAnalysis?.total_prompts || 0,
+          runsPerPrompt: modelSet.size,
+          promptCount: promptCount || 0,
           modelsUsed: Array.from(modelSet),
-          lastRunAt: latestTrendAnalysis?.created_at || null,
+          lastRunAt,
         }}
       />
 
@@ -321,11 +317,11 @@ export default async function OverviewPage() {
           actions={actions}
         />
         <UserSimulationSnippets
-          snippets={simulationItems.map((s) => ({
-            prompt: s.prompt_text,
-            response: s.ai_response || '',
+          snippets={sandboxRuns.map((s) => ({
+            prompt: s.prompt_version?.prompt_text || 'Prompt',
+            response: s.answers?.[0]?.raw_answer_text || '',
             model: s.ai_model,
-            createdAt: s.created_at,
+            createdAt: s.scheduled_at,
           }))}
         />
       </div>

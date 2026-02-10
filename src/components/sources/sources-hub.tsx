@@ -12,7 +12,11 @@ type SourcesPayload = {
     unique_domains: number;
     unique_urls: number;
     owned_share: number;
+    competitor_share: number;
+    third_party_share: number;
     avg_quality_score: number;
+    observed_citations: number;
+    probable_citations: number;
   };
   series: Array<{ date: string; total_citations: number }>;
   breakdown: Array<{ type: string; count: number; share: number }>;
@@ -22,6 +26,8 @@ type SourcesPayload = {
     is_owned: boolean;
     used_total: number;
     used_share: number;
+    observed_share: number;
+    probable_share: number;
     avg_citations_per_run: number;
     last_seen: string;
     brand_mentioned_rate: number;
@@ -66,10 +72,37 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
   const [payload, setPayload] = useState<SourcesPayload | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [runInfo, setRunInfo] = useState<{
+    lastRun: {
+      id: string;
+      run_date: string;
+      status: string;
+      started_at: string;
+      finished_at: string | null;
+      error_message?: string | null;
+    } | null;
+  }>({ lastRun: null });
+  const [runLoading, setRunLoading] = useState(false);
+  const [runError, setRunError] = useState<string | null>(null);
+  const [manualRunning, setManualRunning] = useState(false);
   const [actionModal, setActionModal] = useState<{
     title: string;
     reason: string;
     actions: string[];
+  } | null>(null);
+  const [evidence, setEvidence] = useState<{
+    key: string;
+    scope: 'domain' | 'url';
+    items: Array<{
+      cited_at: string;
+      method: string | null;
+      confidence: number | null;
+      rationale: string | null;
+      ai_model: string | null;
+      prompt_text: string | null;
+      response_snippet: string | null;
+      response_id: string | null;
+    }>;
   } | null>(null);
   const [sortKey, setSortKey] = useState<'used_total' | 'used_share' | 'quality_score' | 'last_seen' | 'brand_mentioned_rate'>('used_share');
   const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc');
@@ -115,6 +148,11 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
       .then((res) => res.json())
       .then((data) => {
         if (!isMounted) return;
+        if (data?.error) {
+          setError(typeof data.error === 'string' ? data.error : 'Impossible de charger les sources.');
+          setPayload(null);
+          return;
+        }
         setPayload(data);
       })
       .catch(() => {
@@ -130,8 +168,58 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
     };
   }, [queryString]);
 
+  const refreshRuns = () => {
+    setRunLoading(true);
+    setRunError(null);
+    fetch('/api/monitoring/daily-runs')
+      .then((res) => res.json())
+      .then((data) => {
+        const runs = Array.isArray(data?.runs) ? data.runs : [];
+        const lastRun = runs.length > 0 ? runs[0] : null;
+        setRunInfo({ lastRun });
+      })
+      .catch(() => {
+        setRunError('Impossible de charger le statut du run.');
+      })
+      .finally(() => setRunLoading(false));
+  };
+
+  useEffect(() => {
+    refreshRuns();
+  }, []);
+
+  const triggerManualRun = async () => {
+    setManualRunning(true);
+    setRunError(null);
+    try {
+      const res = await fetch('/api/monitoring/manual-run', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) {
+        setRunError(data?.error || 'Impossible de relancer le monitoring.');
+      }
+    } catch {
+      setRunError('Impossible de relancer le monitoring.');
+    } finally {
+      setManualRunning(false);
+      refreshRuns();
+    }
+  };
+
+  const statusLabel = (status?: string | null) => {
+    const map: Record<string, string> = {
+      success: 'succès',
+      failed: 'échec',
+      running: 'en cours',
+      partial: 'partiel',
+      pending: 'en attente',
+      completed: 'succès',
+    };
+    if (!status) return 'inconnu';
+    return map[status] || status;
+  };
+
   const exportCsv = () => {
-    if (!payload) return;
+    if (!payload || !Array.isArray(payload.table)) return;
     const rows = payload.table.map((row) => ({
       source: row.key,
       type: row.type,
@@ -162,7 +250,7 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
   }`;
 
   const sortedTable = useMemo(() => {
-    if (!payload) return [];
+    if (!payload || !Array.isArray(payload.table)) return [];
     const sorted = [...payload.table].sort((a, b) => {
       const aVal = a[sortKey] ?? 0;
       const bVal = b[sortKey] ?? 0;
@@ -172,6 +260,17 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
     });
     return sorted;
   }, [payload, sortKey, sortDir]);
+
+  const openEvidence = async (scope: 'domain' | 'url', key: string) => {
+    try {
+      const res = await fetch(`/api/sources/evidence?scope=${scope}&key=${encodeURIComponent(key)}`);
+      const data = await res.json();
+      if (!data?.items) return;
+      setEvidence({ key, scope, items: data.items });
+    } catch {
+      // ignore
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -184,6 +283,34 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
         <p className="text-xs text-zinc-500 mt-1">
           Basé uniquement sur le monitoring automatique (le sandbox est exclu).
         </p>
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-zinc-400">
+          <span>
+            Dernier run:{' '}
+            {runInfo.lastRun
+              ? `${new Date(runInfo.lastRun.run_date).toLocaleDateString('fr-FR')} • ${statusLabel(runInfo.lastRun.status)}`
+              : runLoading
+                ? 'chargement…'
+                : 'aucun'}
+          </span>
+          {runInfo.lastRun?.error_message && (
+            <span className="text-rose-300">
+              • {runInfo.lastRun.error_message}
+            </span>
+          )}
+          <button
+            onClick={triggerManualRun}
+            disabled={manualRunning}
+            className="rounded-full border border-white/10 px-3 py-1 text-xs text-zinc-300 disabled:opacity-50"
+          >
+            {manualRunning ? 'Relance...' : 'Relancer maintenant'}
+          </button>
+          {runError && <span className="text-rose-300">• {runError}</span>}
+        </div>
+        {payload?.kpis && (
+          <p className="text-xs text-zinc-500 mt-1">
+            Observées: {payload.kpis.observed_citations ?? 0} • Probables: {payload.kpis.probable_citations ?? 0}
+          </p>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -304,9 +431,9 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
         </div>
       )}
 
-      {payload && payload.kpis.total_citations > 0 && (
+      {payload && payload.kpis && payload.kpis.total_citations > 0 && (
         <>
-          <div className="grid gap-4 md:grid-cols-5">
+          <div className="grid gap-4 md:grid-cols-7">
             <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-4">
               <p className="text-xs text-zinc-500">
                 Citations totales
@@ -334,6 +461,20 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
                 <HelpTip text="Part des citations provenant de votre propre site." />
               </p>
               <p className="text-xl font-semibold text-white">{payload.kpis.owned_share}%</p>
+            </div>
+            <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-4">
+              <p className="text-xs text-zinc-500">
+                Part concurrents
+                <HelpTip text="Part des citations provenant des sites de concurrents." />
+              </p>
+              <p className="text-xl font-semibold text-white">{payload.kpis.competitor_share}%</p>
+            </div>
+            <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-4">
+              <p className="text-xs text-zinc-500">
+                Part tiers
+                <HelpTip text="Part des citations provenant de sites tiers." />
+              </p>
+              <p className="text-xl font-semibold text-white">{payload.kpis.third_party_share}%</p>
             </div>
             <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-4">
               <p className="text-xs text-zinc-500 flex items-center gap-1">
@@ -445,6 +586,10 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
                         Part
                         <HelpTip text="Pourcentage des citations totales." />
                       </th>
+                      <th className="text-left px-3 py-2">
+                        Méthode
+                        <HelpTip text="Répartition Observées vs Probables." />
+                      </th>
                       <th
                         className="text-left px-3 py-2 cursor-pointer"
                         onClick={() => {
@@ -476,6 +621,10 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
                         <HelpTip text="Dernière apparition de cette source dans les réponses." />
                       </th>
                       <th className="text-left px-3 py-2">
+                        Evidence
+                        <HelpTip text="Voir les réponses qui justifient cette source." />
+                      </th>
+                      <th className="text-left px-3 py-2">
                         Action
                         <HelpTip text="Actions recommandées selon la performance de la source." />
                       </th>
@@ -488,9 +637,20 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
                         <td className="px-3 py-2 text-zinc-400">{typeLabel(row.type)}</td>
                         <td className="px-3 py-2 text-zinc-400">{row.used_total}</td>
                         <td className="px-3 py-2 text-zinc-400">{row.used_share}%</td>
+                        <td className="px-3 py-2 text-zinc-400">
+                          {row.observed_share}% obs • {row.probable_share}% prob
+                        </td>
                         <td className="px-3 py-2 text-zinc-400">{row.brand_mentioned_rate}%</td>
                         <td className="px-3 py-2 text-zinc-200">{row.quality_score}</td>
                         <td className="px-3 py-2 text-zinc-400">{formatShortDate(row.last_seen)}</td>
+                        <td className="px-3 py-2">
+                          <button
+                            onClick={() => openEvidence(tab === 'domains' ? 'domain' : 'url', row.key)}
+                            className="rounded-full bg-white/10 text-zinc-200 px-3 py-1 text-xs"
+                          >
+                            Voir
+                          </button>
+                        </td>
                         <td className="px-3 py-2">
                           {row.opportunity ? (
                             <button
@@ -557,6 +717,55 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
               >
                 Fermer
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {evidence && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-3xl rounded-2xl border border-white/10 bg-zinc-950 p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-white">
+                Evidence — {evidence.scope === 'domain' ? 'Domaine' : 'URL'}: {evidence.key}
+              </h3>
+              <button
+                onClick={() => setEvidence(null)}
+                className="rounded-lg border border-white/10 px-3 py-1 text-sm text-zinc-300"
+              >
+                Fermer
+              </button>
+            </div>
+            <div className="space-y-3 max-h-[60vh] overflow-auto">
+              {evidence.items.length === 0 && (
+                <p className="text-sm text-zinc-400">Aucune evidence disponible.</p>
+              )}
+              {evidence.items.map((item, idx) => (
+                <div key={`${item.response_id || 'resp'}-${idx}`} className="rounded-xl border border-white/[0.08] bg-zinc-900/40 p-4">
+                  <div className="flex flex-wrap gap-2 text-xs text-zinc-400">
+                    <span>{new Date(item.cited_at).toLocaleString('fr-FR')}</span>
+                    <span>•</span>
+                    <span>{item.ai_model || 'model'}</span>
+                    <span>•</span>
+                    <span>{item.method || 'observed'}</span>
+                    {typeof item.confidence === 'number' && (
+                      <>
+                        <span>•</span>
+                        <span>conf: {Math.round(item.confidence * 100)}%</span>
+                      </>
+                    )}
+                  </div>
+                  {item.prompt_text && (
+                    <p className="text-sm text-zinc-200 mt-2">{item.prompt_text}</p>
+                  )}
+                  {item.response_snippet && (
+                    <p className="text-sm text-zinc-400 mt-2 whitespace-pre-wrap">{item.response_snippet}</p>
+                  )}
+                  {item.rationale && (
+                    <p className="text-xs text-zinc-500 mt-2">Rationale: {item.rationale}</p>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         </div>

@@ -105,34 +105,6 @@ export function MonitoringDashboard({
     return map;
   }, [templates, topics]);
 
-  const triggerRunNow = async (reason: string) => {
-    setMonitoringStatus('running');
-    setMonitoringMessage(null);
-    setLocalError(null);
-    try {
-      const res = await fetch('/api/monitoring/run-now', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectId, reason }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setMonitoringStatus('error');
-        setMonitoringMessage(data?.details || data?.error || 'Erreur inconnue.');
-      } else if (data.status === 'skipped') {
-        setMonitoringStatus('skipped');
-        setMonitoringMessage('Monitoring déjà lancé récemment. Résultats bientôt.');
-      } else {
-        setMonitoringStatus('running');
-        setMonitoringMessage('Monitoring lancé… résultats dans quelques secondes.');
-      }
-    } catch {
-      setMonitoringStatus('error');
-      setMonitoringMessage('Erreur réseau.');
-    } finally {
-      setTimeout(() => setMonitoringStatus('idle'), 4000);
-    }
-  };
 
   const addTopic = async () => {
     const value = newTopicName.trim();
@@ -152,7 +124,6 @@ export function MonitoringDashboard({
     setTopics((prev) => [newTopic, ...prev]);
     setNewTopicName('');
     setExpandedTopics((prev) => new Set(prev).add(newTopic.id));
-    triggerRunNow('add_topic');
   };
 
   const toggleTopic = async (id: string, is_active: boolean) => {
@@ -162,7 +133,6 @@ export function MonitoringDashboard({
       body: JSON.stringify({ is_active }),
     });
     setTopics((prev) => prev.map((t) => (t.id === id ? { ...t, is_active } : t)));
-    triggerRunNow('toggle_topic');
   };
 
   const addQuestion = async (text: string, topicId: string | null, source: string, templateId?: string | null) => {
@@ -192,7 +162,6 @@ export function MonitoringDashboard({
     if (source === 'custom' && topicId) {
       setCustomQuestionByTopic((prev) => ({ ...prev, [topicId]: '' }));
     }
-    triggerRunNow('add_question');
   };
 
   const toggleQuestion = async (id: string, is_active: boolean) => {
@@ -202,7 +171,6 @@ export function MonitoringDashboard({
       body: JSON.stringify({ is_active }),
     });
     setQuestions((prev) => prev.map((q) => (q.id === id ? { ...q, is_active } : q)));
-    triggerRunNow('toggle_question');
   };
 
   const assignQuestionToTopic = async (questionId: string, topicId: string) => {
@@ -212,7 +180,6 @@ export function MonitoringDashboard({
       body: JSON.stringify({ topic_id: topicId }),
     });
     setQuestions((prev) => prev.map((q) => (q.id === questionId ? { ...q, topic_id: topicId } : q)));
-    triggerRunNow('assign_question');
   };
 
   const deleteTopic = async (topicId: string) => {
@@ -235,6 +202,13 @@ export function MonitoringDashboard({
     if (!editingId) return;
     const value = editingValue.trim();
     if (!value) return;
+    const current = questions.find((q) => q.id === editingId);
+    if (current && current.prompt_text.trim() !== value) {
+      const confirmed = confirm(
+        'Modifier le texte crée une nouvelle version et démarre une nouvelle série de monitoring. Continuer ?'
+      );
+      if (!confirmed) return;
+    }
     const res = await fetch(`/api/monitoring/prompts/${editingId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },

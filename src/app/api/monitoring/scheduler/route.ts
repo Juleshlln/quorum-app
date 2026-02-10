@@ -91,6 +91,7 @@ export async function POST(request: NextRequest) {
         brandName: project.name,
         competitors,
         context,
+        runType: 'monitoring',
       });
       results.push({ project_id: project.id, ...summary });
     }

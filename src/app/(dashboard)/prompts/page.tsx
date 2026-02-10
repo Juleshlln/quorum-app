@@ -45,29 +45,7 @@ export default async function PromptsPage() {
     .eq('project_id', project.id)
     .order('created_at', { ascending: false });
 
-  const now = new Date();
-  const start7 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  const { data: topicMetricsData } = await supabase
-    .from('topic_daily_metrics')
-    .select('topic_id, date, visibility_rate')
-    .eq('project_id', project.id)
-    .gte('date', start7)
-    .order('date', { ascending: true });
-
-  const topicDeltasMap = new Map<string, number | null>();
-  (topicMetricsData || []).forEach((row: { topic_id: string; date: string; visibility_rate: number | null }) => {
-    const existing = topicDeltasMap.get(row.topic_id);
-    if (existing === undefined) {
-      topicDeltasMap.set(row.topic_id, row.visibility_rate ?? null);
-    } else if (row.visibility_rate !== null) {
-      topicDeltasMap.set(row.topic_id, (row.visibility_rate ?? 0) - (existing ?? 0));
-    }
-  });
-
-  const topicDeltas = (topicsData || []).map((t: { id: string }) => ({
-    topic_id: t.id,
-    delta: topicDeltasMap.get(t.id) ?? null,
-  }));
+  // Réservé pour afficher des deltas par topic si besoin
 
   return (
     <MonitoringTopics

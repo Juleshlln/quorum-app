@@ -9,13 +9,15 @@ import {
   Sliders,
   ListChecks,
   Globe,
-  FlaskConical
+  FlaskConical,
+  Users
 } from 'lucide-react';
 
 const navItems = [
   { href: '/overview', label: 'Overview', icon: LayoutDashboard },
   { href: '/prompts', label: 'Monitoring', icon: ListChecks },
   { href: '/sources', label: 'Sources', icon: Globe },
+  { href: '/concurrents', label: 'Concurrents', icon: Users },
   { href: '/analyses', label: 'Analyses', icon: FlaskConical },
   { href: '/brand', label: 'Brand settings', icon: Sliders },
   { href: '/settings', label: 'Paramètres', icon: Settings },

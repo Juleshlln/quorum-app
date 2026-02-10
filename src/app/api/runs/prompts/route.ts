@@ -15,10 +15,6 @@ export async function POST(request: NextRequest) {
     if (!projectId || !promptText) {
       return NextResponse.json({ error: "Données manquantes" }, { status: 400 });
     }
-    const trimmedPrompt = String(promptText).trim();
-    if (!trimmedPrompt) {
-      return NextResponse.json({ error: "Prompt invalide" }, { status: 400 });
-    }
 
     // Vérifier que le projet appartient à l'utilisateur
     const { data: project } = await supabase
@@ -37,8 +33,7 @@ export async function POST(request: NextRequest) {
       .from("prompt_templates")
       .insert({
         project_id: projectId,
-        name: trimmedPrompt.slice(0, 60),
-        prompt_text: trimmedPrompt,
+        prompt_text: promptText.trim(),
         is_active: true,
       })
       .select()

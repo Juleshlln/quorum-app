@@ -21,7 +21,9 @@ type CitationRow = {
   brand_mentioned: boolean;
   competitor_mentioned: boolean | null;
   position_in_answer: number | null;
-  domain: { domain: string; domain_type: string; is_owned: boolean } | null;
+  method?: string | null;
+  confidence?: number | null;
+  domain: { domain: string; domain_type: string; is_owned: boolean; category?: string | null } | null;
   url: { url: string; url_type: string } | null;
   prompt_run_id: string;
 };
@@ -69,8 +71,14 @@ export function buildSourcesAggregations({
   const totalCitations = citations.length;
   const uniqueDomains = new Set(citations.map((c) => c.domain?.domain).filter(Boolean)).size;
   const uniqueUrls = new Set(citations.map((c) => c.url?.url).filter(Boolean)).size;
-  const ownedCitations = citations.filter((c) => c.domain?.is_owned).length;
+  const observedCitations = citations.filter((c) => (c.method || 'observed') === 'observed').length;
+  const probableCitations = citations.filter((c) => (c.method || 'observed') === 'probable').length;
+  const ownedCitations = citations.filter((c) => c.domain?.category === 'owned' || c.domain?.is_owned).length;
+  const competitorCitations = citations.filter((c) => c.domain?.category === 'competitor').length;
+  const thirdPartyCitations = citations.filter((c) => c.domain?.category === 'third_party' || !c.domain?.category).length;
   const ownedShare = totalCitations > 0 ? Math.round((ownedCitations / totalCitations) * 100) : 0;
+  const competitorShare = totalCitations > 0 ? Math.round((competitorCitations / totalCitations) * 100) : 0;
+  const thirdPartyShare = totalCitations > 0 ? Math.round((thirdPartyCitations / totalCitations) * 100) : 0;
 
   const byDate = new Map<string, number>();
   citations.forEach((c) => {
@@ -98,6 +106,8 @@ export function buildSourcesAggregations({
     type: string;
     is_owned: boolean;
     used_total: number;
+    observed_total: number;
+    probable_total: number;
     runs: Set<string>;
     mentions: number;
     last_seen: string;
@@ -114,12 +124,16 @@ export function buildSourcesAggregations({
       type,
       is_owned: isOwned,
       used_total: 0,
+      observed_total: 0,
+      probable_total: 0,
       runs: new Set<string>(),
       mentions: 0,
       last_seen: c.cited_at,
       distinct_days: new Set<string>(),
     };
     existing.used_total += 1;
+    if ((c.method || 'observed') === 'observed') existing.observed_total += 1;
+    if ((c.method || 'observed') === 'probable') existing.probable_total += 1;
     existing.runs.add(c.prompt_run_id);
     if (c.brand_mentioned) existing.mentions += 1;
     if (c.cited_at > existing.last_seen) existing.last_seen = c.cited_at;
@@ -144,6 +158,8 @@ export function buildSourcesAggregations({
       is_owned: row.is_owned,
       used_total: row.used_total,
       used_share: totalCitations > 0 ? Math.round((row.used_total / totalCitations) * 100) : 0,
+      observed_share: row.used_total > 0 ? Math.round((row.observed_total / row.used_total) * 100) : 0,
+      probable_share: row.used_total > 0 ? Math.round((row.probable_total / row.used_total) * 100) : 0,
       avg_citations_per_run: row.runs.size > 0 ? Number((row.used_total / row.runs.size).toFixed(2)) : 0,
       last_seen: row.last_seen,
       brand_mentioned_rate: brandRate,
@@ -164,7 +180,11 @@ export function buildSourcesAggregations({
       unique_domains: uniqueDomains,
       unique_urls: uniqueUrls,
       owned_share: ownedShare,
+      competitor_share: competitorShare,
+      third_party_share: thirdPartyShare,
       avg_quality_score: avgQuality,
+      observed_citations: observedCitations,
+      probable_citations: probableCitations,
     },
     series,
     breakdown,
