@@ -129,7 +129,7 @@ async function inferProbableSources({
     };
   });
 
-  return scored.sort((a, b) => b.confidence - a.confidence).slice(0, 8);
+  return scored.sort((a: { confidence: number }, b: { confidence: number }) => b.confidence - a.confidence).slice(0, 8);
 }
 
 export async function runMonitoringForProject({
