@@ -39,18 +39,19 @@ async function handleDailyRun(request: NextRequest) {
     .select('project_id')
     .eq('is_active', true);
 
-  const projectIds = Array.from(new Set((promptProjects || []).map((p: any) => p.project_id)));
+  const projectIds = Array.from(new Set((promptProjects || []).map((p: any) => p.project_id))) as string[];
 
   const results: Array<{ project_id: string; runs: number; answers: number; skipped?: boolean }> = [];
 
   for (const projectId of projectIds) {
     const startedAt = new Date().toISOString();
-    const { data: existing } = await supabase
+    const { data: existingRaw } = await supabase
       .from('monitoring_daily_runs')
       .select('id, status, started_at')
       .eq('project_id', projectId)
       .eq('run_date', runDate)
       .maybeSingle();
+    const existing = (existingRaw || null) as { id: string; status: string | null; started_at: string | null } | null;
 
     if (existing?.status === 'success' || existing?.status === 'running') {
       results.push({ project_id: projectId, runs: 0, answers: 0, skipped: true });
