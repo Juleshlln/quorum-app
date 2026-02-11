@@ -1,5 +1,3 @@
-import type { AnalysisModuleResult } from '@/types/database';
-
 export type RawItem = {
   prompt_text: string;
   ai_response: string | null;
