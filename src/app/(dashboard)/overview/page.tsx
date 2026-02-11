@@ -95,7 +95,9 @@ export default async function OverviewPage() {
     .select('id, name')
     .eq('project_id', activeProject.id);
 
-  const topicNameMap = new Map((topicsData || []).map((t: { id: string; name: string }) => [t.id, t.name]));
+  const topicNameMap = new Map<string, string>(
+    (topicsData || []).map((t: { id: string; name: string | null }) => [t.id, t.name || 'Topic'])
+  );
 
   const aggregateTopicMetrics = (rows: MonitoringRunRow[], startDateStr: string) => {
     const filtered = rows.filter((row) => row.scheduled_at >= startDateStr);
