@@ -479,7 +479,7 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
             <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-4">
               <p className="text-xs text-zinc-500 flex items-center gap-1">
                 Score qualité
-                <Info className="h-3 w-3 text-zinc-500" title={QUALITY_TOOLTIP} />
+                <HelpTip text={QUALITY_TOOLTIP} />
               </p>
               <p className="text-xl font-semibold text-white">{payload.kpis.avg_quality_score}</p>
             </div>
