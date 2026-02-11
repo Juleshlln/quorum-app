@@ -196,6 +196,9 @@ export function ProjectForm({ project, mode }: ProjectFormProps) {
 
         if (updateError) throw updateError;
 
+        if (!project?.id) {
+          throw new Error('Projet introuvable');
+        }
         await runConcurrentsDetection(project.id);
         router.push(`/brand`);
       }
