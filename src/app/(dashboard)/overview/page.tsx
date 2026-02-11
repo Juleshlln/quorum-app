@@ -188,7 +188,7 @@ export default async function OverviewPage() {
   const mainMentions = mentionedItems.length;
   const mainVisibility = totalRuns > 0 ? Math.round((mainMentions / totalRuns) * 100) : null;
 
-  const competitorStats = competitorNames.map((name) => {
+  const competitorStats = competitorNames.map((name: string) => {
     const mentions = monitoringRuns.filter((i) =>
       i.competitors_mentioned?.some((c) => c.toLowerCase() === name.toLowerCase())
     ).length;
