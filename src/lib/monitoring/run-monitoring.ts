@@ -426,7 +426,13 @@ export async function runMonitoringForProject({
               projectId,
               promptRunId: runRow.id,
               responseId,
-              citations: inferred.map((p) => ({
+              citations: inferred.map((p: {
+                url: string;
+                domain: string;
+                domain_type: string;
+                confidence: number;
+                rationale: string;
+              }) => ({
                 url: p.url,
                 domain: p.domain,
                 domain_type: p.domain_type,
