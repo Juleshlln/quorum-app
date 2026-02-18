@@ -81,7 +81,14 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
       finished_at: string | null;
       error_message?: string | null;
     } | null;
-  }>({ lastRun: null });
+    lastSuccess: {
+      id: string;
+      run_date: string;
+      status: string;
+      started_at: string;
+      finished_at: string | null;
+    } | null;
+  }>({ lastRun: null, lastSuccess: null });
   const [runLoading, setRunLoading] = useState(false);
   const [runError, setRunError] = useState<string | null>(null);
   const [manualRunning, setManualRunning] = useState(false);
@@ -109,6 +116,8 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
 
   const formatShortDate = (value: string) =>
     new Date(value).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+  const formatLongDate = (value: string) =>
+    new Date(value).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
   const typeLabel = (value: string) => {
     const map: Record<string, string> = {
@@ -176,7 +185,8 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
       .then((data) => {
         const runs = Array.isArray(data?.runs) ? data.runs : [];
         const lastRun = runs.length > 0 ? runs[0] : null;
-        setRunInfo({ lastRun });
+        const lastSuccess = runs.find((r: any) => r.status === 'success' || r.status === 'partial') || null;
+        setRunInfo({ lastRun, lastSuccess });
       })
       .catch(() => {
         setRunError('Impossible de charger le statut du run.');
@@ -285,12 +295,21 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-zinc-400">
           <span>
-            Dernier run:{' '}
-            {runInfo.lastRun
-              ? `${new Date(runInfo.lastRun.run_date).toLocaleDateString('fr-FR')} • ${statusLabel(runInfo.lastRun.status)}`
+            Dernière collecte réussie:{' '}
+            {runInfo.lastSuccess
+              ? `${formatLongDate(runInfo.lastSuccess.run_date)} • ${statusLabel(runInfo.lastSuccess.status)}`
               : runLoading
                 ? 'chargement…'
-                : 'aucun'}
+                : 'aucune'}
+          </span>
+          <span className="text-zinc-500">•</span>
+          <span>
+            Dernière tentative:{' '}
+            {runInfo.lastRun
+              ? `${formatLongDate(runInfo.lastRun.run_date)} • ${statusLabel(runInfo.lastRun.status)}`
+              : runLoading
+                ? 'chargement…'
+                : 'aucune'}
           </span>
           {runInfo.lastRun?.error_message && (
             <span className="text-rose-300">
@@ -299,16 +318,17 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
           )}
           <button
             onClick={triggerManualRun}
-            disabled={manualRunning}
+            disabled={manualRunning || runInfo.lastRun?.status === 'running'}
             className="rounded-full border border-white/10 px-3 py-1 text-xs text-zinc-300 disabled:opacity-50"
           >
-            {manualRunning ? 'Relance...' : 'Relancer maintenant'}
+            {manualRunning || runInfo.lastRun?.status === 'running' ? 'Run en cours…' : 'Relancer maintenant'}
           </button>
           {runError && <span className="text-rose-300">• {runError}</span>}
         </div>
         {payload?.kpis && (
           <p className="text-xs text-zinc-500 mt-1">
             Observées: {payload.kpis.observed_citations ?? 0} • Probables: {payload.kpis.probable_citations ?? 0}
+            <HelpTip text="Observées = URLs explicitement citées. Probables = sources inférées quand la réponse ne cite pas d’URL." />
           </p>
         )}
       </div>
@@ -484,6 +504,12 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
               <p className="text-xl font-semibold text-white">{payload.kpis.avg_quality_score}</p>
             </div>
           </div>
+          {payload.kpis.owned_share === 0 && (
+            <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 text-xs text-amber-200">
+              Part propriétaires à 0%. Vérifie que le site de ta marque est bien renseigné dans Brand settings
+              et que tes domaines propriétaires sont bien enregistrés.
+            </div>
+          )}
 
           <div className="grid gap-6 md:grid-cols-3">
             <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-4">
