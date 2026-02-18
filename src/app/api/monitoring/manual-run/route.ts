@@ -7,6 +7,15 @@ import { getParisRunDate } from '@/lib/monitoring/run-date';
 
 export const runtime = 'nodejs';
 
+const STALE_RUN_MINUTES = 30;
+
+function isStaleRun(startedAt: string | null | undefined) {
+  if (!startedAt) return true;
+  const started = new Date(startedAt).getTime();
+  if (Number.isNaN(started)) return true;
+  return Date.now() - started > STALE_RUN_MINUTES * 60 * 1000;
+}
+
 function buildContext(project: any) {
   const contextParts: string[] = [];
   if (project.description) contextParts.push(project.description);
@@ -34,15 +43,38 @@ export async function POST(_request: NextRequest) {
   const runDate = getParisRunDate();
   const startedAt = new Date().toISOString();
 
-  const { data: existing } = await supabase
+  const { data: existingRaw } = await supabase
     .from('monitoring_daily_runs')
-    .select('id, status')
+    .select('id, status, started_at')
     .eq('project_id', project.id)
     .eq('run_date', runDate)
     .maybeSingle();
+  const existing = (existingRaw || null) as { id: string; status: string | null; started_at: string | null } | null;
 
-  if (existing?.status === 'success' || existing?.status === 'running') {
+  if (existing?.status === 'success') {
     return NextResponse.json({ ok: true, skipped: true, status: existing.status });
+  }
+  if (existing?.status === 'running') {
+    if (!isStaleRun(existing.started_at)) {
+      return NextResponse.json({ ok: true, skipped: true, status: existing.status });
+    }
+    await supabase
+      .from('monitoring_daily_runs')
+      .update({
+        status: 'failed',
+        finished_at: new Date().toISOString(),
+        error_message: `Run bloqué (> ${STALE_RUN_MINUTES} min)`,
+      })
+      .eq('id', existing.id);
+    await logRun({
+      supabase,
+      runId: existing.id,
+      projectId: project.id,
+      level: 'error',
+      step: 'manual_run',
+      message: 'Run stale timeout',
+      meta: { run_date: runDate, started_at: existing.started_at },
+    });
   }
 
   let runId = existing?.id || null;
