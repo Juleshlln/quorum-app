@@ -1,8 +1,27 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { Download, Filter, Info, Sparkles } from 'lucide-react';
+import React, { useMemo, useState, useEffect } from 'react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts';
+import {
+  Download,
+  Globe,
+  Link2,
+  Users,
+  Shield,
+  BarChart3,
+  Sparkles,
+  Search,
+  ChevronDown,
+  ExternalLink,
+  Eye,
+} from 'lucide-react';
+
+import { ScoreHero } from './score-hero';
+import { MetricCard } from './metric-card';
+import { ShareBar } from './share-bar';
+import { StatusBar } from './status-bar';
+
+/* ─── Types ─────────────────────────────────────────────────────── */
 
 type TopicOption = { id: string; name: string };
 
@@ -20,48 +39,187 @@ type SourcesPayload = {
   };
   series: Array<{ date: string; total_citations: number }>;
   breakdown: Array<{ type: string; count: number; share: number }>;
-  table: Array<{
-    key: string;
-    type: string;
-    is_owned: boolean;
-    used_total: number;
-    used_share: number;
-    observed_share: number;
-    probable_share: number;
-    avg_citations_per_run: number;
-    last_seen: string;
-    brand_mentioned_rate: number;
-    quality_score: number;
-    opportunity: boolean;
-  }>;
+  table: SourceTableRow[];
 };
 
-const TYPE_COLORS: Record<string, string> = {
-  Institutional: '#818cf8',
-  Editorial: '#f472b6',
-  Corporate: '#38bdf8',
-  UGC: '#22d3ee',
-  Other: '#94a3b8',
+type SourceTableRow = {
+  key: string;
+  type: string;
+  is_owned: boolean;
+  used_total: number;
+  used_share: number;
+  observed_share: number;
+  probable_share: number;
+  avg_citations_per_run: number;
+  last_seen: string;
+  brand_mentioned_rate: number;
+  quality_score: number;
+  opportunity: boolean;
 };
 
-const QUALITY_TOOLTIP = `Score (0–100) basé sur:
-- Type de source
-- Fréquence d’apparition
-- Volume d’usage
-- Fraîcheur`;
+type EvidenceItem = {
+  cited_at: string;
+  method: string | null;
+  confidence: number | null;
+  rationale: string | null;
+  ai_model: string | null;
+  prompt_text: string | null;
+  response_snippet: string | null;
+  response_id: string | null;
+};
 
-function HelpTip({ text }: { text: string }) {
+type EvidenceData = {
+  key: string;
+  scope: 'domain' | 'url';
+  items: EvidenceItem[];
+};
+
+type RunInfo = {
+  lastRun: {
+    id: string;
+    run_date: string;
+    status: string;
+    started_at: string;
+    finished_at: string | null;
+    error_message?: string | null;
+  } | null;
+  lastSuccess: {
+    id: string;
+    run_date: string;
+    status: string;
+    started_at: string;
+    finished_at: string | null;
+  } | null;
+};
+
+/* ─── Helpers ───────────────────────────────────────────────────── */
+
+const TYPE_LABELS: Record<string, string> = {
+  Institutional: 'Institutionnel',
+  Editorial: 'Éditorial',
+  Corporate: 'Corporate',
+  UGC: 'UGC',
+  Other: 'Autre',
+  Homepage: 'Accueil',
+  Article: 'Article',
+  CategoryPage: 'Catégorie',
+  Profile: 'Profil',
+  Discussion: 'Discussion',
+  HowToGuide: 'Guide',
+  Listicle: 'Liste',
+};
+
+function formatShortDate(value: string) {
+  return new Date(value).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+}
+
+function formatChartDate(value: string) {
+  return new Date(value).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+}
+
+/* ─── Skeleton loader ───────────────────────────────────────────── */
+
+function SkeletonBlock({ className }: { className?: string }) {
   return (
-    <span className="relative inline-flex items-center group">
-      <Info className="ml-1 h-3 w-3 text-zinc-500" />
-      <span className="pointer-events-none absolute left-1/2 top-5 z-30 w-56 -translate-x-1/2 rounded-lg border border-white/10 bg-zinc-900 px-2.5 py-2 text-[11px] leading-relaxed text-zinc-200 opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
-        {text}
-      </span>
+    <div className={`animate-pulse rounded-2xl bg-zinc-900/40 border border-white/[0.06] ${className ?? ''}`} />
+  );
+}
+
+function SourcesSkeleton() {
+  return (
+    <div className="space-y-6">
+      <SkeletonBlock className="h-48" />
+      <div className="grid gap-4 md:grid-cols-4">
+        <SkeletonBlock className="h-28" />
+        <SkeletonBlock className="h-28" />
+        <SkeletonBlock className="h-28" />
+        <SkeletonBlock className="h-28" />
+      </div>
+      <div className="grid gap-6 md:grid-cols-2">
+        <SkeletonBlock className="h-56" />
+        <SkeletonBlock className="h-56" />
+      </div>
+    </div>
+  );
+}
+
+/* ─── Custom chart tooltip ──────────────────────────────────────── */
+
+function ChartTooltip({ active, payload, label }: any) {
+  if (!active || !payload?.[0]) return null;
+  return (
+    <div className="rounded-xl border border-white/[0.08] bg-zinc-900/95 backdrop-blur-sm px-3 py-2 shadow-xl">
+      <p className="text-xs text-zinc-400 mb-0.5">{label}</p>
+      <p className="text-sm font-semibold text-white">{payload[0].value} citations</p>
+    </div>
+  );
+}
+
+/* ─── Filter chip ───────────────────────────────────────────────── */
+
+function FilterChip({
+  children,
+  active,
+  onClick,
+}: {
+  children?: React.ReactNode;
+  active?: boolean;
+  onClick?: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+        active
+          ? 'bg-white/[0.08] text-white border border-white/[0.12]'
+          : 'text-zinc-500 border border-transparent hover:text-zinc-300 hover:bg-white/[0.04]'
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+/* ─── Select wrapper ────────────────────────────────────────────── */
+
+function FilterSelect({
+  value,
+  onChange,
+  children,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="relative">
+      <select
+        value={value}
+        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => onChange(e.target.value)}
+        className="appearance-none rounded-lg border border-white/[0.08] bg-zinc-900/60 pl-3 pr-7 py-1.5 text-xs text-zinc-300 outline-none transition-colors hover:border-white/[0.12] focus:border-white/[0.16]"
+      >
+        {children}
+      </select>
+      <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-500 pointer-events-none" />
+    </div>
+  );
+}
+
+/* ─── Opportunity badge ─────────────────────────────────────────── */
+
+function OpportunityBadge() {
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-violet-500/10 border border-violet-500/20 text-[10px] font-medium text-violet-400">
+      <Sparkles className="w-2.5 h-2.5" />
+      Opportunité
     </span>
   );
 }
 
+/* ─── Main Component ────────────────────────────────────────────── */
+
 export function SourcesHub({ topics }: { topics: TopicOption[] }) {
+  /* State – filters */
   const [tab, setTab] = useState<'domains' | 'urls'>('domains');
   const [range, setRange] = useState<7 | 30 | 90>(30);
   const [owned, setOwned] = useState<'all' | 'owned' | 'earned'>('all');
@@ -69,73 +227,26 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
   const [model, setModel] = useState<string>('all');
   const [search, setSearch] = useState('');
   const [gapOnly, setGapOnly] = useState(false);
+
+  /* State – data */
   const [payload, setPayload] = useState<SourcesPayload | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [runInfo, setRunInfo] = useState<{
-    lastRun: {
-      id: string;
-      run_date: string;
-      status: string;
-      started_at: string;
-      finished_at: string | null;
-      error_message?: string | null;
-    } | null;
-    lastSuccess: {
-      id: string;
-      run_date: string;
-      status: string;
-      started_at: string;
-      finished_at: string | null;
-    } | null;
-  }>({ lastRun: null, lastSuccess: null });
+
+  /* State – runs */
+  const [runInfo, setRunInfo] = useState<RunInfo>({ lastRun: null, lastSuccess: null });
   const [runLoading, setRunLoading] = useState(false);
   const [runError, setRunError] = useState<string | null>(null);
   const [manualRunning, setManualRunning] = useState(false);
-  const [actionModal, setActionModal] = useState<{
-    title: string;
-    reason: string;
-    actions: string[];
-  } | null>(null);
-  const [evidence, setEvidence] = useState<{
-    key: string;
-    scope: 'domain' | 'url';
-    items: Array<{
-      cited_at: string;
-      method: string | null;
-      confidence: number | null;
-      rationale: string | null;
-      ai_model: string | null;
-      prompt_text: string | null;
-      response_snippet: string | null;
-      response_id: string | null;
-    }>;
-  } | null>(null);
+
+  /* State – modals */
+  const [evidence, setEvidence] = useState<EvidenceData | null>(null);
+
+  /* State – table sort */
   const [sortKey, setSortKey] = useState<'used_total' | 'used_share' | 'quality_score' | 'last_seen' | 'brand_mentioned_rate'>('used_share');
   const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc');
 
-  const formatShortDate = (value: string) =>
-    new Date(value).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
-  const formatLongDate = (value: string) =>
-    new Date(value).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-
-  const typeLabel = (value: string) => {
-    const map: Record<string, string> = {
-      Institutional: 'Institutionnel',
-      Editorial: 'Éditorial',
-      Corporate: 'Corporate',
-      UGC: 'UGC',
-      Other: 'Autre',
-      Homepage: 'Accueil',
-      Article: 'Article',
-      CategoryPage: 'Catégorie',
-      Profile: 'Profil',
-      Discussion: 'Discussion',
-      HowToGuide: 'Guide',
-      Listicle: 'Liste',
-    };
-    return map[value] || value;
-  };
+  /* ─── Query string ────────────────────────────────────────── */
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams();
@@ -148,6 +259,8 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
     if (gapOnly) params.set('gap', 'true');
     return params.toString();
   }, [tab, range, owned, topicId, model, search, gapOnly]);
+
+  /* ─── Data fetching ───────────────────────────────────────── */
 
   useEffect(() => {
     let isMounted = true;
@@ -172,10 +285,10 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
         if (!isMounted) return;
         setLoading(false);
       });
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, [queryString]);
+
+  /* ─── Run management ──────────────────────────────────────── */
 
   const refreshRuns = () => {
     setRunLoading(true);
@@ -188,15 +301,11 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
         const lastSuccess = runs.find((r: any) => r.status === 'success' || r.status === 'partial') || null;
         setRunInfo({ lastRun, lastSuccess });
       })
-      .catch(() => {
-        setRunError('Impossible de charger le statut du run.');
-      })
+      .catch(() => setRunError('Impossible de charger le statut.'))
       .finally(() => setRunLoading(false));
   };
 
-  useEffect(() => {
-    refreshRuns();
-  }, []);
+  useEffect(() => { refreshRuns(); }, []);
 
   const triggerManualRun = async () => {
     setManualRunning(true);
@@ -204,33 +313,20 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
     try {
       const res = await fetch('/api/monitoring/manual-run', { method: 'POST' });
       const data = await res.json();
-      if (!res.ok) {
-        setRunError(data?.error || 'Impossible de relancer le monitoring.');
-      }
+      if (!res.ok) setRunError(data?.error || 'Impossible de relancer.');
     } catch {
-      setRunError('Impossible de relancer le monitoring.');
+      setRunError('Impossible de relancer.');
     } finally {
       setManualRunning(false);
       refreshRuns();
     }
   };
 
-  const statusLabel = (status?: string | null) => {
-    const map: Record<string, string> = {
-      success: 'succès',
-      failed: 'échec',
-      running: 'en cours',
-      partial: 'partiel',
-      pending: 'en attente',
-      completed: 'succès',
-    };
-    if (!status) return 'inconnu';
-    return map[status] || status;
-  };
+  /* ─── CSV export ──────────────────────────────────────────── */
 
   const exportCsv = () => {
-    if (!payload || !Array.isArray(payload.table)) return;
-    const rows = payload.table.map((row) => ({
+    if (!payload?.table?.length) return;
+    const rows = payload.table.map((row: SourceTableRow) => ({
       source: row.key,
       type: row.type,
       owned: row.is_owned ? 'owned' : 'earned',
@@ -241,10 +337,10 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
       brand_mentioned_rate: row.brand_mentioned_rate,
       quality_score: row.quality_score,
     }));
-    const headers = Object.keys(rows[0] || {});
+    const headers = Object.keys(rows[0]);
     const csv = [
       headers.join(','),
-      ...rows.map((r) => headers.map((h) => JSON.stringify((r as any)[h] ?? '')).join(',')),
+      ...rows.map((r: Record<string, unknown>) => headers.map((h: string) => JSON.stringify(r[h] ?? '')).join(',')),
     ].join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -255,466 +351,401 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
     URL.revokeObjectURL(url);
   };
 
-  const subtitle = `${range} jours • ${tab === 'domains' ? 'Domaines' : 'URLs'} • ${
-    owned === 'all' ? 'Toutes sources' : owned === 'owned' ? 'Propriétaires' : 'Acquises'
-  }`;
+  /* ─── Table sort ──────────────────────────────────────────── */
 
   const sortedTable = useMemo(() => {
-    if (!payload || !Array.isArray(payload.table)) return [];
-    const sorted = [...payload.table].sort((a, b) => {
+    if (!payload?.table?.length) return [];
+    return [...payload.table].sort((a, b) => {
       const aVal = a[sortKey] ?? 0;
       const bVal = b[sortKey] ?? 0;
       if (aVal < bVal) return sortDir === 'asc' ? -1 : 1;
       if (aVal > bVal) return sortDir === 'asc' ? 1 : -1;
       return 0;
     });
-    return sorted;
   }, [payload, sortKey, sortDir]);
+
+  const toggleSort = (key: typeof sortKey) => {
+    if (sortKey === key) {
+      setSortDir((d: 'desc' | 'asc') => (d === 'desc' ? 'asc' : 'desc'));
+    } else {
+      setSortKey(key);
+      setSortDir('desc');
+    }
+  };
+
+  /* ─── Evidence ────────────────────────────────────────────── */
 
   const openEvidence = async (scope: 'domain' | 'url', key: string) => {
     try {
       const res = await fetch(`/api/sources/evidence?scope=${scope}&key=${encodeURIComponent(key)}`);
       const data = await res.json();
-      if (!data?.items) return;
-      setEvidence({ key, scope, items: data.items });
-    } catch {
-      // ignore
-    }
+      if (data?.items) setEvidence({ key, scope, items: data.items });
+    } catch { /* silent */ }
   };
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold text-white">Sources</h1>
-        <p className="text-zinc-400 mt-1">
-          Analyse des sources qui influencent les réponses IA.
-        </p>
-        <p className="text-xs text-zinc-500 mt-2">{subtitle}</p>
-        <p className="text-xs text-zinc-500 mt-1">
-          Basé uniquement sur le monitoring automatique (le sandbox est exclu).
-        </p>
-        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-zinc-400">
-          <span>
-            Dernière collecte réussie:{' '}
-            {runInfo.lastSuccess
-              ? `${formatLongDate(runInfo.lastSuccess.run_date)} • ${statusLabel(runInfo.lastSuccess.status)}`
-              : runLoading
-                ? 'chargement…'
-                : 'aucune'}
-          </span>
-          <span className="text-zinc-500">•</span>
-          <span>
-            Dernière tentative:{' '}
-            {runInfo.lastRun
-              ? `${formatLongDate(runInfo.lastRun.run_date)} • ${statusLabel(runInfo.lastRun.status)}`
-              : runLoading
-                ? 'chargement…'
-                : 'aucune'}
-          </span>
-          {runInfo.lastRun?.error_message && (
-            <span className="text-rose-300">
-              • {runInfo.lastRun.error_message}
-            </span>
-          )}
-          <button
-            onClick={triggerManualRun}
-            disabled={manualRunning || runInfo.lastRun?.status === 'running'}
-            className="rounded-full border border-white/10 px-3 py-1 text-xs text-zinc-300 disabled:opacity-50"
-          >
-            {manualRunning || runInfo.lastRun?.status === 'running' ? 'Run en cours…' : 'Relancer maintenant'}
-          </button>
-          {runError && <span className="text-rose-300">• {runError}</span>}
-        </div>
-        {payload?.kpis && (
-          <p className="text-xs text-zinc-500 mt-1">
-            Observées: {payload.kpis.observed_citations ?? 0} • Probables: {payload.kpis.probable_citations ?? 0}
-            <HelpTip text="Observées = URLs explicitement citées. Probables = sources inférées quand la réponse ne cite pas d’URL." />
-          </p>
-        )}
-      </div>
+  /* ─── Chart data ──────────────────────────────────────────── */
 
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          onClick={() => setTab('domains')}
-          className={`px-3 py-1.5 rounded-full text-xs border ${tab === 'domains' ? 'border-cyan-500/40 text-cyan-300' : 'border-white/10 text-zinc-400'}`}
-        >
-          Domaines
-          <HelpTip text="Vue par site (ex: lemondedigital.fr). Idéal pour savoir quels sites influencent l’IA." />
-        </button>
-        <button
-          onClick={() => setTab('urls')}
-          className={`px-3 py-1.5 rounded-full text-xs border ${tab === 'urls' ? 'border-cyan-500/40 text-cyan-300' : 'border-white/10 text-zinc-400'}`}
-        >
-          URLs
-          <HelpTip text="Vue par page précise (ex: /blog/article). Utile pour voir quelles pages exactes sont citées." />
-        </button>
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1 rounded-full border border-white/10 bg-zinc-900/60 px-3 py-1.5 text-xs text-zinc-300">
-            <Filter className="h-3 w-3" />
-            <select
-              value={range}
-              onChange={(e) => setRange(Number(e.target.value) as 7 | 30 | 90)}
-              className="bg-transparent outline-none"
-            >
-              <option value={7}>7 jours</option>
-              <option value={30}>30 jours</option>
-              <option value={90}>90 jours</option>
-            </select>
-            <HelpTip text="Choisis la période d’analyse." />
+  const chartData = useMemo(
+    () => (payload?.series ?? []).map((s: { date: string; total_citations: number }) => ({ ...s, label: formatChartDate(s.date) })),
+    [payload?.series]
+  );
+
+  /* ─── Derived ─────────────────────────────────────────────── */
+
+  const kpis = payload?.kpis;
+  const hasData = !!kpis && kpis.total_citations > 0;
+  const isRunning = runInfo.lastRun?.status === 'running';
+
+  /* ─── Render ──────────────────────────────────────────────── */
+
+  return (
+    <div className="space-y-8">
+      {/* ── Page header ─────────────────────────────────────── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-semibold text-white tracking-tight">Sources</h1>
+            <p className="text-zinc-500 text-sm mt-1">
+              Quelles sources influencent les réponses IA sur votre marché.
+            </p>
           </div>
-          <div className="flex items-center gap-1 rounded-full border border-white/10 bg-zinc-900/60 px-3 py-1.5 text-xs text-zinc-300">
-            <select
-              value={owned}
-              onChange={(e) => setOwned(e.target.value as 'all' | 'owned' | 'earned')}
-              className="bg-transparent outline-none"
-            >
-              <option value="all">Toutes sources</option>
-              <option value="owned">Propriétaires</option>
-              <option value="earned">Acquises</option>
-            </select>
-            <HelpTip text="Propriétaires = votre site. Acquises = médias, forums, tiers." />
-          </div>
-          <div className="flex items-center gap-1 rounded-full border border-white/10 bg-zinc-900/60 px-3 py-1.5 text-xs text-zinc-300">
-            <select
-              value={topicId}
-              onChange={(e) => setTopicId(e.target.value)}
-              className="bg-transparent outline-none"
-            >
-              <option value="all">Tous les enjeux</option>
-              {topics.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-            <HelpTip text="Filtre par enjeu (topic) pour analyser une thématique précise." />
-          </div>
-          <div className="flex items-center gap-1 rounded-full border border-white/10 bg-zinc-900/60 px-3 py-1.5 text-xs text-zinc-300">
-            <select
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-              className="bg-transparent outline-none"
-            >
-              <option value="all">Tous modèles</option>
-              <option value="gpt-4o">GPT-4o</option>
-              <option value="gpt-4o-mini">GPT-4o mini</option>
-            </select>
-            <HelpTip text="Filtre par modèle IA utilisé pour les analyses." />
-          </div>
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Rechercher une source"
-            className="rounded-full border border-white/10 bg-zinc-900/60 px-3 py-1.5 text-xs text-zinc-200"
-          />
-          <button
-            onClick={() => setGapOnly((prev) => !prev)}
-            className={`px-3 py-1.5 rounded-full text-xs border ${gapOnly ? 'border-rose-500/40 text-rose-300' : 'border-white/10 text-zinc-400'}`}
-          >
-            Opportunités
-            <HelpTip text="Affiche uniquement les sources où la marque est peu citée (opportunités d’optimisation)." />
-          </button>
           <button
             onClick={exportCsv}
-            className="inline-flex items-center gap-1 rounded-full border border-white/10 px-3 py-1.5 text-xs text-zinc-300"
+            disabled={!hasData}
+            className="hidden md:inline-flex items-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.03] px-4 py-2 text-xs text-zinc-300 transition-all duration-200 hover:bg-white/[0.06] hover:border-white/[0.12] disabled:opacity-30"
           >
-            <Download className="h-3 w-3" />
-            Exporter CSV
-            <HelpTip text="Télécharge les données du tableau au format CSV." />
+            <Download className="h-3.5 w-3.5" />
+            Exporter
           </button>
         </div>
+
+        {/* Status bar */}
+        <StatusBar
+          runInfo={runInfo}
+          isLoading={runLoading}
+          onManualRun={triggerManualRun}
+          isManualRunning={manualRunning}
+          error={runError}
+        />
       </div>
 
-      {loading && (
-        <div className="rounded-2xl border border-white/10 bg-zinc-900/40 p-6 text-sm text-zinc-400">
-          Chargement des sources...
-        </div>
-      )}
+      {/* ── Loading skeleton ────────────────────────────────── */}
+      {loading && !payload && <SourcesSkeleton />}
+
+      {/* ── Error ───────────────────────────────────────────── */}
       {error && (
-        <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">
+        <div className="rounded-2xl border border-red-500/20 bg-red-500/[0.06] p-5 text-sm text-red-300">
           {error}
         </div>
       )}
 
-      {payload && payload.kpis.total_citations === 0 && (
-        <div className="rounded-2xl border border-white/10 bg-zinc-900/40 p-6 text-sm text-zinc-300">
-          <p className="text-white font-medium mb-1">Aucune donnée de monitoring.</p>
-          <p className="text-zinc-400 mb-4">
-            Les sources s’alimentent uniquement via les exécutions automatiques. Configure des enjeux et des questions pour lancer le monitoring.
+      {/* ── Empty state ─────────────────────────────────────── */}
+      {payload && !hasData && (
+        <div className="rounded-3xl border border-white/[0.08] bg-zinc-900/40 p-12 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500/20 via-cyan-500/20 to-violet-500/20 border border-white/[0.08] flex items-center justify-center mx-auto mb-5">
+            <Globe className="w-6 h-6 text-cyan-400" />
+          </div>
+          <h3 className="text-lg font-medium text-white mb-2">Aucune donnée de monitoring</h3>
+          <p className="text-sm text-zinc-500 max-w-sm mx-auto mb-6">
+            Les sources s'alimentent via les exécutions automatiques. Configurez des enjeux et des questions pour lancer le monitoring.
           </p>
           <a
             href="/monitoring"
-            className="inline-flex items-center rounded-full border border-cyan-400/30 bg-cyan-500/10 px-4 py-2 text-xs text-cyan-200"
+            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 via-cyan-500 to-violet-500 px-5 py-2.5 text-sm font-medium text-white transition-all hover:shadow-lg hover:shadow-cyan-500/20"
           >
             Configurer le monitoring
+            <ExternalLink className="w-3.5 h-3.5" />
           </a>
         </div>
       )}
 
-      {payload && payload.kpis && payload.kpis.total_citations > 0 && (
+      {/* ── Main content ────────────────────────────────────── */}
+      {hasData && kpis && (
         <>
-          <div className="grid gap-4 md:grid-cols-7">
-            <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-4">
-              <p className="text-xs text-zinc-500">
-                Citations totales
-                <HelpTip text="Nombre total de fois où une source est citée." />
-              </p>
-              <p className="text-xl font-semibold text-white">{payload.kpis.total_citations}</p>
-            </div>
-            <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-4">
-              <p className="text-xs text-zinc-500">
-                Domaines uniques
-                <HelpTip text="Nombre de sites différents cités." />
-              </p>
-              <p className="text-xl font-semibold text-white">{payload.kpis.unique_domains}</p>
-            </div>
-            <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-4">
-              <p className="text-xs text-zinc-500">
-                URLs uniques
-                <HelpTip text="Nombre de pages précises citées." />
-              </p>
-              <p className="text-xl font-semibold text-white">{payload.kpis.unique_urls}</p>
-            </div>
-            <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-4">
-              <p className="text-xs text-zinc-500">
-                Part propriétaires
-                <HelpTip text="Part des citations provenant de votre propre site." />
-              </p>
-              <p className="text-xl font-semibold text-white">{payload.kpis.owned_share}%</p>
-            </div>
-            <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-4">
-              <p className="text-xs text-zinc-500">
-                Part concurrents
-                <HelpTip text="Part des citations provenant des sites de concurrents." />
-              </p>
-              <p className="text-xl font-semibold text-white">{payload.kpis.competitor_share}%</p>
-            </div>
-            <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-4">
-              <p className="text-xs text-zinc-500">
-                Part tiers
-                <HelpTip text="Part des citations provenant de sites tiers." />
-              </p>
-              <p className="text-xl font-semibold text-white">{payload.kpis.third_party_share}%</p>
-            </div>
-            <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-4">
-              <p className="text-xs text-zinc-500 flex items-center gap-1">
-                Score qualité
-                <HelpTip text={QUALITY_TOOLTIP} />
-              </p>
-              <p className="text-xl font-semibold text-white">{payload.kpis.avg_quality_score}</p>
-            </div>
+          {/* A. Hero Section */}
+          <ScoreHero
+            qualityScore={kpis.avg_quality_score}
+            ownedShare={kpis.owned_share}
+            competitorShare={kpis.competitor_share}
+            totalCitations={kpis.total_citations}
+            isRunning={isRunning}
+          />
+
+          {/* B. KPI Cards */}
+          <div className="grid gap-4 md:grid-cols-4">
+            <MetricCard
+              label="Domaines uniques"
+              value={kpis.unique_domains}
+              icon={Globe}
+              color="blue"
+              description="Sites différents citant votre marché"
+            />
+            <MetricCard
+              label="URLs uniques"
+              value={kpis.unique_urls}
+              icon={Link2}
+              color="cyan"
+              description="Pages précises référencées"
+            />
+            <MetricCard
+              label="Citations observées"
+              value={kpis.observed_citations}
+              icon={Eye}
+              color="emerald"
+              description="URLs explicitement citées par l'IA"
+            />
+            <MetricCard
+              label="Citations probables"
+              value={kpis.probable_citations}
+              icon={BarChart3}
+              color="violet"
+              description="Sources inférées sans URL explicite"
+            />
           </div>
-          {payload.kpis.owned_share === 0 && (
-            <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 text-xs text-amber-200">
-              Part propriétaires à 0%. Vérifie que le site de ta marque est bien renseigné dans Brand settings
-              et que tes domaines propriétaires sont bien enregistrés.
+
+          {/* Owned share warning */}
+          {kpis.owned_share === 0 && (
+            <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.06] px-4 py-3 text-xs text-amber-300 leading-relaxed">
+              Part propriétaires à 0%. Vérifiez que le site de votre marque est renseigné dans
+              <a href="/brand-settings" className="underline underline-offset-2 ml-1 text-amber-200 hover:text-white">Brand settings</a>.
             </div>
           )}
 
-          <div className="grid gap-6 md:grid-cols-3">
-            <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-4">
-              <p className="text-sm font-medium text-white mb-3">
-                Répartition par type
-                <HelpTip text="Montre quels types de sources (médias, institutions, UGC…) influencent l’IA." />
-              </p>
-              {payload.breakdown.length === 0 ? (
-                <p className="text-sm text-zinc-500">Aucune source détectée.</p>
-              ) : (
-                <div className="h-52">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={payload.breakdown} dataKey="count" nameKey="type" innerRadius={40} outerRadius={70}>
-                        {payload.breakdown.map((entry) => (
-                          <Cell key={entry.type} fill={TYPE_COLORS[entry.type] || '#94a3b8'} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        formatter={(value: number, name: string) => [value, typeLabel(name)]}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-            </div>
+          {/* C. Share breakdown + Trend chart */}
+          <div className="grid gap-6 md:grid-cols-2">
+            <ShareBar
+              ownedShare={kpis.owned_share}
+              competitorShare={kpis.competitor_share}
+              thirdPartyShare={kpis.third_party_share}
+            />
 
-            <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-4 md:col-span-2">
-              <p className="text-sm font-medium text-white mb-3">
-                Usage dans le temps
-                <HelpTip text="Évolution du nombre de citations par jour." />
-              </p>
-              {payload.series.length === 0 ? (
-                <p className="text-sm text-zinc-500">Aucune donnée de tendance.</p>
-              ) : (
-                <div className="h-56">
+            {/* Trend chart */}
+            <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-6">
+              <div className="mb-4">
+                <h3 className="text-sm font-medium text-white">Évolution des citations</h3>
+                <p className="text-xs text-zinc-500 mt-0.5">Volume quotidien sur {range} jours</p>
+              </div>
+              {chartData.length > 0 ? (
+                <div className="h-44">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={payload.series}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                      <XAxis dataKey="date" tick={{ fill: '#9ca3af', fontSize: 12 }} />
-                      <YAxis tick={{ fill: '#9ca3af', fontSize: 12 }} />
-                      <Tooltip
-                        contentStyle={{
-                          background: 'rgba(15, 23, 42, 0.9)',
-                          border: '1px solid rgba(255,255,255,0.08)',
-                          borderRadius: '12px',
-                          color: '#fff',
-                        }}
+                    <LineChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                      <XAxis
+                        dataKey="label"
+                        tick={{ fill: '#52525b', fontSize: 10 }}
+                        axisLine={{ stroke: 'rgba(255,255,255,0.06)' }}
+                        tickLine={false}
                       />
-                      <Line type="monotone" dataKey="total_citations" stroke="#22d3ee" strokeWidth={2} dot={false} />
+                      <YAxis
+                        tick={{ fill: '#52525b', fontSize: 10 }}
+                        axisLine={false}
+                        tickLine={false}
+                        width={30}
+                      />
+                      <Tooltip content={<ChartTooltip />} />
+                      <Line
+                        type="monotone"
+                        dataKey="total_citations"
+                        stroke="#22d3ee"
+                        strokeWidth={2}
+                        dot={false}
+                        activeDot={{ r: 4, strokeWidth: 0, fill: '#22d3ee' }}
+                      />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
+              ) : (
+                <p className="text-sm text-zinc-500 py-12 text-center">Pas encore de données de tendance.</p>
               )}
             </div>
           </div>
 
-          <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-4">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-medium text-white">Top {tab === 'domains' ? 'Domaines' : 'URLs'}</p>
-              {gapOnly && (
-                <span className="text-xs text-rose-300 flex items-center gap-1">
-                  <Sparkles className="h-3 w-3" />
-                  Opportunités
-                </span>
-              )}
+          {/* ── D. Sources table ─────────────────────────────── */}
+          <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40">
+            {/* Table header with filters */}
+            <div className="p-5 border-b border-white/[0.06]">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-medium text-white">
+                    Top {tab === 'domains' ? 'domaines' : 'URLs'}
+                  </h3>
+                  {gapOnly && <OpportunityBadge />}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Tab switch */}
+                  <div className="flex items-center rounded-lg border border-white/[0.08] bg-zinc-900/60 p-0.5">
+                    <FilterChip active={tab === 'domains'} onClick={() => setTab('domains')}>
+                      Domaines
+                    </FilterChip>
+                    <FilterChip active={tab === 'urls'} onClick={() => setTab('urls')}>
+                      URLs
+                    </FilterChip>
+                  </div>
+
+                  {/* Range */}
+                  <FilterSelect value={String(range)} onChange={(v) => setRange(Number(v) as 7 | 30 | 90)}>
+                    <option value="7">7 jours</option>
+                    <option value="30">30 jours</option>
+                    <option value="90">90 jours</option>
+                  </FilterSelect>
+
+                  {/* Ownership */}
+                  <FilterSelect value={owned} onChange={(v) => setOwned(v as 'all' | 'owned' | 'earned')}>
+                    <option value="all">Toutes sources</option>
+                    <option value="owned">Propriétaires</option>
+                    <option value="earned">Acquises</option>
+                  </FilterSelect>
+
+                  {/* Topic */}
+                  {topics.length > 0 && (
+                    <FilterSelect value={topicId} onChange={setTopicId}>
+                      <option value="all">Tous les enjeux</option>
+                      {topics.map((t) => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
+                    </FilterSelect>
+                  )}
+
+                  {/* Model */}
+                  <FilterSelect value={model} onChange={setModel}>
+                    <option value="all">Tous modèles</option>
+                    <option value="gpt-4o">GPT-4o</option>
+                    <option value="gpt-4o-mini">GPT-4o mini</option>
+                  </FilterSelect>
+
+                  {/* Opportunities toggle */}
+                  <button
+                    onClick={() => setGapOnly((prev: boolean) => !prev)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+                      gapOnly
+                        ? 'bg-violet-500/10 text-violet-400 border border-violet-500/20'
+                        : 'text-zinc-500 border border-white/[0.08] hover:text-zinc-300'
+                    }`}
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    Opportunités
+                  </button>
+
+                  {/* Search */}
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
+                    <input
+                      value={search}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
+                      placeholder="Rechercher…"
+                      className="rounded-lg border border-white/[0.08] bg-zinc-900/60 pl-8 pr-3 py-1.5 text-xs text-zinc-200 outline-none transition-colors placeholder:text-zinc-600 hover:border-white/[0.12] focus:border-white/[0.16] w-36"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
+
+            {/* Table content */}
             {payload.table.length === 0 ? (
-              <p className="text-sm text-zinc-500">Aucune source détectée.</p>
+              <div className="p-12 text-center">
+                <p className="text-sm text-zinc-500">Aucune source détectée avec ces filtres.</p>
+              </div>
             ) : (
-              <div className="rounded-xl border border-white/[0.06] overflow-hidden">
+              <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-zinc-900/60 text-zinc-400">
-                    <tr>
-                      <th className="text-left px-3 py-2">
+                  <thead>
+                    <tr className="border-b border-white/[0.06]">
+                      <th className="text-left px-5 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider">
                         Source
-                        <HelpTip text="Domaine ou URL cité dans la réponse." />
                       </th>
-                      <th className="text-left px-3 py-2">
+                      <th className="text-left px-4 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider">
                         Type
-                        <HelpTip text="Catégorie de la source (média, institution, UGC…)." />
                       </th>
                       <th
-                        className="text-left px-3 py-2 cursor-pointer"
-                        onClick={() => {
-                          setSortKey('used_total');
-                          setSortDir(sortDir === 'desc' && sortKey === 'used_total' ? 'asc' : 'desc');
-                        }}
+                        className="text-left px-4 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider cursor-pointer hover:text-zinc-300 transition-colors"
+                        onClick={() => toggleSort('used_total')}
                       >
-                        Usage
-                        <HelpTip text="Nombre total de citations sur la période." />
+                        Usage {sortKey === 'used_total' && (sortDir === 'desc' ? '↓' : '↑')}
                       </th>
                       <th
-                        className="text-left px-3 py-2 cursor-pointer"
-                        onClick={() => {
-                          setSortKey('used_share');
-                          setSortDir(sortDir === 'desc' && sortKey === 'used_share' ? 'asc' : 'desc');
-                        }}
+                        className="text-left px-4 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider cursor-pointer hover:text-zinc-300 transition-colors"
+                        onClick={() => toggleSort('used_share')}
                       >
-                        Part
-                        <HelpTip text="Pourcentage des citations totales." />
-                      </th>
-                      <th className="text-left px-3 py-2">
-                        Méthode
-                        <HelpTip text="Répartition Observées vs Probables." />
+                        Part {sortKey === 'used_share' && (sortDir === 'desc' ? '↓' : '↑')}
                       </th>
                       <th
-                        className="text-left px-3 py-2 cursor-pointer"
-                        onClick={() => {
-                          setSortKey('brand_mentioned_rate');
-                          setSortDir(sortDir === 'desc' && sortKey === 'brand_mentioned_rate' ? 'asc' : 'desc');
-                        }}
+                        className="text-left px-4 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider cursor-pointer hover:text-zinc-300 transition-colors"
+                        onClick={() => toggleSort('brand_mentioned_rate')}
                       >
-                        Mention marque
-                        <HelpTip text="Taux de réponses où la marque est mentionnée." />
+                        Marque {sortKey === 'brand_mentioned_rate' && (sortDir === 'desc' ? '↓' : '↑')}
                       </th>
                       <th
-                        className="text-left px-3 py-2 cursor-pointer"
-                        onClick={() => {
-                          setSortKey('quality_score');
-                          setSortDir(sortDir === 'desc' && sortKey === 'quality_score' ? 'asc' : 'desc');
-                        }}
+                        className="text-left px-4 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider cursor-pointer hover:text-zinc-300 transition-colors"
+                        onClick={() => toggleSort('quality_score')}
                       >
-                        Qualité
-                        <HelpTip text="Score global de fiabilité et d’impact de la source." />
+                        Qualité {sortKey === 'quality_score' && (sortDir === 'desc' ? '↓' : '↑')}
                       </th>
                       <th
-                        className="text-left px-3 py-2 cursor-pointer"
-                        onClick={() => {
-                          setSortKey('last_seen');
-                          setSortDir(sortDir === 'desc' && sortKey === 'last_seen' ? 'asc' : 'desc');
-                        }}
+                        className="text-left px-4 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider cursor-pointer hover:text-zinc-300 transition-colors"
+                        onClick={() => toggleSort('last_seen')}
                       >
-                        Dernière vue
-                        <HelpTip text="Dernière apparition de cette source dans les réponses." />
+                        Dernière vue {sortKey === 'last_seen' && (sortDir === 'desc' ? '↓' : '↑')}
                       </th>
-                      <th className="text-left px-3 py-2">
-                        Evidence
-                        <HelpTip text="Voir les réponses qui justifient cette source." />
-                      </th>
-                      <th className="text-left px-3 py-2">
-                        Action
-                        <HelpTip text="Actions recommandées selon la performance de la source." />
-                      </th>
+                      <th className="px-4 py-3" />
                     </tr>
                   </thead>
                   <tbody>
-                    {sortedTable.map((row) => (
-                      <tr key={row.key} className="border-t border-white/[0.06]">
-                        <td className="px-3 py-2 text-zinc-200">{row.key}</td>
-                        <td className="px-3 py-2 text-zinc-400">{typeLabel(row.type)}</td>
-                        <td className="px-3 py-2 text-zinc-400">{row.used_total}</td>
-                        <td className="px-3 py-2 text-zinc-400">{row.used_share}%</td>
-                        <td className="px-3 py-2 text-zinc-400">
-                          {row.observed_share}% obs • {row.probable_share}% prob
+                    {sortedTable.map((row: SourceTableRow) => (
+                      <tr
+                        key={row.key}
+                        className="border-t border-white/[0.04] transition-colors hover:bg-white/[0.02] group"
+                      >
+                        <td className="px-5 py-3">
+                          <div className="flex items-center gap-2.5">
+                            {row.is_owned ? (
+                              <Shield className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                            ) : (
+                              <Users className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                            )}
+                            <span className="text-zinc-200 font-medium truncate max-w-[240px]">{row.key}</span>
+                            {row.opportunity && <OpportunityBadge />}
+                          </div>
                         </td>
-                        <td className="px-3 py-2 text-zinc-400">{row.brand_mentioned_rate}%</td>
-                        <td className="px-3 py-2 text-zinc-200">{row.quality_score}</td>
-                        <td className="px-3 py-2 text-zinc-400">{formatShortDate(row.last_seen)}</td>
-                        <td className="px-3 py-2">
+                        <td className="px-4 py-3 text-zinc-500">{TYPE_LABELS[row.type] ?? row.type}</td>
+                        <td className="px-4 py-3 text-zinc-300 tabular-nums">{row.used_total}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-16 h-1.5 rounded-full bg-zinc-800 overflow-hidden">
+                              <div
+                                className="h-full rounded-full bg-cyan-500/60 transition-all duration-500"
+                                style={{ width: `${Math.min(row.used_share, 100)}%` }}
+                              />
+                            </div>
+                            <span className="text-zinc-400 tabular-nums text-xs">{row.used_share}%</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`tabular-nums ${
+                            row.brand_mentioned_rate >= 50
+                              ? 'text-emerald-400'
+                              : row.brand_mentioned_rate >= 20
+                                ? 'text-amber-400'
+                                : 'text-zinc-500'
+                          }`}>
+                            {row.brand_mentioned_rate}%
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`tabular-nums ${
+                            row.quality_score >= 60 ? 'text-white' : 'text-zinc-400'
+                          }`}>
+                            {row.quality_score}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-zinc-500 text-xs tabular-nums">{formatShortDate(row.last_seen)}</td>
+                        <td className="px-4 py-3">
                           <button
                             onClick={() => openEvidence(tab === 'domains' ? 'domain' : 'url', row.key)}
-                            className="rounded-full bg-white/10 text-zinc-200 px-3 py-1 text-xs"
+                            className="opacity-0 group-hover:opacity-100 rounded-md bg-white/[0.06] px-2.5 py-1 text-[11px] text-zinc-400 transition-all hover:bg-white/[0.1] hover:text-white"
                           >
                             Voir
                           </button>
-                        </td>
-                        <td className="px-3 py-2">
-                          {row.opportunity ? (
-                            <button
-                              onClick={() =>
-                                setActionModal({
-                                  title: 'Opportunité détectée',
-                                  reason: 'Faible mention de la marque sur une source externe.',
-                                  actions: [
-                                    'Créer une page ciblée pour cette source.',
-                                    'Renforcer le linking vers votre contenu.',
-                                    'Préparer un outreach éditorial.',
-                                  ],
-                                })
-                              }
-                              className="rounded-full bg-rose-500/15 text-rose-200 px-3 py-1 text-xs"
-                            >
-                              Opportunité
-                            </button>
-                          ) : row.is_owned ? (
-                            <button
-                              onClick={() =>
-                                setActionModal({
-                                  title: 'Optimiser page propriétaire',
-                                  reason: 'Source propriétaire mais visibilité faible.',
-                                  actions: [
-                                    'Optimiser la page avec FAQ IA.',
-                                    'Ajouter des preuves sociales.',
-                                    'Améliorer les meta données.',
-                                  ],
-                                })
-                              }
-                              className="rounded-full bg-emerald-500/15 text-emerald-200 px-3 py-1 text-xs"
-                            >
-                              Audit
-                            </button>
-                          ) : (
-                            <span className="text-xs text-zinc-500">—</span>
-                          )}
                         </td>
                       </tr>
                     ))}
@@ -726,69 +757,53 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
         </>
       )}
 
-      {actionModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-          <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-zinc-950 p-6 space-y-4">
-            <h3 className="text-lg font-semibold text-white">{actionModal.title}</h3>
-            <p className="text-sm text-zinc-400">{actionModal.reason}</p>
-            <ul className="text-sm text-zinc-300 space-y-2">
-              {actionModal.actions.map((action) => (
-                <li key={action}>• {action}</li>
-              ))}
-            </ul>
-            <div className="flex justify-end">
-              <button
-                onClick={() => setActionModal(null)}
-                className="rounded-lg border border-white/10 px-4 py-2 text-sm text-zinc-300"
-              >
-                Fermer
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
+      {/* ── Evidence modal ──────────────────────────────────── */}
       {evidence && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-          <div className="w-full max-w-3xl rounded-2xl border border-white/10 bg-zinc-950 p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-white">
-                Evidence — {evidence.scope === 'domain' ? 'Domaine' : 'URL'}: {evidence.key}
-              </h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+          <div className="w-full max-w-3xl rounded-2xl border border-white/[0.08] bg-zinc-950 shadow-2xl">
+            <div className="flex items-center justify-between p-5 border-b border-white/[0.06]">
+              <div>
+                <h3 className="text-base font-semibold text-white">Evidence</h3>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  {evidence.scope === 'domain' ? 'Domaine' : 'URL'} : {evidence.key}
+                </p>
+              </div>
               <button
                 onClick={() => setEvidence(null)}
-                className="rounded-lg border border-white/10 px-3 py-1 text-sm text-zinc-300"
+                className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-xs text-zinc-400 transition-colors hover:text-white hover:bg-white/[0.06]"
               >
                 Fermer
               </button>
             </div>
-            <div className="space-y-3 max-h-[60vh] overflow-auto">
+            <div className="p-5 space-y-3 max-h-[60vh] overflow-auto">
               {evidence.items.length === 0 && (
-                <p className="text-sm text-zinc-400">Aucune evidence disponible.</p>
+                <p className="text-sm text-zinc-500 text-center py-8">Aucune evidence disponible.</p>
               )}
-              {evidence.items.map((item, idx) => (
-                <div key={`${item.response_id || 'resp'}-${idx}`} className="rounded-xl border border-white/[0.08] bg-zinc-900/40 p-4">
-                  <div className="flex flex-wrap gap-2 text-xs text-zinc-400">
+              {evidence.items.map((item: EvidenceItem, idx: number) => (
+                <div key={`${item.response_id || 'r'}-${idx}`} className="rounded-xl border border-white/[0.06] bg-zinc-900/30 p-4 space-y-2">
+                  <div className="flex flex-wrap gap-2 text-[11px] text-zinc-500">
                     <span>{new Date(item.cited_at).toLocaleString('fr-FR')}</span>
                     <span>•</span>
                     <span>{item.ai_model || 'model'}</span>
                     <span>•</span>
-                    <span>{item.method || 'observed'}</span>
+                    <span className={item.method === 'observed' ? 'text-emerald-400' : 'text-violet-400'}>
+                      {item.method === 'observed' ? 'Observée' : 'Probable'}
+                    </span>
                     {typeof item.confidence === 'number' && (
                       <>
                         <span>•</span>
-                        <span>conf: {Math.round(item.confidence * 100)}%</span>
+                        <span>conf. {Math.round(item.confidence * 100)}%</span>
                       </>
                     )}
                   </div>
                   {item.prompt_text && (
-                    <p className="text-sm text-zinc-200 mt-2">{item.prompt_text}</p>
+                    <p className="text-sm text-zinc-300">{item.prompt_text}</p>
                   )}
                   {item.response_snippet && (
-                    <p className="text-sm text-zinc-400 mt-2 whitespace-pre-wrap">{item.response_snippet}</p>
+                    <p className="text-xs text-zinc-500 leading-relaxed whitespace-pre-wrap">{item.response_snippet}</p>
                   )}
                   {item.rationale && (
-                    <p className="text-xs text-zinc-500 mt-2">Rationale: {item.rationale}</p>
+                    <p className="text-[11px] text-zinc-600 italic">Rationale : {item.rationale}</p>
                   )}
                 </div>
               ))}
