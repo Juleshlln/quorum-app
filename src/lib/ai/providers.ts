@@ -184,8 +184,23 @@ function analyzeResponse(
     const brandSentence = sentences.find(s => s.toLowerCase().includes(lowerBrand));
     
     if (brandSentence) {
-      const positiveWords = ['best', 'excellent', 'great', 'recommend', 'top', 'leading', 'popular', 'trusted', 'reliable', 'innovative'];
-      const negativeWords = ['worst', 'bad', 'avoid', 'poor', 'limited', 'expensive', 'difficult', 'complex', 'issues'];
+      const positiveWords = [
+        // English
+        'best', 'excellent', 'great', 'recommend', 'top', 'leading', 'popular', 'trusted', 'reliable', 'innovative',
+        'outstanding', 'preferred', 'ideal', 'strong', 'notable', 'renowned', 'reputable',
+        // French
+        'meilleur', 'excellent', 'recommandé', 'recommande', 'leader', 'populaire', 'fiable',
+        'performant', 'innovant', 'reconnu', 'réputé', 'idéal', 'privilégié', 'incontournable',
+        'référence', 'qualité', 'efficace', 'apprécié', 'plébiscité', 'notable', 'solide',
+      ];
+      const negativeWords = [
+        // English
+        'worst', 'bad', 'avoid', 'poor', 'limited', 'expensive', 'difficult', 'complex', 'issues',
+        'lacks', 'outdated', 'inferior',
+        // French
+        'mauvais', 'éviter', 'limité', 'cher', 'coûteux', 'complexe', 'difficile', 'problème',
+        'insuffisant', 'décevant', 'obsolète', 'inférieur', 'médiocre', 'faible',
+      ];
       
       const lowerSentence = brandSentence.toLowerCase();
       const hasPositive = positiveWords.some(word => lowerSentence.includes(word));

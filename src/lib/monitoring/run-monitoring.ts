@@ -62,8 +62,11 @@ function classifyDomain(domain: string): string {
 }
 
 function buildPromptWithSources(prompt: string, model: string) {
-  if (!REQUIRE_SOURCES || !CITATION_MODELS.includes(model)) return prompt;
-  return `${prompt}\n\nRéponds normalement puis ajoute une section \"Sources (URLs)\" avec 2 à 3 URLs exactes.`;
+  const explicitUrlsInstruction = 'Dans ta réponse, cite systématiquement les URLs exactes des sources que tu mentionnes, sous la forme https://...';
+  if (!REQUIRE_SOURCES || !CITATION_MODELS.includes(model)) {
+    return `${prompt}\n\n${explicitUrlsInstruction}`;
+  }
+  return `${prompt}\n\nRéponds normalement puis ajoute une section \"Sources (URLs)\" avec 2 à 3 URLs exactes.\n${explicitUrlsInstruction}`;
 }
 
 function buildFollowupSourcesPrompt(prompt: string) {
@@ -135,24 +138,44 @@ async function inferProbableSources({
 export async function runMonitoringForProject({
   supabase,
   runId,
+  logRunId,
   projectId,
   brandName,
   competitors,
   context,
   scheduledAt = new Date().toISOString(),
+  runWindowStart,
+  runWindowEnd,
   runType = 'monitoring',
   models = DEFAULT_MODELS,
 }: {
   supabase: any;
   runId?: string | null;
+  logRunId?: string | null;
   projectId: string;
   brandName: string;
   competitors: string[];
   context: string;
   scheduledAt?: string;
+  runWindowStart?: string | null;
+  runWindowEnd?: string | null;
   runType?: 'monitoring' | 'sandbox';
   models?: string[];
 }) {
+  if (runType === 'monitoring' && !runId) {
+    await logRun({
+      supabase,
+      runId: logRunId,
+      monitoringRunId: runId,
+      projectId,
+      level: 'error',
+      step: 'validate_run',
+      message: 'Missing runId for monitoring prompt_runs',
+      meta: { runType },
+    });
+    throw new Error('Missing runId for monitoring prompt_runs');
+  }
+
   const { data: topicsData } = await supabase
     .from('monitoring_topics')
     .select('id, is_active')
@@ -170,7 +193,8 @@ export async function runMonitoringForProject({
   if (promptsError) {
     await logRun({
       supabase,
-      runId,
+      runId: logRunId,
+      monitoringRunId: runId,
       projectId,
       level: 'error',
       step: 'load_prompts',
@@ -188,7 +212,8 @@ export async function runMonitoringForProject({
   if (prompts.length === 0) {
     await logRun({
       supabase,
-      runId,
+      runId: logRunId,
+      monitoringRunId: runId,
       projectId,
       level: 'warn',
       step: 'load_prompts',
@@ -232,9 +257,11 @@ export async function runMonitoringForProject({
     if (!version) continue;
 
     for (const model of models) {
+      const promptRunMonitoringId = runType === 'monitoring' ? runId : (runId || null);
       await logRun({
         supabase,
-        runId,
+        runId: logRunId,
+        monitoringRunId: runId,
         projectId,
         step: 'execute_item',
         message: 'Running prompt',
@@ -250,78 +277,170 @@ export async function runMonitoringForProject({
           max_tokens: 1200,
           require_sources: REQUIRE_SOURCES && CITATION_MODELS.includes(model),
         });
-      } catch {
+      } catch (aiErr: any) {
         result = null;
+        await logRun({
+          supabase,
+          runId: logRunId,
+          monitoringRunId: runId,
+          projectId,
+          level: 'error',
+          step: 'query_ai',
+          message: aiErr?.message || String(aiErr),
+          meta: { prompt_id: prompt.id, model },
+        });
       }
 
-      const { data: runRow, error: runError } = await supabase
+      // queryOpenAI never throws — it returns { error } on failure.
+      // Treat error responses as a failed result.
+      const aiSuccess = result && !result.error && result.response !== '';
+
+      const promptRunPayload = {
+        run_id: promptRunMonitoringId,
+        run_window_start: runWindowStart || null,
+        run_window_end: runWindowEnd || null,
+        run_date: scheduledAt.slice(0, 10),
+        prompt_id: prompt.id,
+        prompt_version_id: version.id,
+        project_id: projectId,
+        ai_model: model,
+        run_type: runType,
+        scheduled_at: scheduledAt,
+        executed_at: new Date().toISOString(),
+        status: aiSuccess ? 'success' : 'failed',
+        brand_mentioned: aiSuccess ? (result!.mentioned ?? null) : null,
+        position_rank: aiSuccess ? (result!.position ?? null) : null,
+        sentiment_label: aiSuccess ? (result!.sentiment ?? null) : null,
+        competitors_mentioned: aiSuccess ? (result!.competitors_mentioned ?? []) : [],
+      };
+
+      // Try upsert first; fall back to select-existing + update if the
+      // ON CONFLICT cannot resolve (partial unique index issue).
+      let runRow: { id: string } | null = null;
+      let runError: any = null;
+
+      const upsertResult = await supabase
         .from('prompt_runs')
-        .insert({
-          prompt_id: prompt.id,
-          prompt_version_id: version.id,
-          project_id: projectId,
-          ai_model: model,
-          run_type: runType,
-          scheduled_at: scheduledAt,
-          executed_at: new Date().toISOString(),
-          status: result ? 'success' : 'failed',
-          brand_mentioned: result?.mentioned ?? null,
-          position_rank: result?.position ?? null,
-          sentiment_label: result?.sentiment ?? null,
-          competitors_mentioned: result?.competitors_mentioned ?? [],
+        .upsert(promptRunPayload, {
+          onConflict: 'run_id,prompt_id,ai_model',
         })
         .select('id')
         .single();
+      runRow = upsertResult.data;
+      runError = upsertResult.error;
+
+      // Fallback: if upsert failed, try finding existing row and updating it,
+      // or insert fresh if no existing row found.
+      if (runError || !runRow) {
+        const { data: existingRow } = await supabase
+          .from('prompt_runs')
+          .select('id')
+          .eq('run_id', promptRunMonitoringId)
+          .eq('prompt_id', prompt.id)
+          .eq('ai_model', model)
+          .maybeSingle();
+
+        if (existingRow) {
+          const { executed_at, status, brand_mentioned, position_rank, sentiment_label, competitors_mentioned } = promptRunPayload;
+          await supabase
+            .from('prompt_runs')
+            .update({ executed_at, status, brand_mentioned, position_rank, sentiment_label, competitors_mentioned })
+            .eq('id', existingRow.id);
+          runRow = existingRow;
+          runError = null;
+        } else {
+          const insertResult = await supabase
+            .from('prompt_runs')
+            .insert(promptRunPayload)
+            .select('id')
+            .single();
+          runRow = insertResult.data;
+          runError = insertResult.error;
+        }
+      }
 
       if (runError || !runRow) {
         await logRun({
           supabase,
-          runId,
+          runId: logRunId,
+          monitoringRunId: runId,
           projectId,
           level: 'error',
           step: 'create_run',
           message: runError?.message || 'Failed to create prompt run',
-          meta: { prompt_id: prompt.id, model },
+          meta: { prompt_id: prompt.id, model, upsert_error: upsertResult.error?.message },
         });
         continue;
       }
 
       runs += 1;
-      if (result) {
+      if (aiSuccess) {
         answers += 1;
       }
 
-      if (result) {
-        await supabase.from('ai_answers').insert({
+      if (aiSuccess) {
+        // Delete any stale ai_answers from a previous run for this prompt_run,
+        // then insert the fresh response. This avoids duplicates on re-runs.
+        await supabase
+          .from('ai_answers')
+          .delete()
+          .eq('prompt_run_id', runRow.id);
+
+        const { error: answerErr } = await supabase.from('ai_answers').insert({
           prompt_run_id: runRow.id,
-          raw_answer_text: result.response,
+          raw_answer_text: result!.response,
         });
+        if (answerErr) {
+          await logRun({
+            supabase,
+            runId: logRunId,
+            monitoringRunId: runId,
+            projectId,
+            level: 'error',
+            step: 'insert_answer',
+            message: answerErr.message,
+            meta: { prompt_run_id: runRow.id },
+          });
+        }
       }
 
-      if (result) {
-        const { data: responseRow } = await supabase
+      if (aiSuccess) {
+        const { data: responseRow, error: responseErr } = await supabase
           .from('monitoring_responses')
           .insert({
             project_id: projectId,
             prompt_run_id: runRow.id,
-            raw_text: result.response,
+            raw_text: result!.response,
             raw_json: null,
-            model_used: result.model,
+            model_used: result!.model,
             prompt_final: finalPrompt,
-            params: result.params,
+            params: result!.params,
             language: 'fr',
-            latency_ms: result.response_time_ms,
+            latency_ms: result!.response_time_ms,
           })
           .select('id')
           .single();
+        if (responseErr) {
+          await logRun({
+            supabase,
+            runId: logRunId,
+            monitoringRunId: runId,
+            projectId,
+            level: 'error',
+            step: 'insert_response',
+            message: responseErr.message,
+            meta: { prompt_run_id: runRow.id },
+          });
+        }
 
         const responseId = responseRow?.id ?? null;
-        let citations = extractCitations(result.response);
+        let citations = extractCitations(result!.response);
         if (citations.length > 0) {
           observed += citations.length;
           await logRun({
             supabase,
-            runId,
+            runId: logRunId,
+            monitoringRunId: runId,
             projectId,
             step: 'extract_sources',
             message: 'Observed citations extracted',
@@ -330,7 +449,9 @@ export async function runMonitoringForProject({
           await ingestCitations({
             supabase,
             runId,
+            logRunId,
             projectId,
+            promptId: prompt.id,
             promptRunId: runRow.id,
             responseId,
             citations: citations.map((c) => ({
@@ -342,17 +463,18 @@ export async function runMonitoringForProject({
               method: 'observed',
             })),
             citedAt: scheduledAt,
-            aiModel: result.model,
+            aiModel: result!.model,
             topicId: prompt.topic_id ?? null,
-            brandMentioned: result.mentioned,
-            competitorMentioned: result.competitors_mentioned?.length ? true : false,
-            positionInAnswer: result.position,
+            brandMentioned: result!.mentioned,
+            competitorMentioned: result!.competitors_mentioned?.length ? true : false,
+            positionInAnswer: result!.position,
           });
         } else {
           if (REQUIRE_SOURCES && CITATION_MODELS.includes(model)) {
             await logRun({
               supabase,
-              runId,
+              runId: logRunId,
+              monitoringRunId: runId,
               projectId,
               step: 'extract_sources',
               message: 'No URLs in response, running follow-up for URLs only',
@@ -374,8 +496,17 @@ export async function runMonitoringForProject({
               if (!/^\s*NONE\s*$/i.test((followup.response || '').trim())) {
                 citations = extractCitations(followup.response);
               }
-            } catch {
-              // ignore follow-up errors
+            } catch (followupErr: any) {
+              await logRun({
+                supabase,
+                runId: logRunId,
+                monitoringRunId: runId,
+                projectId,
+                level: 'warn',
+                step: 'followup_sources',
+                message: followupErr?.message || String(followupErr),
+                meta: { prompt_id: prompt.id, model },
+              });
             }
           }
 
@@ -384,7 +515,9 @@ export async function runMonitoringForProject({
             await ingestCitations({
               supabase,
               runId,
+              logRunId,
               projectId,
+              promptId: prompt.id,
               promptRunId: runRow.id,
               responseId,
               citations: citations.map((c) => ({
@@ -396,58 +529,25 @@ export async function runMonitoringForProject({
                 method: 'probable',
               })),
               citedAt: scheduledAt,
-              aiModel: result.model,
+              aiModel: result!.model,
               topicId: prompt.topic_id ?? null,
-              brandMentioned: result.mentioned,
-              competitorMentioned: result.competitors_mentioned?.length ? true : false,
-              positionInAnswer: result.position,
+              brandMentioned: result!.mentioned,
+              competitorMentioned: result!.competitors_mentioned?.length ? true : false,
+              positionInAnswer: result!.position,
             });
             continue;
           }
 
           await logRun({
             supabase,
-            runId,
+            runId: logRunId,
+            monitoringRunId: runId,
             projectId,
+            level: 'warn',
             step: 'extract_sources',
-            message: 'No citations in response, inferring probable sources',
+            message: 'No citations detected after follow-up; skipping citations insertion',
+            meta: { prompt_id: prompt.id, model },
           });
-          const inferred = await inferProbableSources({
-            supabase,
-            prompt: version.prompt_text,
-            brandName,
-            competitors,
-          });
-          if (inferred.length > 0) {
-            probable += inferred.length;
-            await ingestCitations({
-              supabase,
-              runId,
-              projectId,
-              promptRunId: runRow.id,
-              responseId,
-              citations: inferred.map((p: {
-                url: string;
-                domain: string;
-                domain_type: string;
-                confidence: number;
-                rationale: string;
-              }) => ({
-                url: p.url,
-                domain: p.domain,
-                domain_type: p.domain_type,
-                confidence: p.confidence,
-                rationale: p.rationale,
-                method: 'probable',
-              })),
-              citedAt: scheduledAt,
-              aiModel: result.model,
-              topicId: prompt.topic_id ?? null,
-              brandMentioned: result.mentioned,
-              competitorMentioned: result.competitors_mentioned?.length ? true : false,
-              positionInAnswer: result.position,
-            });
-          }
         }
       }
     }
@@ -455,7 +555,8 @@ export async function runMonitoringForProject({
 
   await logRun({
     supabase,
-    runId,
+    runId: logRunId,
+    monitoringRunId: runId,
     projectId,
     step: 'compute_metrics',
     message: 'Monitoring run completed',
