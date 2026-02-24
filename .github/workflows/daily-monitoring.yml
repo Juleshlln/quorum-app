@@ -1,0 +1,20 @@
+name: Daily Monitoring Fallback
+
+on:
+  schedule:
+    - cron: '5 7 * * *'
+  workflow_dispatch:
+
+jobs:
+  trigger-daily-run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call daily-run endpoint
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          DAILY_RUN_URL: https://[ton-domaine-vercel]/api/cron/daily-run
+        run: |
+          curl -sS -X POST "$DAILY_RUN_URL" \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            -H "Content-Type: application/json" \
+            --fail-with-body
