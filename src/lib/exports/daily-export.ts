@@ -38,6 +38,36 @@ type DailyMetricRow = {
   competitor_data: Array<{ name: string; mentions: number; visibility: number }>;
 };
 
+type PromptRow = {
+  id: string;
+  prompt_text: string;
+  topic_id: string | null;
+};
+
+type TopicRow = {
+  id: string;
+  name: string;
+};
+
+type ResponseRow = {
+  prompt_run_id: string;
+  raw_text: string | null;
+  model_used: string | null;
+  created_at: string;
+};
+
+type CitationRow = {
+  id: string;
+  prompt_run_id: string;
+  cited_at: string;
+  method: string | null;
+  confidence: number | null;
+  rationale: string | null;
+  ai_model: string | null;
+  domain: { domain: string | null; is_owned?: boolean | null } | null;
+  url: { url: string | null } | null;
+};
+
 type ReportData = {
   project: { id: string; name: string; website: string | null };
   run: {
@@ -196,10 +226,10 @@ async function loadReportData({ projectId, runId, runDate }: Omit<ExportInput, '
         .from('monitoring_prompts')
         .select('id, prompt_text, topic_id')
         .in('id', promptIds)
-    : { data: [] as any[] };
+    : { data: [] as PromptRow[] };
 
   const topicIds = Array.from(
-    new Set(((prompts || []) as Array<{ topic_id: string | null }>).map((p) => p.topic_id).filter(Boolean) as string[])
+    new Set(((prompts || []) as PromptRow[]).map((p) => p.topic_id).filter(Boolean) as string[])
   );
 
   const { data: topics } = topicIds.length
@@ -207,14 +237,14 @@ async function loadReportData({ projectId, runId, runDate }: Omit<ExportInput, '
         .from('monitoring_topics')
         .select('id, name')
         .in('id', topicIds)
-    : { data: [] as any[] };
+    : { data: [] as TopicRow[] };
 
   const { data: responses } = promptRunIds.length
     ? await supabase
         .from('monitoring_responses')
         .select('prompt_run_id, raw_text, model_used, created_at')
         .in('prompt_run_id', promptRunIds)
-    : { data: [] as any[] };
+    : { data: [] as ResponseRow[] };
 
   const { data: citations } = await supabase
     .from('citations')
@@ -225,12 +255,13 @@ async function loadReportData({ projectId, runId, runDate }: Omit<ExportInput, '
     .order('confidence', { ascending: false })
     .order('cited_at', { ascending: false });
 
-  const promptMap = new Map((prompts || []).map((p: any) => [p.id, p]));
-  const topicMap = new Map((topics || []).map((t: any) => [t.id, t.name]));
-  const responseMap = new Map((responses || []).map((r: any) => [r.prompt_run_id, r]));
+  const promptMap = new Map<string, PromptRow>(((prompts || []) as PromptRow[]).map((p) => [p.id, p]));
+  const topicMap = new Map<string, string>(((topics || []) as TopicRow[]).map((t) => [t.id, t.name]));
+  const responseMap = new Map<string, ResponseRow>(((responses || []) as ResponseRow[]).map((r) => [r.prompt_run_id, r]));
 
-  const citationsByPromptRun = new Map<string, any[]>();
-  for (const citation of citations || []) {
+  const typedCitations = (citations || []) as CitationRow[];
+  const citationsByPromptRun = new Map<string, CitationRow[]>();
+  for (const citation of typedCitations) {
     const list = citationsByPromptRun.get(citation.prompt_run_id) || [];
     list.push(citation);
     citationsByPromptRun.set(citation.prompt_run_id, list);
@@ -267,7 +298,7 @@ async function loadReportData({ projectId, runId, runDate }: Omit<ExportInput, '
 
   const totalPromptsActive = dailyMetric?.total_prompts_active ?? (totalPromptsActiveCount || 0);
 
-  const evidence = (citations || []).slice(0, 15).map((citation: any) => {
+  const evidence = typedCitations.slice(0, 15).map((citation) => {
     const pr = promptRunRows.find((row) => row.id === citation.prompt_run_id);
     const prompt = pr ? promptMap.get(pr.prompt_id) : null;
     return {
@@ -282,7 +313,7 @@ async function loadReportData({ projectId, runId, runDate }: Omit<ExportInput, '
     };
   });
 
-  const uniqueDomains = new Set((citations || []).map((c: any) => c.domain?.domain).filter(Boolean)).size;
+  const uniqueDomains = new Set(typedCitations.map((c) => c.domain?.domain).filter(Boolean)).size;
 
   const { data: competitors } = await supabase
     .from('competitors')
@@ -331,7 +362,7 @@ async function loadReportData({ projectId, runId, runDate }: Omit<ExportInput, '
     const citationsForPromptRun = citationsByPromptRun.get(pr.id) || [];
 
     const urls = citationsForPromptRun
-      .map((c: any) => c.url?.url)
+      .map((c) => c.url?.url)
       .filter(Boolean)
       .join(' | ');
 
@@ -340,7 +371,7 @@ async function loadReportData({ projectId, runId, runDate }: Omit<ExportInput, '
       run_date: run.run_date,
       prompt_run_id: pr.id,
       prompt_id: pr.prompt_id,
-      topic: topicName,
+      topic: String(topicName),
       prompt: prompt?.prompt_text || '',
       model: pr.ai_model || response?.model_used || '',
       status: pr.status,
@@ -381,7 +412,7 @@ async function loadReportData({ projectId, runId, runDate }: Omit<ExportInput, '
       negativeCount,
       promptsCovered,
       totalPromptsActive,
-      citationsCount: (citations || []).length,
+      citationsCount: typedCitations.length,
       uniqueDomains,
     },
     deltas,
@@ -530,12 +561,13 @@ function renderDailyAuditHtml(data: ReportData) {
 
 async function renderPdfBuffer(html: string): Promise<Buffer> {
   let chromium: any;
+  const dynamicImport = new Function('moduleName', 'return import(moduleName)') as (moduleName: string) => Promise<any>;
   try {
-    const playwright = await import('playwright');
+    const playwright = await dynamicImport('playwright');
     chromium = playwright.chromium;
   } catch {
     try {
-      const playwrightCore = await import('playwright-core');
+      const playwrightCore = await dynamicImport('playwright-core');
       chromium = playwrightCore.chromium;
     } catch {
       throw new Error('Playwright is required to generate PDFs. Install `playwright`.');
@@ -555,6 +587,67 @@ async function renderPdfBuffer(html: string): Promise<Buffer> {
   } finally {
     await browser.close();
   }
+}
+
+async function renderPdfFallbackBuffer(data: ReportData): Promise<Buffer> {
+  const dynamicImport = new Function('moduleName', 'return import(moduleName)') as (moduleName: string) => Promise<any>;
+  const { jsPDF } = await dynamicImport('jspdf');
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+
+  const lineHeight = 16;
+  const pageWidth = 595;
+  const pageHeight = 842;
+  const margin = 42;
+  const maxWidth = pageWidth - margin * 2;
+  let cursorY = margin;
+
+  const writeLine = (text: string, size = 11, bold = false) => {
+    doc.setFont('helvetica', bold ? 'bold' : 'normal');
+    doc.setFontSize(size);
+    const lines = doc.splitTextToSize(text, maxWidth);
+    for (const line of lines) {
+      if (cursorY > pageHeight - margin) {
+        doc.addPage();
+        cursorY = margin;
+      }
+      doc.text(line, margin, cursorY);
+      cursorY += lineHeight;
+    }
+  };
+
+  writeLine('Daily GEO Audit', 20, true);
+  cursorY += 4;
+  writeLine(`Project: ${data.project.name}`, 11);
+  writeLine(`Run date: ${data.run.runDate}`, 11);
+  writeLine(`Run id: ${data.run.id}`, 11);
+  writeLine(`Generated at: ${new Date().toISOString()}`, 11);
+
+  cursorY += 10;
+  writeLine('Executive Summary', 14, true);
+  writeLine(`Responses: ${data.summary.responsesCount}`);
+  writeLine(`Mentions: ${data.summary.mentionsCount}`);
+  writeLine(`Visibility: ${data.summary.visibilityScore ?? 'n/a'}%`);
+  writeLine(`Avg position: ${data.summary.avgPosition ?? 'n/a'}`);
+  writeLine(`Sentiment: ${data.summary.sentimentScore ?? 'n/a'}`);
+
+  cursorY += 10;
+  writeLine('Evidence', 14, true);
+  if (!data.evidence.length) {
+    writeLine('No evidence rows generated for this run.');
+  } else {
+    data.evidence.slice(0, 10).forEach((e, idx) => {
+      writeLine(`#${idx + 1} ${e.domain || 'Unknown domain'} ${e.url || ''}`, 11, true);
+      writeLine(`Prompt: ${e.promptText || 'n/a'}`);
+      writeLine(`Confidence: ${e.confidence ?? 'n/a'} | Method: ${e.method || 'n/a'}`);
+    });
+  }
+
+  cursorY += 10;
+  writeLine('Methodology', 14, true);
+  writeLine(`ALGO_VERSION: ${data.methodology.algoVersion}`);
+  data.methodology.formulas.forEach((f) => writeLine(`${f.label}: ${f.formula}`));
+
+  return Buffer.from(doc.output('arraybuffer'));
 }
 
 export async function generateAndStoreDailyExport(input: ExportInput) {
@@ -589,7 +682,13 @@ export async function generateAndStoreDailyExport(input: ExportInput) {
 
     if (input.type === 'daily_audit_pdf') {
       const html = renderDailyAuditHtml(reportData);
-      const pdfBuffer = await renderPdfBuffer(html);
+      let pdfBuffer: Buffer;
+      try {
+        pdfBuffer = await renderPdfBuffer(html);
+      } catch {
+        // Fallback to jsPDF when Playwright/Chromium is unavailable in runtime.
+        pdfBuffer = await renderPdfFallbackBuffer(reportData);
+      }
       filePath = `${input.projectId}/${input.runDate}/audit.pdf`;
       const { error: uploadError } = await supabase.storage
         .from('reports')
