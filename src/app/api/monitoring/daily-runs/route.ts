@@ -16,8 +16,8 @@ export async function GET(_request: NextRequest) {
   }
 
   const { data: runs } = await supabase
-    .from('monitoring_daily_runs')
-    .select('*')
+    .from('monitoring_runs')
+    .select('id, run_date, status, started_at, finished_at, error_message')
     .eq('project_id', project.id)
     .order('run_date', { ascending: false })
     .limit(30);

@@ -1,12 +1,14 @@
 'use client';
 
 import { type LucideIcon } from 'lucide-react';
+import { InfoTip } from './info-tip';
 
 type MetricCardProps = {
   label: string;
   value: string | number;
   suffix?: string;
   description?: string;
+  tooltip?: string;
   icon: LucideIcon;
   color: 'emerald' | 'red' | 'zinc' | 'violet' | 'blue' | 'cyan';
 };
@@ -44,13 +46,16 @@ const colorMap = {
   },
 };
 
-export function MetricCard({ label, value, suffix, description, icon: Icon, color }: MetricCardProps) {
+export function MetricCard({ label, value, suffix, description, tooltip, icon: Icon, color }: MetricCardProps) {
   const c = colorMap[color];
 
   return (
     <div className="group rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-5 transition-all duration-200 hover:border-white/[0.12] hover:bg-zinc-900/50">
       <div className="flex items-start justify-between mb-3">
-        <p className="text-xs text-zinc-500 uppercase tracking-wider font-medium">{label}</p>
+        <p className="text-xs text-zinc-500 uppercase tracking-wider font-medium inline-flex items-center gap-1">
+          {label}
+          {tooltip && <InfoTip text={tooltip} />}
+        </p>
         <div className={`w-8 h-8 rounded-xl ${c.iconBg} flex items-center justify-center`}>
           <Icon className={`w-4 h-4 ${c.iconColor}`} />
         </div>

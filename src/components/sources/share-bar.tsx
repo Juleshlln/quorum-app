@@ -1,5 +1,7 @@
 'use client';
 
+import { InfoTip } from './info-tip';
+
 type ShareBarProps = {
   ownedShare: number;
   competitorShare: number;
@@ -24,7 +26,10 @@ export function ShareBar({ ownedShare, competitorShare, thirdPartyShare }: Share
     <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-sm font-medium text-white">Répartition des sources</h3>
+          <h3 className="text-sm font-medium text-white inline-flex items-center gap-1">
+            Répartition des sources
+            <InfoTip text="Répartition entre vos domaines (Marque), ceux de vos concurrents, et les sites tiers (comparateurs, médias, etc.)." />
+          </h3>
           <p className="text-xs text-zinc-500 mt-0.5">Part de chaque acteur dans les citations IA</p>
         </div>
       </div>

@@ -42,6 +42,34 @@ type SourcesPayload = {
   table: SourceTableRow[];
 };
 
+type SummaryPayload = {
+  metrics: {
+    total_citations: number;
+    unique_domains: number;
+    unique_urls: number;
+    owned_share: number;
+    competitor_share: number;
+    third_party_share: number;
+    avg_quality_score: number;
+    observed_citations: number;
+    probable_citations: number;
+    series: Array<{ date: string; total_citations: number }>;
+  };
+  latestRun: {
+    id: string;
+    status: string;
+    run_date: string;
+    started_at: string | null;
+    finished_at: string | null;
+    error_message?: string | null;
+  } | null;
+  window: {
+    windowStart: string;
+    windowEnd: string;
+    windowDays: number;
+  };
+};
+
 type SourceTableRow = {
   key: string;
   type: string;
@@ -58,6 +86,7 @@ type SourceTableRow = {
 };
 
 type EvidenceItem = {
+  id?: string;
   cited_at: string;
   method: string | null;
   confidence: number | null;
@@ -66,6 +95,7 @@ type EvidenceItem = {
   prompt_text: string | null;
   response_snippet: string | null;
   response_id: string | null;
+  source_urls?: string[];
 };
 
 type EvidenceData = {
@@ -75,21 +105,21 @@ type EvidenceData = {
 };
 
 type RunInfo = {
-  lastRun: {
+  latestRun: {
     id: string;
-    run_date: string;
     status: string;
-    started_at: string;
+    run_date: string;
+    started_at: string | null;
     finished_at: string | null;
     error_message?: string | null;
   } | null;
-  lastSuccess: {
-    id: string;
-    run_date: string;
-    status: string;
-    started_at: string;
-    finished_at: string | null;
-  } | null;
+};
+
+type CronStatus = {
+  next_run_at_utc: string;
+  did_run_today: boolean;
+  last_daily_run_finished_at: string | null;
+  last_daily_run_status: string | null;
 };
 
 /* ─── Helpers ───────────────────────────────────────────────────── */
@@ -115,6 +145,80 @@ function formatShortDate(value: string) {
 
 function formatChartDate(value: string) {
   return new Date(value).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+}
+
+function HeaderWithInfo({
+  label,
+  tooltip,
+  sortable,
+  active,
+  direction,
+  onClick,
+  onShowInfo,
+  onHideInfo,
+}: {
+  label: string;
+  tooltip: string;
+  sortable?: boolean;
+  active?: boolean;
+  direction?: 'asc' | 'desc';
+  onClick?: () => void;
+  onShowInfo?: (tooltip: string, target: HTMLElement) => void;
+  onHideInfo?: () => void;
+}) {
+  const content = (
+    <span className="inline-flex items-center gap-1.5">
+      <span>{label}{sortable && active ? ` ${direction === 'desc' ? '↓' : '↑'}` : ''}</span>
+      <span className="inline-flex items-center">
+        <button
+          type="button"
+          aria-label={tooltip}
+          className="text-[11px] text-zinc-500 hover:text-zinc-300 cursor-help"
+          onMouseEnter={(event) => onShowInfo?.(tooltip, event.currentTarget)}
+          onMouseLeave={() => onHideInfo?.()}
+          onFocus={(event) => onShowInfo?.(tooltip, event.currentTarget)}
+          onBlur={() => onHideInfo?.()}
+          onClick={(event) => event.stopPropagation()}
+        >
+          ⓘ
+        </button>
+      </span>
+    </span>
+  );
+
+  if (!sortable) return content;
+
+  return (
+    <span
+      role="button"
+      tabIndex={0}
+      className="inline-flex items-center cursor-pointer hover:text-zinc-300 transition-colors"
+      onClick={onClick}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onClick?.();
+        }
+      }}
+    >
+      {content}
+    </span>
+  );
+}
+
+function cleanEvidenceSnippet(value: string | null) {
+  if (!value) return value;
+  return value
+    .split('\n')
+    .filter((line) => !/^\s*-\s*https?:\/\//i.test(line) && !/^\s*https?:\/\//i.test(line))
+    .join('\n')
+    .trim();
+}
+
+function toConfidencePercent(value: number) {
+  if (!Number.isFinite(value)) return 0;
+  const normalized = value <= 1 ? value * 100 : value;
+  return Math.max(0, Math.min(100, Math.round(normalized)));
 }
 
 /* ─── Skeleton loader ───────────────────────────────────────────── */
@@ -218,7 +322,7 @@ function OpportunityBadge() {
 
 /* ─── Main Component ────────────────────────────────────────────── */
 
-export function SourcesHub({ topics }: { topics: TopicOption[] }) {
+export function SourcesHub({ topics, projectId }: { topics: TopicOption[]; projectId: string }) {
   /* State – filters */
   const [tab, setTab] = useState<'domains' | 'urls'>('domains');
   const [range, setRange] = useState<7 | 30 | 90>(30);
@@ -230,11 +334,14 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
 
   /* State – data */
   const [payload, setPayload] = useState<SourcesPayload | null>(null);
+  const [summary, setSummary] = useState<SummaryPayload | null>(null);
   const [loading, setLoading] = useState(false);
+  const [summaryLoading, setSummaryLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   /* State – runs */
-  const [runInfo, setRunInfo] = useState<RunInfo>({ lastRun: null, lastSuccess: null });
+  const [runInfo, setRunInfo] = useState<RunInfo>({ latestRun: null });
+  const [cronStatus, setCronStatus] = useState<CronStatus | null>(null);
   const [runLoading, setRunLoading] = useState(false);
   const [runError, setRunError] = useState<string | null>(null);
   const [manualRunning, setManualRunning] = useState(false);
@@ -245,6 +352,7 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
   /* State – table sort */
   const [sortKey, setSortKey] = useState<'used_total' | 'used_share' | 'quality_score' | 'last_seen' | 'brand_mentioned_rate'>('used_share');
   const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc');
+  const [headerTooltip, setHeaderTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
 
   /* ─── Query string ────────────────────────────────────────── */
 
@@ -260,7 +368,7 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
     return params.toString();
   }, [tab, range, owned, topicId, model, search, gapOnly]);
 
-  /* ─── Data fetching ───────────────────────────────────────── */
+  /* ─── Data fetching (table + filters) ─────────────────────── */
 
   useEffect(() => {
     let isMounted = true;
@@ -288,24 +396,52 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
     return () => { isMounted = false; };
   }, [queryString]);
 
-  /* ─── Run management ──────────────────────────────────────── */
+  /* ─── Summary fetching (KPIs + latest run) ────────────────── */
 
-  const refreshRuns = () => {
+  useEffect(() => {
+    let isMounted = true;
+    setSummaryLoading(true);
     setRunLoading(true);
-    setRunError(null);
-    fetch('/api/monitoring/daily-runs')
+    fetch(`/api/projects/${projectId}/sources/summary?window=${range}d`)
       .then((res) => res.json())
       .then((data) => {
-        const runs = Array.isArray(data?.runs) ? data.runs : [];
-        const lastRun = runs.length > 0 ? runs[0] : null;
-        const lastSuccess = runs.find((r: any) => r.status === 'success' || r.status === 'partial') || null;
-        setRunInfo({ lastRun, lastSuccess });
+        if (!isMounted) return;
+        if (data?.error) {
+          setRunError(typeof data.error === 'string' ? data.error : 'Impossible de charger le statut.');
+          setSummary(null);
+          return;
+        }
+        setSummary(data);
+        setRunInfo({ latestRun: data?.latestRun ?? null });
       })
-      .catch(() => setRunError('Impossible de charger le statut.'))
-      .finally(() => setRunLoading(false));
-  };
+      .catch(() => {
+        if (!isMounted) return;
+        setRunError('Impossible de charger le statut.');
+      })
+      .finally(() => {
+        if (!isMounted) return;
+        setSummaryLoading(false);
+        setRunLoading(false);
+      });
+    return () => { isMounted = false; };
+  }, [projectId, range]);
 
-  useEffect(() => { refreshRuns(); }, []);
+  useEffect(() => {
+    let isMounted = true;
+    fetch('/api/cron/status')
+      .then((res) => res.json())
+      .then((data) => {
+        if (!isMounted) return;
+        if (data?.error) return;
+        setCronStatus(data as CronStatus);
+      })
+      .catch(() => {
+        // best effort only
+      });
+    return () => { isMounted = false; };
+  }, [projectId]);
+
+  /* ─── Manual run ──────────────────────────────────────────── */
 
   const triggerManualRun = async () => {
     setManualRunning(true);
@@ -318,7 +454,25 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
       setRunError('Impossible de relancer.');
     } finally {
       setManualRunning(false);
-      refreshRuns();
+      // refresh summary after manual run
+      setSummaryLoading(true);
+      fetch(`/api/projects/${projectId}/sources/summary?window=${range}d`)
+        .then((res) => res.json())
+        .then((data) => {
+          setSummary(data);
+          setRunInfo({ latestRun: data?.latestRun ?? null });
+        })
+        .catch(() => setRunError('Impossible de charger le statut.'))
+        .finally(() => setSummaryLoading(false));
+      fetch('/api/cron/status')
+        .then((res) => res.json())
+        .then((data) => {
+          if (data?.error) return;
+          setCronStatus(data as CronStatus);
+        })
+        .catch(() => {
+          // best effort only
+        });
     }
   };
 
@@ -373,6 +527,17 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
     }
   };
 
+  const showHeaderTooltip = (text: string, target: HTMLElement) => {
+    const rect = target.getBoundingClientRect();
+    setHeaderTooltip({
+      text,
+      x: rect.left + (rect.width / 2),
+      y: rect.bottom + 8,
+    });
+  };
+
+  const hideHeaderTooltip = () => setHeaderTooltip(null);
+
   /* ─── Evidence ────────────────────────────────────────────── */
 
   const openEvidence = async (scope: 'domain' | 'url', key: string) => {
@@ -386,15 +551,15 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
   /* ─── Chart data ──────────────────────────────────────────── */
 
   const chartData = useMemo(
-    () => (payload?.series ?? []).map((s: { date: string; total_citations: number }) => ({ ...s, label: formatChartDate(s.date) })),
-    [payload?.series]
+    () => (summary?.metrics?.series ?? []).map((s) => ({ ...s, label: formatChartDate(s.date) })),
+    [summary?.metrics?.series]
   );
 
   /* ─── Derived ─────────────────────────────────────────────── */
 
-  const kpis = payload?.kpis;
-  const hasData = !!kpis && kpis.total_citations > 0;
-  const isRunning = runInfo.lastRun?.status === 'running';
+  const metrics = summary?.metrics;
+  const hasData = !!metrics && metrics.total_citations > 0;
+  const isRunning = runInfo.latestRun?.status === 'running';
 
   /* ─── Render ──────────────────────────────────────────────── */
 
@@ -422,10 +587,11 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
         {/* Status bar */}
         <StatusBar
           runInfo={runInfo}
-          isLoading={runLoading}
+          isLoading={runLoading || summaryLoading}
           onManualRun={triggerManualRun}
           isManualRunning={manualRunning}
           error={runError}
+          cronStatus={cronStatus}
         />
       </div>
 
@@ -460,14 +626,14 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
       )}
 
       {/* ── Main content ────────────────────────────────────── */}
-      {hasData && kpis && (
+      {hasData && metrics && (
         <>
           {/* A. Hero Section */}
           <ScoreHero
-            qualityScore={kpis.avg_quality_score}
-            ownedShare={kpis.owned_share}
-            competitorShare={kpis.competitor_share}
-            totalCitations={kpis.total_citations}
+            qualityScore={metrics.avg_quality_score}
+            ownedShare={metrics.owned_share}
+            competitorShare={metrics.competitor_share}
+            totalCitations={metrics.total_citations}
             isRunning={isRunning}
           />
 
@@ -475,36 +641,40 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
           <div className="grid gap-4 md:grid-cols-4">
             <MetricCard
               label="Domaines uniques"
-              value={kpis.unique_domains}
+              value={metrics.unique_domains}
               icon={Globe}
               color="blue"
               description="Sites différents citant votre marché"
+              tooltip="Nombre de sites web distincts cités par les IA sur votre marché."
             />
             <MetricCard
               label="URLs uniques"
-              value={kpis.unique_urls}
+              value={metrics.unique_urls}
               icon={Link2}
               color="cyan"
               description="Pages précises référencées"
+              tooltip="Nombre de pages web précises (avec leur chemin complet) citées par les IA."
             />
             <MetricCard
               label="Citations observées"
-              value={kpis.observed_citations}
+              value={metrics.observed_citations}
               icon={Eye}
               color="emerald"
               description="URLs explicitement citées par l'IA"
+              tooltip="URLs explicitement présentes dans la réponse IA — détection directe et fiable."
             />
             <MetricCard
               label="Citations probables"
-              value={kpis.probable_citations}
+              value={metrics.probable_citations}
               icon={BarChart3}
               color="violet"
               description="Sources inférées sans URL explicite"
+              tooltip="Sources inférées par un follow-up IA quand aucune URL n'est citée directement — moins fiables."
             />
           </div>
 
           {/* Owned share warning */}
-          {kpis.owned_share === 0 && (
+          {metrics.owned_share === 0 && (
             <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.06] px-4 py-3 text-xs text-amber-300 leading-relaxed">
               Part propriétaires à 0%. Vérifiez que le site de votre marque est renseigné dans
               <a href="/brand-settings" className="underline underline-offset-2 ml-1 text-amber-200 hover:text-white">Brand settings</a>.
@@ -514,9 +684,9 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
           {/* C. Share breakdown + Trend chart */}
           <div className="grid gap-6 md:grid-cols-2">
             <ShareBar
-              ownedShare={kpis.owned_share}
-              competitorShare={kpis.competitor_share}
-              thirdPartyShare={kpis.third_party_share}
+              ownedShare={metrics.owned_share}
+              competitorShare={metrics.competitor_share}
+              thirdPartyShare={metrics.third_party_share}
             />
 
             {/* Trend chart */}
@@ -642,7 +812,7 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
             </div>
 
             {/* Table content */}
-            {payload.table.length === 0 ? (
+            {payload?.table?.length === 0 ? (
               <div className="p-12 text-center">
                 <p className="text-sm text-zinc-500">Aucune source détectée avec ces filtres.</p>
               </div>
@@ -655,37 +825,82 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
                         Source
                       </th>
                       <th className="text-left px-4 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider">
-                        Type
+                        <HeaderWithInfo
+                          label="Type"
+                          tooltip="Catégorie éditoriale de la source (Éditorial, UGC, Institutionnel, etc.)"
+                          onShowInfo={showHeaderTooltip}
+                          onHideInfo={hideHeaderTooltip}
+                        />
                       </th>
                       <th
-                        className="text-left px-4 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider cursor-pointer hover:text-zinc-300 transition-colors"
-                        onClick={() => toggleSort('used_total')}
+                        className="text-left px-4 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider"
                       >
-                        Usage {sortKey === 'used_total' && (sortDir === 'desc' ? '↓' : '↑')}
+                        <HeaderWithInfo
+                          label="Usage"
+                          tooltip="Nombre de fois que cette source a été citée sur la période sélectionnée"
+                          sortable
+                          active={sortKey === 'used_total'}
+                          direction={sortDir}
+                          onClick={() => toggleSort('used_total')}
+                          onShowInfo={showHeaderTooltip}
+                          onHideInfo={hideHeaderTooltip}
+                        />
                       </th>
                       <th
-                        className="text-left px-4 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider cursor-pointer hover:text-zinc-300 transition-colors"
-                        onClick={() => toggleSort('used_share')}
+                        className="text-left px-4 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider"
                       >
-                        Part {sortKey === 'used_share' && (sortDir === 'desc' ? '↓' : '↑')}
+                        <HeaderWithInfo
+                          label="Part"
+                          tooltip="Pourcentage de citations que représente cette source sur le total"
+                          sortable
+                          active={sortKey === 'used_share'}
+                          direction={sortDir}
+                          onClick={() => toggleSort('used_share')}
+                          onShowInfo={showHeaderTooltip}
+                          onHideInfo={hideHeaderTooltip}
+                        />
                       </th>
                       <th
-                        className="text-left px-4 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider cursor-pointer hover:text-zinc-300 transition-colors"
-                        onClick={() => toggleSort('brand_mentioned_rate')}
+                        className="text-left px-4 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider"
                       >
-                        Marque {sortKey === 'brand_mentioned_rate' && (sortDir === 'desc' ? '↓' : '↑')}
+                        <HeaderWithInfo
+                          label="Marque"
+                          tooltip="Pourcentage des citations de cette source où ta marque apparaît dans la réponse"
+                          sortable
+                          active={sortKey === 'brand_mentioned_rate'}
+                          direction={sortDir}
+                          onClick={() => toggleSort('brand_mentioned_rate')}
+                          onShowInfo={showHeaderTooltip}
+                          onHideInfo={hideHeaderTooltip}
+                        />
                       </th>
                       <th
-                        className="text-left px-4 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider cursor-pointer hover:text-zinc-300 transition-colors"
-                        onClick={() => toggleSort('quality_score')}
+                        className="text-left px-4 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider"
                       >
-                        Qualité {sortKey === 'quality_score' && (sortDir === 'desc' ? '↓' : '↑')}
+                        <HeaderWithInfo
+                          label="Qualité"
+                          tooltip="Score de fiabilité et d'autorité de la source, de 0 à 100"
+                          sortable
+                          active={sortKey === 'quality_score'}
+                          direction={sortDir}
+                          onClick={() => toggleSort('quality_score')}
+                          onShowInfo={showHeaderTooltip}
+                          onHideInfo={hideHeaderTooltip}
+                        />
                       </th>
                       <th
-                        className="text-left px-4 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider cursor-pointer hover:text-zinc-300 transition-colors"
-                        onClick={() => toggleSort('last_seen')}
+                        className="text-left px-4 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider"
                       >
-                        Dernière vue {sortKey === 'last_seen' && (sortDir === 'desc' ? '↓' : '↑')}
+                        <HeaderWithInfo
+                          label="Dernière vue"
+                          tooltip="Date de la dernière détection de cette source dans une réponse IA"
+                          sortable
+                          active={sortKey === 'last_seen'}
+                          direction={sortDir}
+                          onClick={() => toggleSort('last_seen')}
+                          onShowInfo={showHeaderTooltip}
+                          onHideInfo={hideHeaderTooltip}
+                        />
                       </th>
                       <th className="px-4 py-3" />
                     </tr>
@@ -757,6 +972,15 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
         </>
       )}
 
+      {headerTooltip && (
+        <div
+          className="fixed z-[90] max-w-xs -translate-x-1/2 rounded-lg border border-white/[0.12] bg-zinc-900 px-2.5 py-2 text-[11px] text-zinc-200 shadow-xl"
+          style={{ left: `${headerTooltip.x}px`, top: `${headerTooltip.y}px` }}
+        >
+          {headerTooltip.text}
+        </div>
+      )}
+
       {/* ── Evidence modal ──────────────────────────────────── */}
       {evidence && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
@@ -780,31 +1004,77 @@ export function SourcesHub({ topics }: { topics: TopicOption[] }) {
                 <p className="text-sm text-zinc-500 text-center py-8">Aucune evidence disponible.</p>
               )}
               {evidence.items.map((item: EvidenceItem, idx: number) => (
-                <div key={`${item.response_id || 'r'}-${idx}`} className="rounded-xl border border-white/[0.06] bg-zinc-900/30 p-4 space-y-2">
-                  <div className="flex flex-wrap gap-2 text-[11px] text-zinc-500">
-                    <span>{new Date(item.cited_at).toLocaleString('fr-FR')}</span>
-                    <span>•</span>
-                    <span>{item.ai_model || 'model'}</span>
-                    <span>•</span>
-                    <span className={item.method === 'observed' ? 'text-emerald-400' : 'text-violet-400'}>
-                      {item.method === 'observed' ? 'Observée' : 'Probable'}
-                    </span>
+                <div key={`${item.id || item.response_id || 'r'}-${idx}`} className="relative pl-6">
+                  <div className="absolute left-2 top-2 bottom-0 w-px bg-white/[0.08]" />
+                  <div className="absolute left-[5px] top-2 h-3 w-3 rounded-full border border-zinc-800 bg-cyan-400/80" />
+                  <div className="rounded-xl border border-white/[0.08] bg-zinc-900/40 p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
+                          item.method === 'observed'
+                            ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-400/20'
+                            : 'bg-amber-500/15 text-amber-300 border border-amber-400/20'
+                        }`}>
+                          {item.method === 'observed' ? 'Observée' : 'Probable'}
+                        </span>
+                      </div>
+                      <div className="text-right text-[11px] text-zinc-500">
+                        <div>{new Date(item.cited_at).toLocaleString('fr-FR')}</div>
+                        <div>{item.ai_model || 'modèle inconnu'}</div>
+                      </div>
+                    </div>
+
+                    {item.prompt_text && (
+                      <p className="text-base md:text-lg font-semibold text-white leading-snug">{item.prompt_text}</p>
+                    )}
+
                     {typeof item.confidence === 'number' && (
-                      <>
-                        <span>•</span>
-                        <span>conf. {Math.round(item.confidence * 100)}%</span>
-                      </>
+                      <div className="space-y-1">
+                        {(() => {
+                          const confidenceScore = toConfidencePercent(item.confidence);
+                          return (
+                            <>
+                              <div className="flex items-center justify-between text-[11px] text-zinc-400">
+                                <span>Score de confiance</span>
+                                <span>{confidenceScore}%</span>
+                              </div>
+                              <div style={{ width: '100%', backgroundColor: '#374151', borderRadius: '9999px', height: '6px' }}>
+                                <div style={{
+                                  width: `${confidenceScore}%`,
+                                  backgroundColor: '#3b82f6',
+                                  borderRadius: '9999px',
+                                  height: '6px',
+                                }} />
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    )}
+
+                    {item.source_urls && item.source_urls.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {item.source_urls.map((sourceUrl) => (
+                          <a
+                            key={sourceUrl}
+                            href={sourceUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="rounded-full border border-white/[0.1] bg-white/[0.04] px-2.5 py-1 text-[11px] text-zinc-300 hover:text-white hover:bg-white/[0.08]"
+                          >
+                            {sourceUrl}
+                          </a>
+                        ))}
+                      </div>
+                    )}
+
+                    {cleanEvidenceSnippet(item.response_snippet) && (
+                      <p className="text-xs text-zinc-500 leading-relaxed whitespace-pre-wrap">{cleanEvidenceSnippet(item.response_snippet)}</p>
+                    )}
+                    {item.rationale && (
+                      <p className="text-[11px] text-zinc-600 italic">Rationale : {item.rationale}</p>
                     )}
                   </div>
-                  {item.prompt_text && (
-                    <p className="text-sm text-zinc-300">{item.prompt_text}</p>
-                  )}
-                  {item.response_snippet && (
-                    <p className="text-xs text-zinc-500 leading-relaxed whitespace-pre-wrap">{item.response_snippet}</p>
-                  )}
-                  {item.rationale && (
-                    <p className="text-[11px] text-zinc-600 italic">Rationale : {item.rationale}</p>
-                  )}
                 </div>
               ))}
             </div>

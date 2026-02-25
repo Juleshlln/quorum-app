@@ -8,13 +8,47 @@ on:
 jobs:
   trigger-daily-run:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
+      - name: Validate secrets
+        run: |
+          missing=""
+          if [ -z "${{ secrets.CRON_SECRET }}" ]; then
+            missing="$missing CRON_SECRET"
+          fi
+          if [ -z "${{ vars.SITE_URL }}" ]; then
+            missing="$missing SITE_URL"
+          fi
+          if [ -n "$missing" ]; then
+            echo "::error::Missing required configuration:$missing"
+            echo ""
+            echo "Configure in GitHub → Settings → Secrets and variables → Actions:"
+            echo "  - SITE_URL (variable, not secret): Your Vercel deployment URL (e.g. https://quorum-mvp.vercel.app)"
+            echo "  - CRON_SECRET (secret): Must match CRON_SECRET in your Vercel environment variables"
+            exit 1
+          fi
+
       - name: Call daily-run endpoint
         env:
+          SITE_URL: ${{ vars.SITE_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
-          DAILY_RUN_URL: https://[ton-domaine-vercel]/api/cron/daily-run
         run: |
-          curl -sS -X POST "$DAILY_RUN_URL" \
+          DAILY_RUN_URL="${SITE_URL%/}/api/cron/daily-run"
+          echo "Calling $DAILY_RUN_URL"
+
+          HTTP_CODE=$(curl -sS -o response.json -w "%{http_code}" \
+            -X POST "$DAILY_RUN_URL" \
             -H "Authorization: Bearer $CRON_SECRET" \
             -H "Content-Type: application/json" \
-            --fail-with-body
+            --max-time 290 \
+            --connect-timeout 10)
+
+          echo "HTTP status: $HTTP_CODE"
+          cat response.json
+
+          if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
+            echo "::error::daily-run returned HTTP $HTTP_CODE"
+            exit 1
+          fi
+
+          echo "Daily run completed successfully"

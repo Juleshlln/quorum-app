@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient, createClient } from '@/lib/supabase/server';
 import { getActiveProjectForUser } from '@/lib/projects/get-active-project';
-import { createMonitoringRun, executeMonitoringRun, isValidCompletedRun } from '@/lib/monitoring/run-orchestrator';
+import { createMonitoringRun, executeMonitoringRun } from '@/lib/monitoring/run-orchestrator';
 import { logRun } from '@/lib/monitoring/run-logs';
 import { getParisRunDate } from '@/lib/monitoring/run-date';
 
@@ -18,83 +18,35 @@ function isStaleRun(startedAt: string | null | undefined) {
 }
 
 export async function POST(_request: NextRequest) {
-  console.log('[monitoring/manual-run] POST called', {
-    timestamp: new Date().toISOString(),
-  });
-
   const supabaseUser = await createClient();
   const { data: { user } } = await supabaseUser.auth.getUser();
-  console.log('[monitoring/manual-run] auth', { user_id: user?.id ?? null });
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const project = await getActiveProjectForUser(user.id);
-  console.log('[monitoring/manual-run] active project', { project_id: project?.id ?? null });
   if (!project) {
     return NextResponse.json({ error: 'No active project' }, { status: 400 });
   }
 
   const supabase = createAdminClient();
+  let monitoringRunId: string | null = null;
   const runDate = getParisRunDate();
   const startedAt = new Date().toISOString();
 
   const { data: existingRaw } = await supabase
     .from('monitoring_daily_runs')
-    .select('id, status, started_at')
+    .select('id, status, started_at, monitoring_run_id')
     .eq('project_id', project.id)
     .eq('run_date', runDate)
     .maybeSingle();
-  const existing = (existingRaw || null) as { id: string; status: string | null; started_at: string | null } | null;
-  console.log('[monitoring/manual-run] daily_run check', {
-    run_date: runDate,
-    existing_id: existing?.id ?? null,
-    existing_status: existing?.status ?? null,
-  });
-
-  if (existing?.status === 'success') {
-    // Validate the corresponding monitoring_run actually has data
-    const { data: linkedRun } = await supabase
-      .from('monitoring_runs')
-      .select('id')
-      .eq('project_id', project.id)
-      .eq('status', 'success')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (linkedRun) {
-      const validation = await isValidCompletedRun(supabase, linkedRun.id);
-      if (validation.valid) {
-        console.log('[monitoring/manual-run] skipped: valid monitoring_run exists', { run_id: linkedRun.id });
-        return NextResponse.json({ ok: true, skipped: true, status: existing.status });
-      }
-      await logRun({
-        supabase,
-        runId: existing.id,
-        projectId: project.id,
-        level: 'warn',
-        step: 'manual_run',
-        message: 'Daily run was success but monitoring_run is invalid; re-running',
-        meta: { items_total: validation.itemsTotal, prompt_runs: validation.linkedPromptRuns },
-      });
-      // Fall through to re-run
-    } else {
-      console.log('[monitoring/manual-run] daily_run is success but no monitoring_run in success found; re-running');
-      await logRun({
-        supabase,
-        runId: existing.id,
-        projectId: project.id,
-        level: 'warn',
-        step: 'manual_run',
-        message: 'Daily run was success but no monitoring_run in success status found; re-running',
-      });
-      // Fall through to re-run
-    }
-  }
-  if (existing?.status === 'running') {
-    if (!isStaleRun(existing.started_at)) {
-      return NextResponse.json({ ok: true, skipped: true, status: existing.status });
-    }
+  let existing = (existingRaw || null) as {
+    id: string;
+    status: string | null;
+    started_at: string | null;
+    monitoring_run_id: string | null;
+  } | null;
+  if (existing?.status === 'running' && isStaleRun(existing.started_at)) {
     await supabase
       .from('monitoring_daily_runs')
       .update({
@@ -112,6 +64,8 @@ export async function POST(_request: NextRequest) {
       message: 'Run stale timeout',
       meta: { run_date: runDate, started_at: existing.started_at },
     });
+    // Stale rows are closed and replaced by a fresh one.
+    existing = null;
   }
 
   let runId = existing?.id || null;
@@ -151,37 +105,16 @@ export async function POST(_request: NextRequest) {
 
   const runStart = Date.now();
   try {
-    const { run, reused } = await createMonitoringRun({
+    const { run } = await createMonitoringRun({
       supabase,
       projectId: project.id,
       windowDays: 30,
       createdBy: user.id,
       force: true,
     });
-    console.log('[monitoring/manual-run] monitoring_run', {
-      monitoring_run_id: run.id,
-      status: run.status,
-      reused,
-      items_total: run.items_total,
-    });
+    monitoringRunId = run.id;
 
     const execution = await executeMonitoringRun({ supabase, runId: run.id });
-    console.log('[monitoring/manual-run] execution result', {
-      skipped: !!execution.skipped,
-      ok: (execution as any).ok,
-      status: (execution as any).status,
-    });
-    if (execution.skipped) {
-      await supabase
-        .from('monitoring_daily_runs')
-        .update({
-          status: 'success',
-          finished_at: new Date().toISOString(),
-          duration_ms: Date.now() - runStart,
-        })
-        .eq('id', runId);
-      return NextResponse.json({ ok: true, skipped: true, status: 'success' });
-    }
     const summary = (execution as { summary?: { runs: number; answers: number } }).summary || { runs: 0, answers: 0 };
 
     const { data: runRow } = await supabase
@@ -190,20 +123,25 @@ export async function POST(_request: NextRequest) {
       .eq('id', run.id)
       .maybeSingle();
 
+    if (!runRow) {
+      throw new Error(`Missing monitoring_runs row for run_id=${run.id}`);
+    }
+
     await supabase
       .from('monitoring_daily_runs')
       .update({
-        status: runRow?.status || 'success',
-        items_total: runRow?.items_total || 0,
-        items_processed: runRow?.items_processed || 0,
-        items_success: runRow?.items_success || 0,
-        items_failed: runRow?.items_failed || 0,
+        status: runRow.status || 'success',
+        monitoring_run_id: run.id,
+        items_total: runRow.items_total || 0,
+        items_processed: runRow.items_processed || 0,
+        items_success: runRow.items_success || 0,
+        items_failed: runRow.items_failed || 0,
         finished_at: new Date().toISOString(),
         duration_ms: Date.now() - runStart,
       })
       .eq('id', runId);
 
-    return NextResponse.json({ ok: true, ...summary });
+    return NextResponse.json({ ok: true, skipped: false, run_id: run.id, ...summary });
   } catch (err: any) {
     const message = err?.message || String(err);
     await logRun({
@@ -219,6 +157,7 @@ export async function POST(_request: NextRequest) {
       .from('monitoring_daily_runs')
       .update({
         status: 'failed',
+        monitoring_run_id: monitoringRunId,
         finished_at: new Date().toISOString(),
         duration_ms: Date.now() - runStart,
         error_message: message,

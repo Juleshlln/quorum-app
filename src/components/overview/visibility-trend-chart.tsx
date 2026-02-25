@@ -8,14 +8,25 @@ import {
   Tooltip,
   ResponsiveContainer,
   CartesianGrid,
+  Legend,
 } from 'recharts';
 
-type TrendPoint = {
-  date: string;
-  visibilityRate: number;
-};
+const BRAND_COLORS = [
+  '#22d3ee', // cyan-400  (own brand)
+  '#f87171', // red-400
+  '#a78bfa', // violet-400
+  '#fb923c', // orange-400
+  '#34d399', // emerald-400
+  '#facc15', // yellow-400
+];
 
-export function VisibilityTrendChart({ data }: { data: TrendPoint[] }) {
+export function VisibilityTrendChart({
+  data,
+  brands,
+}: {
+  data: Record<string, string | number>[];
+  brands?: string[];
+}) {
   if (!data || data.length === 0) {
     return (
       <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/30 p-8 text-center text-zinc-500">
@@ -23,6 +34,10 @@ export function VisibilityTrendChart({ data }: { data: TrendPoint[] }) {
       </div>
     );
   }
+
+  const lineKeys = brands && brands.length > 0
+    ? brands
+    : Object.keys(data[0] || {}).filter((k) => k !== 'date');
 
   return (
     <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-4">
@@ -44,13 +59,23 @@ export function VisibilityTrendChart({ data }: { data: TrendPoint[] }) {
                 color: '#fff',
               }}
             />
-            <Line
-              type="monotone"
-              dataKey="visibilityRate"
-              stroke="#22d3ee"
-              strokeWidth={2}
-              dot={false}
-            />
+            {lineKeys.length > 1 && (
+              <Legend
+                wrapperStyle={{ fontSize: 12, color: '#9ca3af' }}
+              />
+            )}
+            {lineKeys.map((key, i) => (
+              <Line
+                key={key}
+                type="monotone"
+                dataKey={key}
+                name={key}
+                stroke={BRAND_COLORS[i % BRAND_COLORS.length]}
+                strokeWidth={i === 0 ? 2.5 : 1.5}
+                strokeDasharray={i === 0 ? undefined : '4 3'}
+                dot={false}
+              />
+            ))}
           </LineChart>
         </ResponsiveContainer>
       </div>

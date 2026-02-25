@@ -34,6 +34,9 @@ export default async function SourcesPage() {
     .order('created_at', { ascending: false });
 
   return (
-    <SourcesHub topics={(topicsData || []) as Array<{ id: string; name: string }>} />
+    <SourcesHub
+  topics={(topicsData || []) as Array<{ id: string; name: string }>}
+  projectId={project.id}
+/>
   );
 }

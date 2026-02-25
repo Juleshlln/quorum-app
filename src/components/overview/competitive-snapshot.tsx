@@ -4,14 +4,10 @@ import { useMemo, useState } from 'react';
 import { VisibilityTrendChart } from '@/components/overview/visibility-trend-chart';
 import { BrandsLeaderboardTable } from '@/components/overview/brands-leaderboard-table';
 
-type TrendPoint = {
-  date: string;
-  visibilityRate: number;
-};
-
 type BrandRow = {
   brand: string;
   visibilityRate: number | null;
+  delta: number | null;
   avgSentiment: number | null;
   avgPosition: number | null;
   mentions: number;
@@ -20,9 +16,11 @@ type BrandRow = {
 
 export function CompetitiveSnapshot({
   trendData,
+  trendBrands,
   leaderboard,
 }: {
-  trendData: TrendPoint[];
+  trendData: Record<string, string | number>[];
+  trendBrands: string[];
   leaderboard: BrandRow[];
 }) {
   const [activeTab, setActiveTab] = useState<'trend' | 'leaderboard'>('trend');
@@ -81,7 +79,7 @@ export function CompetitiveSnapshot({
         </button>
       </div>
       {activeTab === 'trend' ? (
-        <VisibilityTrendChart data={filteredTrend} />
+        <VisibilityTrendChart data={filteredTrend} brands={trendBrands} />
       ) : (
         <BrandsLeaderboardTable rows={leaderboard} />
       )}

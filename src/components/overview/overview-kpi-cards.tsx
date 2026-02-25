@@ -39,22 +39,24 @@ export function OverviewKpiCards({
         </p>
       </div>
       <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-4">
-        <p className="text-xs text-zinc-500 uppercase tracking-wider">Position moyenne</p>
+        <p className="text-xs text-zinc-500 uppercase tracking-wider">Rang compétitif</p>
         <p className="text-2xl font-semibold text-white mt-2">
           {avgPosition !== null ? `#${avgPosition}` : '—'}
         </p>
-        <p className="text-xs text-zinc-500 mt-2">Sur les réponses où la marque est citée</p>
+        <p className="text-xs text-zinc-500 mt-2">Basé sur le nombre de mentions vs concurrents</p>
       </div>
       <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-4">
         <p className="text-xs text-zinc-500 uppercase tracking-wider">Couverture</p>
         <div className="mt-2 space-y-1 text-sm text-zinc-200">
-          <div>{coverage.runsPerPrompt} runs / prompt</div>
-          <div>{coverage.promptCount} prompts</div>
+          <div>{coverage.runsPerPrompt} run{coverage.runsPerPrompt !== 1 ? 's' : ''}</div>
+          <div>{coverage.promptCount} prompt{coverage.promptCount !== 1 ? 's' : ''} actif{coverage.promptCount !== 1 ? 's' : ''}</div>
           <div className="text-xs text-zinc-500">
             Modèles: {coverage.modelsUsed.length > 0 ? coverage.modelsUsed.join(', ') : '—'}
           </div>
           {coverage.lastRunAt && (
-            <div className="text-xs text-zinc-500">Dernière analyse: {coverage.lastRunAt}</div>
+            <div className="text-xs text-zinc-500">
+              Dernière analyse: {new Date(coverage.lastRunAt).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+            </div>
           )}
         </div>
       </div>

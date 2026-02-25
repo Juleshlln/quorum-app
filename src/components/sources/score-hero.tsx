@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import { TrendingUp, TrendingDown, Minus, Activity } from 'lucide-react';
+import { InfoTip } from './info-tip';
 
 type ScoreHeroProps = {
   qualityScore: number;
@@ -62,7 +63,10 @@ export function ScoreHero({ qualityScore, ownedShare, competitorShare, totalCita
         {/* Left: Score + insight */}
         <div className="space-y-4">
           <div className="flex items-center gap-2">
-            <p className="text-xs text-zinc-500 uppercase tracking-wider font-medium">Score de visibilité sources</p>
+            <p className="text-xs text-zinc-500 uppercase tracking-wider font-medium inline-flex items-center gap-1">
+              Score de visibilité sources
+              <InfoTip text="Score composite calculé à partir du nombre de citations, de leur fraîcheur, et de la diversité des sources qui citent votre marque dans les réponses IA." />
+            </p>
             {isRunning && (
               <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-[10px] text-cyan-400 font-medium">
                 <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
@@ -92,15 +96,24 @@ export function ScoreHero({ qualityScore, ownedShare, competitorShare, totalCita
         {/* Right: Mini stats */}
         <div className="flex gap-8">
           <div className="text-center">
-            <p className="text-xs text-zinc-500 mb-1">Citations</p>
+            <p className="text-xs text-zinc-500 mb-1 inline-flex items-center gap-1">
+              Citations
+              <InfoTip text="Nombre de fois où une URL de votre marché a été explicitement citée dans une réponse IA sur la période sélectionnée." />
+            </p>
             <p className="text-2xl font-semibold text-white tabular-nums">{totalCitations}</p>
           </div>
           <div className="text-center">
-            <p className="text-xs text-zinc-500 mb-1">Part marque</p>
+            <p className="text-xs text-zinc-500 mb-1 inline-flex items-center gap-1">
+              Part marque
+              <InfoTip text="Pourcentage de citations qui pointent vers vos propres domaines (owned) parmi toutes les citations détectées." />
+            </p>
             <p className="text-2xl font-semibold text-emerald-400 tabular-nums">{ownedShare}%</p>
           </div>
           <div className="text-center">
-            <p className="text-xs text-zinc-500 mb-1">Part concurrents</p>
+            <p className="text-xs text-zinc-500 mb-1 inline-flex items-center gap-1">
+              Part concurrents
+              <InfoTip text="Pourcentage de citations qui pointent vers des domaines classifiés comme concurrents." />
+            </p>
             <p className="text-2xl font-semibold text-red-400 tabular-nums">{competitorShare}%</p>
           </div>
         </div>

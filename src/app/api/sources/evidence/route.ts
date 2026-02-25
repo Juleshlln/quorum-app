@@ -66,12 +66,21 @@ export async function GET(request: NextRequest) {
     promptMap = new Map((prompts || []).map((p: any) => [p.id, p]));
   }
 
+  const responseUrlsMap = new Map<string, string[]>();
+  for (const row of filtered) {
+    if (!row.response_id || !row.url?.url) continue;
+    const existing = responseUrlsMap.get(row.response_id) || [];
+    if (!existing.includes(row.url.url)) existing.push(row.url.url);
+    responseUrlsMap.set(row.response_id, existing);
+  }
+
   const items = filtered.map((row: any) => {
     const resp = row.response_id ? responsesMap.get(row.response_id) : null;
     const prompt = row.run?.prompt_id ? promptMap.get(row.run.prompt_id) : null;
     const needle = scope === 'domain' ? row.domain?.domain : row.url?.url;
     const snippet = resp?.raw_text && needle ? buildSnippet(resp.raw_text, needle) : null;
     return {
+      id: row.id,
       cited_at: row.cited_at,
       method: row.method,
       confidence: row.confidence,
@@ -80,6 +89,7 @@ export async function GET(request: NextRequest) {
       prompt_text: prompt?.prompt_text || resp?.prompt_final || null,
       response_snippet: snippet,
       response_id: row.response_id,
+      source_urls: row.response_id ? (responseUrlsMap.get(row.response_id) || []) : (row.url?.url ? [row.url.url] : []),
     };
   });
 
