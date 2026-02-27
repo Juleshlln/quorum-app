@@ -2,7 +2,7 @@ name: Daily Monitoring Fallback
 
 on:
   schedule:
-    - cron: '5 7 * * *'
+    - cron: '5 6 * * *'
   workflow_dispatch:
 
 jobs:

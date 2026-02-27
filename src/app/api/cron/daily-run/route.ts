@@ -79,16 +79,28 @@ async function recoverStuckRuns(supabase: ReturnType<typeof createAdminClient>) 
 /*  Main handler                                                       */
 /* ------------------------------------------------------------------ */
 async function handleDailyRun(request: NextRequest) {
+  // Pre-flight: ensure CRON_SECRET is configured
+  if (!process.env.CRON_SECRET) {
+    console.error('[daily-run] CRON_SECRET environment variable is not set');
+    return NextResponse.json(
+      { error: 'Server misconfiguration: CRON_SECRET not set' },
+      { status: 500 },
+    );
+  }
+
   const cronHeader = request.headers.get('x-vercel-cron');
   const authHeader = request.headers.get('authorization');
   const secret = authHeader?.replace('Bearer ', '');
 
   const isVercelCron = cronHeader === '1';
-  const isValidSecret = process.env.CRON_SECRET && secret === process.env.CRON_SECRET;
+  const isValidSecret = secret === process.env.CRON_SECRET;
 
   if (!isVercelCron && !isValidSecret) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  const source = isVercelCron ? 'vercel-cron' : 'external';
+  console.log(`[daily-run] Triggered by ${source} at ${new Date().toISOString()}`);
 
   const supabase = createAdminClient();
   const runDate = getParisRunDate();
@@ -422,7 +434,21 @@ async function handleDailyRun(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, recovered: recoveredCount, results });
+  const skippedAll = results.length > 0 && results.every(r => r.skipped);
+  const status = skippedAll ? 'already_run' : 'completed';
+
+  console.log(`[daily-run] Finished: ${status}, recovered=${recoveredCount}, projects=${results.length}`);
+
+  return NextResponse.json({
+    ok: true,
+    status,
+    message: skippedAll
+      ? `All ${results.length} project(s) already ran today (${runDate}). No new execution needed.`
+      : `Daily run completed for ${results.length} project(s).`,
+    run_date: runDate,
+    recovered: recoveredCount,
+    results,
+  });
 }
 
 export async function POST(request: NextRequest) {
