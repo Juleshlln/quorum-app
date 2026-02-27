@@ -24,22 +24,36 @@ export async function isValidCompletedRun(supabase: any, runId: string) {
     .eq('id', runId)
     .maybeSingle();
 
-  const { count: successCount } = await supabase
+  const { data: successPromptRuns } = await supabase
     .from('prompt_runs')
-    .select('id', { count: 'exact', head: true })
+    .select('id')
     .eq('run_id', runId)
     .eq('status', 'success');
 
+  const successIds = (successPromptRuns || []).map((r: { id: string }) => r.id);
+
   const itemsTotal = Number(runRow?.items_total || 0);
   const itemsProcessed = Number(runRow?.items_processed || 0);
-  const successfulPromptRuns = Number(successCount || 0);
+  const successfulPromptRuns = successIds.length;
 
-  // A run is valid only if it actually processed items AND has successful prompt_runs
+  // Verify that actual AI answers exist (not just prompt_run rows marked success)
+  let answersCount = 0;
+  if (successIds.length > 0) {
+    const { count } = await supabase
+      .from('ai_answers')
+      .select('id', { count: 'exact', head: true })
+      .in('prompt_run_id', successIds);
+    answersCount = Number(count || 0);
+  }
+
+  // A run is valid only if it processed items, has successful prompt_runs,
+  // AND those prompt_runs have actual AI answers stored
   return {
-    valid: itemsTotal > 0 && itemsProcessed > 0 && successfulPromptRuns > 0,
+    valid: itemsTotal > 0 && itemsProcessed > 0 && successfulPromptRuns > 0 && answersCount > 0,
     itemsTotal,
     itemsProcessed,
     linkedPromptRuns: successfulPromptRuns,
+    answersCount,
   };
 }
 
@@ -279,9 +293,15 @@ export async function executeMonitoringRun({
       models,
     });
 
-    const itemsFailed = Math.max(0, itemsTotal - summary.runs);
-    // A run with 0 items is not a success — it means no prompts were active
-    const status = itemsTotal === 0 ? 'empty' : itemsFailed > 0 ? 'partial' : 'success';
+    // items_success = actual AI answers, not just processed prompt_runs
+    const itemsFailed = Math.max(0, itemsTotal - summary.answers);
+    const status = itemsTotal === 0
+      ? 'empty'
+      : summary.answers === 0
+        ? 'failed'
+        : summary.answers < itemsTotal
+          ? 'partial'
+          : 'success';
 
     await supabase
       .from('monitoring_runs')
@@ -289,7 +309,7 @@ export async function executeMonitoringRun({
         status,
         items_total: itemsTotal,
         items_processed: summary.runs,
-        items_success: summary.runs,
+        items_success: summary.answers,
         items_failed: itemsFailed,
         finished_at: new Date().toISOString(),
         duration_ms: Date.now() - runStart,

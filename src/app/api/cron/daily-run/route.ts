@@ -151,56 +151,56 @@ async function handleDailyRun(request: NextRequest) {
     }
 
     // --- Step B: Handle already-successful runs ---
-    if (existing?.status === 'success') {
-      const { data: linkedRun } = await supabase
-        .from('monitoring_runs')
-        .select('id, status, items_total, items_processed, items_success, items_failed')
-        .eq('project_id', projectId)
-        .eq('status', 'success')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      let skipValid = false;
-      if (linkedRun) {
-        const validation = await isValidCompletedRun(supabase, linkedRun.id);
-        if (validation.valid) {
-          skipValid = true;
-          monitoringRunId = linkedRun.id;
-        } else {
-          await logRun({
-            supabase,
-            runId: existing.id,
-            projectId,
-            level: 'warn',
-            step: 'daily_run',
-            message: 'Daily run was success but monitoring_run is invalid; re-running',
-            meta: { items_total: validation.itemsTotal, prompt_runs: validation.linkedPromptRuns },
-          });
-        }
-      } else {
-        await logRun({
-          supabase,
-          runId: existing.id,
-          projectId,
-          level: 'warn',
-          step: 'daily_run',
-          message: 'Daily run was success but no monitoring_run in success status found; re-running',
-        });
-      }
-      if (skipValid) {
+    // Only skip if the SPECIFIC linked monitoring_run has real AI answers.
+    if (existing?.status === 'success' && existing.monitoring_run_id) {
+      const validation = await isValidCompletedRun(supabase, existing.monitoring_run_id);
+      if (validation.valid) {
+        // The linked run has actual AI answers — safe to skip
+        const { data: linkedRun } = await supabase
+          .from('monitoring_runs')
+          .select('items_total, items_processed, items_success, items_failed')
+          .eq('id', existing.monitoring_run_id)
+          .maybeSingle();
         await supabase
           .from('monitoring_daily_runs')
           .update({
-            monitoring_run_id: monitoringRunId,
             items_total: linkedRun?.items_total || 0,
             items_processed: linkedRun?.items_processed || 0,
             items_success: linkedRun?.items_success || 0,
             items_failed: linkedRun?.items_failed || 0,
           })
           .eq('id', existing.id);
+        monitoringRunId = existing.monitoring_run_id;
+
+        console.log(`[daily-run] Project ${projectId}: already ran today with ${validation.answersCount} AI answers — skipping`);
         results.push({ project_id: projectId, runs: 0, answers: 0, skipped: true });
         continue;
       }
+
+      // The linked run exists but has no real AI answers — must re-run
+      await logRun({
+        supabase,
+        runId: existing.id,
+        projectId,
+        level: 'warn',
+        step: 'daily_run',
+        message: 'Daily run marked success but linked monitoring_run has no AI answers; re-running',
+        meta: {
+          monitoring_run_id: existing.monitoring_run_id,
+          items_total: validation.itemsTotal,
+          prompt_runs: validation.linkedPromptRuns,
+          answers: validation.answersCount,
+        },
+      });
+    } else if (existing?.status === 'success' && !existing.monitoring_run_id) {
+      await logRun({
+        supabase,
+        runId: existing.id,
+        projectId,
+        level: 'warn',
+        step: 'daily_run',
+        message: 'Daily run marked success but has no linked monitoring_run_id; re-running',
+      });
     }
 
     // --- Step C: Handle still-running runs (should be recovered above, but double-check) ---
