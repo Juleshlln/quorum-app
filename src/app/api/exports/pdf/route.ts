@@ -27,6 +27,8 @@ export async function GET(_request: NextRequest) {
 
   const now = new Date();
   const start30 = new Date(now.getTime() - 30 * 86_400_000).toISOString().slice(0, 10);
+  const start7 = new Date(now.getTime() - 7 * 86_400_000).toISOString().slice(0, 10);
+  const start14 = new Date(now.getTime() - 14 * 86_400_000).toISOString().slice(0, 10);
 
   // 1. Daily metrics for the 30-day trend
   const { data: dailyMetrics } = await supabase
@@ -55,36 +57,62 @@ export async function GET(_request: NextRequest) {
   const visibility = totalResponses > 0 ? pct(totalMentions, totalResponses) : 0;
 
   const posCount = metrics.reduce((s, r) => s + r.positive_count, 0);
-  const neuCount = metrics.reduce((s, r) => s + r.neutral_count, 0);
   const negCount = metrics.reduce((s, r) => s + r.negative_count, 0);
   const sentimentScore = totalMentions > 0
     ? Number(((posCount - negCount) / totalMentions).toFixed(2))
     : null;
 
-  // 3. Competitors
+  // 7d / prev-7d split
+  const metrics7 = metrics.filter(r => r.day >= start7);
+  const metricsPrev7 = metrics.filter(r => r.day >= start14 && r.day < start7);
+  const total7 = metrics7.reduce((s, r) => s + r.responses_count, 0);
+  const mentions7 = metrics7.reduce((s, r) => s + r.mentions_count, 0);
+  const vis7 = total7 > 0 ? pct(mentions7, total7) : 0;
+  const totalPrev7 = metricsPrev7.reduce((s, r) => s + r.responses_count, 0);
+  const mentionsPrev7 = metricsPrev7.reduce((s, r) => s + r.mentions_count, 0);
+  const visPrev7 = totalPrev7 > 0 ? pct(mentionsPrev7, totalPrev7) : 0;
+
+  // 3. Competitors — detailed benchmark
   const { data: competitors } = await supabase
     .from('competitors')
     .select('name')
     .eq('project_id', projectId);
   const competitorNames: string[] = (competitors || []).map((c: any) => c.name as string);
 
-  const competitorMentions = competitorNames.map((name) => {
+  const competitorBenchmark = competitorNames.map((name) => {
     let total = 0;
+    let total7d = 0;
+    let totalPrev7d = 0;
+    let bestVis = 0;
     for (const dr of metrics) {
       const entry = (dr.competitor_data || []).find(
         (c) => c.name.toLowerCase() === name.toLowerCase()
       );
-      if (entry) total += entry.mentions;
+      if (entry) {
+        total += entry.mentions;
+        if (entry.visibility > bestVis) bestVis = entry.visibility;
+        if (dr.day >= start7) total7d += entry.mentions;
+        if (dr.day >= start14 && dr.day < start7) totalPrev7d += entry.mentions;
+      }
     }
-    return { name, mentions: total, visibility: totalResponses > 0 ? pct(total, totalResponses) : 0 };
+    const avgVis = totalResponses > 0 ? pct(total, totalResponses) : 0;
+    const vis7d = total7 > 0 ? pct(total7d, total7) : 0;
+    const visPrev = totalPrev7 > 0 ? pct(totalPrev7d, totalPrev7) : 0;
+    const trendDelta = vis7d - visPrev;
+    const trend = trendDelta > 2 ? 'up' : trendDelta < -2 ? 'down' : 'stable';
+    return { name, mentions: total, avgVisibility: avgVis, bestVisibility: bestVis, trend, trendDelta };
   });
 
   // Rank
   const leaderboard = [
     { name: project.name, mentions: totalMentions },
-    ...competitorMentions.map(c => ({ name: c.name, mentions: c.mentions })),
+    ...competitorBenchmark.map(c => ({ name: c.name, mentions: c.mentions })),
   ].sort((a, b) => b.mentions - a.mentions);
   const brandRank = leaderboard.findIndex(e => e.name === project.name) + 1;
+
+  // Brand trend
+  const brandTrendDelta = vis7 - visPrev7;
+  const brandTrend = brandTrendDelta > 2 ? 'up' : brandTrendDelta < -2 ? 'down' : 'stable';
 
   // 4. Completed runs count
   const { count: runsCount } = await supabase
@@ -120,7 +148,7 @@ export async function GET(_request: NextRequest) {
   const thirdPartyCount = Object.values(domainCounts).filter(d => d.category === 'third_party').reduce((s, d) => s + d.count, 0);
   const totalCitations = ownedCount + competitorCount + thirdPartyCount;
 
-  // 6. Real citations (is_fallback=false) for table
+  // 6. Real citations for table
   const { data: realCitations } = await supabase
     .from('citations')
     .select(`
@@ -129,6 +157,7 @@ export async function GET(_request: NextRequest) {
       method,
       confidence,
       brand_mentioned,
+      competitor_mentioned,
       prompt_run_id,
       domain:sources_domains(domain, category),
       url:sources_urls(url)
@@ -137,7 +166,7 @@ export async function GET(_request: NextRequest) {
     .eq('is_fallback', false)
     .gte('cited_at', `${start30}T00:00:00Z`)
     .order('cited_at', { ascending: false })
-    .limit(50);
+    .limit(500);
 
   // Get prompt texts for citations
   const citationPrIds = [...new Set((realCitations || []).map((c: any) => c.prompt_run_id).filter(Boolean))];
@@ -175,31 +204,99 @@ export async function GET(_request: NextRequest) {
         : 0,
     }));
 
-  // 8. Recommendations
+  // 8. Per-prompt analysis
+  const { data: promptsData } = await supabase
+    .from('monitoring_prompts')
+    .select('id, prompt_text, topic_id, is_active')
+    .eq('project_id', projectId)
+    .eq('is_active', true);
+
+  const { data: promptRunsData } = await supabase
+    .from('prompt_runs')
+    .select('prompt_id, brand_mentioned, competitors_mentioned, scheduled_at')
+    .eq('project_id', projectId)
+    .eq('run_type', 'monitoring')
+    .eq('status', 'success')
+    .gte('scheduled_at', `${start30}T00:00:00Z`);
+
+  const promptAnalysis = (promptsData || []).map((p: any) => {
+    const runs = (promptRunsData || []).filter((r: any) => r.prompt_id === p.id);
+    const brandMentions = runs.filter((r: any) => r.brand_mentioned === true).length;
+    const competitorsDetected = new Set<string>();
+    for (const r of runs) {
+      for (const c of (r as any).competitors_mentioned || []) {
+        competitorsDetected.add(c);
+      }
+    }
+    const runs7 = runs.filter((r: any) => r.scheduled_at?.slice(0, 10) >= start7);
+    const runsPrev7 = runs.filter((r: any) => {
+      const d = r.scheduled_at?.slice(0, 10);
+      return d >= start14 && d < start7;
+    });
+    const vis = runs.length > 0 ? pct(brandMentions, runs.length) : 0;
+    const vis7d = runs7.length > 0 ? pct(runs7.filter((r: any) => r.brand_mentioned).length, runs7.length) : 0;
+    const visPrev = runsPrev7.length > 0 ? pct(runsPrev7.filter((r: any) => r.brand_mentioned).length, runsPrev7.length) : 0;
+    const delta = vis7d - visPrev;
+    const trend = delta > 5 ? 'up' : delta < -5 ? 'down' : 'stable';
+    return {
+      prompt: p.prompt_text,
+      runs: runs.length,
+      brandMentioned: brandMentions > 0,
+      visibility: vis,
+      competitors: [...competitorsDetected].slice(0, 4),
+      trend,
+    };
+  }).sort((a: any, b: any) => b.visibility - a.visibility);
+
+  // 9. Recommendations (data-driven)
   const recommendations: string[] = [];
 
-  if (visibility < 30) {
-    recommendations.push('Votre visibilite est faible (< 30%). Creez du contenu optimise pour les requetes IA sur vos thematiques cles.');
-  } else if (visibility < 60) {
-    recommendations.push('Visibilite moderee. Renforcez votre presence sur les domaines tiers les plus cites.');
-  } else {
+  // Compare with top competitor
+  const topCompetitor = competitorBenchmark.sort((a, b) => b.avgVisibility - a.avgVisibility)[0];
+  if (topCompetitor && topCompetitor.avgVisibility > visibility) {
+    recommendations.push(
+      `${topCompetitor.name} vous depasse avec ${topCompetitor.avgVisibility}% de visibilite contre ${visibility}%. Renforcez votre contenu sur les thematiques ou ce concurrent est cite.`
+    );
+  }
+
+  // Sentiment
+  const sentimentPct = totalMentions > 0 ? pct(posCount, totalMentions) : 0;
+  if (sentimentPct < 30 && totalMentions > 0) {
+    recommendations.push(
+      `Sentiment positif faible (${sentimentPct}%). Analysez les reponses negatives et mettez en avant vos elements differenciants.`
+    );
+  }
+
+  // Owned media share
+  const ownedPct = totalCitations > 0 ? pct(ownedCount, totalCitations) : 0;
+  if (ownedPct < 25 && totalCitations > 0) {
+    recommendations.push(
+      `Seulement ${ownedPct}% de vos citations proviennent de vos domaines owned. Creez du contenu sur ${(project as any).website || 'votre site'} ciblant les prompts ou vous etes absent.`
+    );
+  }
+
+  // Top third-party domains
+  const thirdPartyDomains = topDomains.filter(d => d.category === 'third_party').slice(0, 3);
+  if (thirdPartyDomains.length > 0) {
+    recommendations.push(
+      `Les domaines tiers les plus influents sont : ${thirdPartyDomains.map(d => d.domain).join(', ')}. Assurez-vous d'y etre reference.`
+    );
+  }
+
+  // Worst performing prompt
+  const worstPrompt = promptAnalysis.find((p: any) => p.visibility === 0 && p.runs > 0);
+  if (worstPrompt) {
+    const truncated = worstPrompt.prompt.length > 60 ? worstPrompt.prompt.slice(0, 60) + '...' : worstPrompt.prompt;
+    recommendations.push(
+      `Le prompt "${truncated}" genere 0% de visibilite sur ${worstPrompt.runs} runs. C'est votre plus grande opportunite.`
+    );
+  }
+
+  // General
+  if (visibility >= 60) {
     recommendations.push('Excellente visibilite. Maintenez votre strategie et surveillez les mouvements concurrentiels.');
-  }
-
-  if (sentimentScore !== null && sentimentScore < 0) {
-    recommendations.push('Sentiment negatif detecte. Analysez les reponses negatives et adaptez votre communication.');
-  }
-
-  if (brandRank > 1) {
-    recommendations.push(`Vous etes ${brandRank}${brandRank === 1 ? 'er' : 'e'} dans le classement. Ciblez les prompts ou vos concurrents sont mieux positionnes.`);
-  }
-
-  if (thirdPartyCount > ownedCount * 2) {
-    recommendations.push('La majorite de vos citations proviennent de tiers. Renforcez vos contenus owned media.');
-  }
-
-  if (topDomains.length > 0) {
-    recommendations.push(`Les domaines les plus cites sont : ${topDomains.slice(0, 3).map(d => d.domain).join(', ')}. Assurez-vous d\'y avoir un contenu a jour.`);
+  } else if (visibility < 30) {
+    recommendations.push('Visibilite faible (< 30%). Creez du contenu optimise pour les requetes IA sur vos thematiques cles.');
   }
 
   return NextResponse.json({
@@ -214,6 +311,8 @@ export async function GET(_request: NextRequest) {
       runsCount: runsCount || 0,
       totalResponses,
       totalMentions,
+      brandTrend,
+      brandTrendDelta,
     },
     breakdown: {
       owned: totalCitations > 0 ? pct(ownedCount, totalCitations) : 0,
@@ -226,7 +325,24 @@ export async function GET(_request: NextRequest) {
     },
     trend,
     citations: citationsTable,
-    competitors: competitorMentions,
+    competitorBenchmark: [
+      {
+        name: project.name,
+        mentions: totalMentions,
+        avgVisibility: visibility,
+        bestVisibility: metrics.reduce((best, r) => {
+          const v = r.visibility_score != null
+            ? (r.visibility_score >= 0 && r.visibility_score <= 1 ? Math.round(r.visibility_score * 100) : r.visibility_score)
+            : 0;
+          return Math.max(best, v);
+        }, 0),
+        trend: brandTrend,
+        trendDelta: brandTrendDelta,
+        isBrand: true,
+      },
+      ...competitorBenchmark.map(c => ({ ...c, isBrand: false })),
+    ],
+    promptAnalysis,
     recommendations,
   });
 }

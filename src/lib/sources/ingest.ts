@@ -37,7 +37,7 @@ function normalizeUrlType(url: string) {
 }
 
 const DOMAIN_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
-const domainCache = new Map<string, { owned: string | null; competitors: Array<{ id: string; domain: string }>; cachedAt: number }>();
+const domainCache = new Map<string, { owned: string | null; competitors: Array<{ id: string; domain: string }>; competitorNames: Array<{ id: string; name: string }>; cachedAt: number }>();
 const PROBABLE_GENERIC_DOMAINS = new Set([
   'wikipedia.org',
   'reddit.com',
@@ -77,13 +77,29 @@ async function resolveDomainCategory({
       .single();
     const { data: competitors } = await supabase
       .from('competitors')
-      .select('id, website')
+      .select('id, name, domain, website')
       .eq('project_id', projectId);
+    // Build competitor domains from both website and domain fields
+    const competitorDomains: Array<{ id: string; domain: string }> = [];
+    const seenDomains = new Set<string>();
+    for (const c of (competitors || []) as any[]) {
+      const fromWebsite = getDomainFromUrl(c.website || null);
+      const fromDomain = normalizeDomain(c.domain || null);
+      if (fromWebsite && !seenDomains.has(fromWebsite)) {
+        seenDomains.add(fromWebsite);
+        competitorDomains.push({ id: c.id, domain: fromWebsite });
+      }
+      if (fromDomain && fromDomain !== fromWebsite && !seenDomains.has(fromDomain)) {
+        seenDomains.add(fromDomain);
+        competitorDomains.push({ id: c.id, domain: fromDomain });
+      }
+    }
     cached = {
       owned: getDomainFromUrl(project?.website || null),
-      competitors: (competitors || [])
-        .map((c: any) => ({ id: c.id, domain: getDomainFromUrl(c.website || null) }))
-        .filter((c: any) => c.domain),
+      competitors: competitorDomains,
+      competitorNames: (competitors || [])
+        .map((c: any) => ({ id: c.id, name: (c.name || '').toLowerCase().trim() }))
+        .filter((c: any) => c.name.length > 2),
       cachedAt: Date.now(),
     };
     domainCache.set(projectId, cached);
@@ -95,6 +111,15 @@ async function resolveDomainCategory({
   const competitor = cached.competitors.find((c) => domain === c.domain || domain.endsWith(`.${c.domain}`));
   if (competitor) {
     return { category: 'competitor', competitor_id: competitor.id };
+  }
+  // Fallback: match competitor by name against the domain
+  // e.g., competitor "Lyreco" matches domain "lyreco.fr" or "lyreco.com"
+  const nameMatch = cached.competitorNames.find((c) => {
+    const token = c.name.replace(/\s+/g, '');
+    return domain.startsWith(token + '.') || domain.includes('.' + token + '.');
+  });
+  if (nameMatch) {
+    return { category: 'competitor', competitor_id: nameMatch.id };
   }
   return { category: 'third_party', competitor_id: null };
 }
@@ -315,6 +340,11 @@ export async function ingestCitations({
       continue;
     }
 
+    // A citation is competitor_mentioned if the cited domain IS a competitor
+    // (domain-based) OR if any competitor name was detected in the response text
+    // (text-based, passed via competitorMentioned parameter).
+    const isCompetitorDomain = categoryInfo.category === 'competitor';
+
     const citationPayload = {
       project_id: projectId,
       run_id: resolvedRunId,
@@ -331,7 +361,7 @@ export async function ingestCitations({
       is_fallback: citation.is_fallback ?? false,
       cited_at: citedAt,
       brand_mentioned: brandMentioned,
-      competitor_mentioned: competitorMentioned,
+      competitor_mentioned: isCompetitorDomain || (competitorMentioned ?? false),
       position_in_answer: positionInAnswer,
     };
 

@@ -212,10 +212,19 @@ function analyzeResponse(
     }
   }
 
-  // Check for competitor mentions
-  const competitorsMentioned = competitors.filter(comp => 
-    lowerResponse.includes(comp.toLowerCase())
-  );
+  // Check for competitor mentions (by name and by domain)
+  const competitorsMentioned = competitors.filter(comp => {
+    const lowerComp = comp.toLowerCase();
+    // Direct name match
+    if (lowerResponse.includes(lowerComp)) return true;
+    // Also match domain-like references (e.g., "lyreco.com", "raja.fr")
+    // Extract a possible domain token from the competitor name
+    const domainToken = lowerComp
+      .replace(/\s+(group|sas|sarl|sa|inc|ltd|gmbh|ag)$/i, '')
+      .replace(/\s+/g, '');
+    if (domainToken !== lowerComp && lowerResponse.includes(domainToken)) return true;
+    return false;
+  });
 
   // Extract cited sources (URLs)
   const urlRegex = /https?:\/\/[^\s)]+/g;

@@ -28,17 +28,6 @@ type DailyMetric = {
   competitor_data: Array<{ name: string; mentions: number; visibility: number }>;
 };
 
-type TopicAgg = {
-  topic_id: string;
-  runs: number;
-  mentions: number;
-  positive: number;
-  neutral: number;
-  negative: number;
-  positionSum: number;
-  positionCount: number;
-};
-
 /* ────────────────────────────────────────────────────────────────── */
 /*  Helpers                                                          */
 /* ────────────────────────────────────────────────────────────────── */
@@ -52,14 +41,6 @@ function normalizeVisibilityScore(raw: unknown): number {
   if (!Number.isFinite(numeric)) return 0;
   if (numeric >= 0 && numeric <= 1) return Math.round(numeric * 100);
   return numeric;
-}
-
-function extractDomains(text: string | null) {
-  if (!text) return [];
-  const urls = text.match(/https?:\/\/[^\s)]+/g) || [];
-  return urls
-    .map((u) => u.replace(/^https?:\/\//, '').split('/')[0].toLowerCase())
-    .filter(Boolean);
 }
 
 /* ────────────────────────────────────────────────────────────────── */
@@ -364,9 +345,94 @@ export default async function OverviewPage() {
   const leaderboard = leaderboardUnsorted.sort((a, b) => (b.visibilityRate || 0) - (a.visibilityRate || 0));
 
   /* ══════════════════════════════════════════════════════════════ */
-  /*  F. Topics performance (flat query, no joins)                 */
+  /*  F. Per-prompt performance + Themes detection                 */
   /* ══════════════════════════════════════════════════════════════ */
 
+  // Fetch all active prompts
+  const { data: allPromptsData } = await supabase
+    .from('monitoring_prompts')
+    .select('id, prompt_text, topic_id, is_active')
+    .eq('project_id', projectId)
+    .eq('is_active', true);
+  const allPrompts = (allPromptsData || []) as Array<{
+    id: string; prompt_text: string; topic_id: string | null; is_active: boolean;
+  }>;
+
+  // Fetch prompt_runs for 30d (we'll slice for 7d too)
+  const { data: allPromptRuns30 } = await supabase
+    .from('prompt_runs')
+    .select('prompt_id, brand_mentioned, scheduled_at, competitors_mentioned')
+    .eq('project_id', projectId)
+    .eq('run_type', 'monitoring')
+    .eq('status', 'success')
+    .gte('scheduled_at', `${start30}T00:00:00Z`)
+    .order('scheduled_at', { ascending: false });
+
+  const promptRuns30 = (allPromptRuns30 || []) as Array<{
+    prompt_id: string;
+    brand_mentioned: boolean | null;
+    scheduled_at: string;
+    competitors_mentioned: string[] | null;
+  }>;
+
+  // Per-prompt aggregation
+  const promptPerformance = allPrompts.map((p) => {
+    const runs = promptRuns30.filter((r) => r.prompt_id === p.id);
+    const brandWins = runs.filter((r) => r.brand_mentioned === true).length;
+    const visibility = runs.length > 0 ? Math.round((brandWins / runs.length) * 100) : 0;
+
+    // Trend: last 3 runs vs previous 3 runs
+    const sorted = [...runs].sort((a, b) => b.scheduled_at.localeCompare(a.scheduled_at));
+    const last3 = sorted.slice(0, 3);
+    const prev3 = sorted.slice(3, 6);
+    const last3Rate = last3.length > 0 ? last3.filter((r) => r.brand_mentioned === true).length / last3.length : 0;
+    const prev3Rate = prev3.length > 0 ? prev3.filter((r) => r.brand_mentioned === true).length / prev3.length : 0;
+    const diff = last3Rate - prev3Rate;
+    const trend: 'up' | 'stable' | 'down' = diff > 0.15 ? 'up' : diff < -0.15 ? 'down' : 'stable';
+
+    // Collect competitors from all runs of this prompt
+    const competitorsSet = new Set<string>();
+    for (const r of runs) {
+      for (const c of r.competitors_mentioned || []) competitorsSet.add(c);
+    }
+
+    return {
+      promptId: p.id,
+      promptText: p.prompt_text,
+      runs: runs.length,
+      brandWins,
+      visibility,
+      trend,
+      competitors: [...competitorsSet],
+    };
+  }).sort((a, b) => b.visibility - a.visibility);
+
+  // Theme detection from prompt texts
+  const themeRules: Array<{ name: string; icon: string; keywords: string[] }> = [
+    { name: 'Prix / Compétitivité', icon: '💰', keywords: ['prix', 'moins cher', 'économique', 'cout', 'budget', 'tarif', 'pas cher'] },
+    { name: 'Distribution BtoB', icon: '🏢', keywords: ['btob', 'b2b', 'distributeur', 'professionnel', 'entreprise', 'fourniture'] },
+    { name: 'E-commerce', icon: '🛒', keywords: ['ecommerce', 'e-commerce', 'commande en ligne', 'livraison', 'achat en ligne', 'site web'] },
+    { name: 'Alternatif Amazon', icon: '📦', keywords: ['alternative', 'amazon', 'marketplace'] },
+    { name: 'Leaders / Marché', icon: '🏆', keywords: ['leader', 'meilleur', 'top', 'classement', 'recommande', 'principal'] },
+  ];
+
+  const detectedThemes = themeRules.map((theme) => {
+    const matchingPrompts = promptPerformance.filter((p) =>
+      theme.keywords.some((kw) => p.promptText.toLowerCase().includes(kw))
+    );
+    if (matchingPrompts.length === 0) return null;
+    const avgVis = matchingPrompts.length > 0
+      ? Math.round(matchingPrompts.reduce((s, p) => s + p.visibility, 0) / matchingPrompts.length)
+      : 0;
+    return {
+      name: theme.name,
+      icon: theme.icon,
+      promptCount: matchingPrompts.length,
+      avgVisibility: avgVis,
+    };
+  }).filter(Boolean) as Array<{ name: string; icon: string; promptCount: number; avgVisibility: number }>;
+
+  // Legacy topic metrics (keep for backward compat)
   const { data: topicsData } = await supabase
     .from('monitoring_topics')
     .select('id, name')
@@ -375,183 +441,206 @@ export default async function OverviewPage() {
     (topicsData || []).map((t: { id: string; name: string | null }) => [t.id, t.name || 'Topic'])
   );
 
-  // Flat prompt_runs with topic — single simple query
-  const topicQuery = async (startDate: string) => {
-    const { data } = await supabase
+  /* ══════════════════════════════════════════════════════════════ */
+  /*  G. Insights — real citations + dynamic recommendations       */
+  /* ══════════════════════════════════════════════════════════════ */
+
+  // Top owned domains from citations (brand_mentioned=true)
+  const { data: ownedCitationData } = await supabase
+    .from('citations')
+    .select('domain_id, brand_mentioned, domain:sources_domains(domain, category)')
+    .eq('project_id', projectId)
+    .eq('brand_mentioned', true)
+    .eq('is_fallback', false)
+    .gte('created_at', `${start30}T00:00:00Z`);
+
+  const ownedDomainCounts: Record<string, { count: number; category: string }> = {};
+  for (const c of (ownedCitationData || []) as Array<{ domain: { domain: string; category: string } | null }>) {
+    const d = c.domain?.domain;
+    if (!d) continue;
+    if (!ownedDomainCounts[d]) ownedDomainCounts[d] = { count: 0, category: c.domain?.category || 'third_party' };
+    ownedDomainCounts[d].count++;
+  }
+  const insightTopDomains = Object.entries(ownedDomainCounts)
+    .sort(([, a], [, b]) => b.count - a.count)
+    .slice(0, 3)
+    .map(([domain, info]) => ({ domain, count: info.count, category: info.category }));
+
+  // Top prompts by best visibility (reuse promptPerformance)
+  const insightTopPrompts = promptPerformance
+    .filter((p) => p.visibility > 0)
+    .slice(0, 3)
+    .map((p) => ({
+      text: p.promptText,
+      visibility: p.visibility,
+      runs: p.runs,
+    }));
+
+  // Owned media percentage
+  const totalCitationCount = Object.values(ownedDomainCounts).reduce((s, d) => s + d.count, 0);
+  const ownedCitationCount = Object.values(ownedDomainCounts).filter((d) => d.category === 'owned').reduce((s, d) => s + d.count, 0);
+  // Need ALL citation domain data for accurate owned %
+  const { data: allCitDomains } = await supabase
+    .from('citations')
+    .select('domain:sources_domains(domain, category)')
+    .eq('project_id', projectId)
+    .eq('is_fallback', false)
+    .gte('created_at', `${start30}T00:00:00Z`);
+  let allCitTotal = 0;
+  let allCitOwned = 0;
+  for (const c of (allCitDomains || []) as Array<{ domain: { domain: string; category: string } | null }>) {
+    allCitTotal++;
+    if (c.domain?.category === 'owned') allCitOwned++;
+  }
+  const ownedPercent = allCitTotal > 0 ? Math.round((allCitOwned / allCitTotal) * 100) : 0;
+
+  // Dynamic recommendations
+  const insightActions: Array<{ title: string; detail: string; type: 'warning' | 'info' | 'success' }> = [];
+
+  // Rule 1: prompt with 0% visibility
+  const worstPrompt = promptPerformance.find((p) => p.visibility === 0 && p.runs > 0);
+  if (worstPrompt) {
+    const truncated = worstPrompt.promptText.length > 50
+      ? worstPrompt.promptText.slice(0, 50) + '...'
+      : worstPrompt.promptText;
+    insightActions.push({
+      title: 'Optimiser un prompt clé',
+      detail: `Aucune visibilité sur "${truncated}". Créez du contenu ciblant cette requête.`,
+      type: 'warning',
+    });
+  }
+
+  // Rule 2: competitor leading on a prompt
+  const competitorLeading = promptPerformance.find((p) => p.visibility === 0 && p.competitors.length > 0);
+  if (competitorLeading) {
+    const comp = competitorLeading.competitors[0];
+    const truncated = competitorLeading.promptText.length > 40
+      ? competitorLeading.promptText.slice(0, 40) + '...'
+      : competitorLeading.promptText;
+    insightActions.push({
+      title: `Contrer ${comp}`,
+      detail: `Il vous devance sur "${truncated}". Renforcez votre contenu sur ce sujet.`,
+      type: 'warning',
+    });
+  }
+
+  // Rule 3: owned media < 30%
+  if (ownedPercent < 30 && allCitTotal > 0) {
+    insightActions.push({
+      title: 'Renforcer la présence owned',
+      detail: `Seulement ${ownedPercent}% de citations owned. Publiez du contenu sur ${(activeProject as any).website || 'votre site'}.`,
+      type: 'warning',
+    });
+  }
+
+  // Rule 4: fallback positive
+  if (insightActions.length === 0) {
+    const vis = mainVisibility ?? 0;
+    if (vis >= 50) {
+      insightActions.push({
+        title: 'Maintenir la dynamique',
+        detail: 'Visibilité solide. Continuez à enrichir vos contenus sur les prompts actifs.',
+        type: 'success',
+      });
+    } else {
+      insightActions.push({
+        title: 'Créer du contenu IA-optimisé',
+        detail: 'Publiez des pages qui répondent directement aux questions posées aux IA sur votre marché.',
+        type: 'info',
+      });
+    }
+  }
+
+  /* ══════════════════════════════════════════════════════════════ */
+  /*  H. Simulation — real monitoring AI response with highlights  */
+  /* ══════════════════════════════════════════════════════════════ */
+
+  // Find latest monitoring prompt_run where brand_mentioned=true + has answer
+  const { data: simRunData } = await supabase
+    .from('prompt_runs')
+    .select('id, prompt_id, scheduled_at, ai_model, brand_mentioned, competitors_mentioned')
+    .eq('project_id', projectId)
+    .eq('run_type', 'monitoring')
+    .eq('status', 'success')
+    .eq('brand_mentioned', true)
+    .order('scheduled_at', { ascending: false })
+    .limit(10);
+
+  let simulationData: {
+    promptText: string;
+    answerText: string;
+    brandMentioned: boolean;
+    competitors: string[];
+    model: string;
+    date: string;
+  } | null = null;
+
+  if (simRunData && simRunData.length > 0) {
+    // Get ai_answers for these runs and find one with actual text
+    const simRunIds = simRunData.map((r: any) => r.id);
+    const { data: simAnswers } = await supabase
+      .from('ai_answers')
+      .select('prompt_run_id, raw_answer_text')
+      .in('prompt_run_id', simRunIds);
+
+    const simAnswerMap = new Map<string, string>(
+      (simAnswers || []).map((a: any) => [a.prompt_run_id, a.raw_answer_text ?? ''])
+    );
+
+    // Find first run that has a non-empty answer
+    for (const run of simRunData as any[]) {
+      const answerText = simAnswerMap.get(run.id) || '';
+      if (answerText.length > 50) {
+        // Get prompt text
+        const prompt = allPrompts.find((p) => p.id === run.prompt_id);
+        simulationData = {
+          promptText: prompt?.prompt_text || 'Prompt',
+          answerText,
+          brandMentioned: run.brand_mentioned === true,
+          competitors: run.competitors_mentioned || [],
+          model: run.ai_model || 'gpt-4o',
+          date: run.scheduled_at,
+        };
+        break;
+      }
+    }
+  }
+
+  // Fallback: try any run (not just brand_mentioned=true) if no result
+  if (!simulationData) {
+    const { data: simFallback } = await supabase
       .from('prompt_runs')
-      .select('prompt_id, brand_mentioned, position_rank, sentiment_label')
+      .select('id, prompt_id, scheduled_at, ai_model, brand_mentioned, competitors_mentioned')
       .eq('project_id', projectId)
       .eq('run_type', 'monitoring')
       .eq('status', 'success')
-      .gte('scheduled_at', `${startDate}T00:00:00Z`);
+      .order('scheduled_at', { ascending: false })
+      .limit(5);
 
-    const rows = (data || []) as Array<{
-      prompt_id: string;
-      brand_mentioned: boolean | null;
-      position_rank: number | null;
-      sentiment_label: string | null;
-    }>;
-
-    // Get prompt→topic mapping
-    const { data: promptRows } = await supabase
-      .from('monitoring_prompts')
-      .select('id, topic_id')
-      .eq('project_id', projectId);
-    const promptTopicMap = new Map<string, string>(
-      (promptRows || [])
-        .filter((p: { id: string; topic_id: string | null }) => p.topic_id)
-        .map((p: { id: string; topic_id: string }) => [p.id, p.topic_id])
-    );
-
-    const aggs = new Map<string, TopicAgg>();
-    for (const r of rows) {
-      const topicId = promptTopicMap.get(r.prompt_id);
-      if (!topicId) continue;
-      const a = aggs.get(topicId) || {
-        topic_id: topicId,
-        runs: 0, mentions: 0, positive: 0, neutral: 0, negative: 0,
-        positionSum: 0, positionCount: 0,
-      };
-      a.runs += 1;
-      if (r.brand_mentioned) {
-        a.mentions += 1;
-        if (r.sentiment_label === 'positive') a.positive += 1;
-        else if (r.sentiment_label === 'negative') a.negative += 1;
-        else a.neutral += 1;
-        if (typeof r.position_rank === 'number') {
-          a.positionSum += r.position_rank;
-          a.positionCount += 1;
-        }
-      }
-      aggs.set(topicId, a);
-    }
-
-    return Array.from(aggs.values()).map((a) => ({
-      topicId: a.topic_id,
-      name: topicNameMap.get(a.topic_id) || 'Topic',
-      visibilityRate: a.runs > 0 ? Math.round((a.mentions / a.runs) * 100) : null,
-      sentimentPositive: a.mentions > 0 ? Math.round((a.positive / a.mentions) * 100) : null,
-      avgPosition: a.positionCount > 0 ? Number((a.positionSum / a.positionCount).toFixed(1)) : null,
-      mentions: a.mentions,
-      runs: a.runs,
-    })).sort((a, b) => (b.visibilityRate || 0) - (a.visibilityRate || 0));
-  };
-
-  const topicMetrics7 = await topicQuery(start7);
-  const topicMetrics30 = await topicQuery(start30);
-
-  /* ══════════════════════════════════════════════════════════════ */
-  /*  G. Insights (domains from monitoring_responses raw_text)     */
-  /* ══════════════════════════════════════════════════════════════ */
-
-  const { data: recentResponses } = await supabase
-    .from('monitoring_responses')
-    .select('raw_text')
-    .eq('project_id', projectId)
-    .order('created_at', { ascending: false })
-    .limit(50);
-
-  const domains = (recentResponses || []).flatMap((r: { raw_text: string | null }) =>
-    extractDomains(r.raw_text)
-  );
-  const domainCounts: Record<string, number> = {};
-  for (const d of domains) {
-    domainCounts[d] = (domainCounts[d] || 0) + 1;
-  }
-  const topDomains = Object.entries(domainCounts)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 3)
-    .map(([d]) => d);
-
-  // Top prompts (from prompt_runs + monitoring_prompts)
-  const { data: mentionedPR } = await supabase
-    .from('prompt_runs')
-    .select('prompt_id')
-    .eq('project_id', projectId)
-    .eq('run_type', 'monitoring')
-    .eq('brand_mentioned', true)
-    .gte('scheduled_at', `${start30}T00:00:00Z`);
-
-  const promptIdCounts: Record<string, number> = {};
-  for (const r of (mentionedPR || []) as Array<{ prompt_id: string }>) {
-    promptIdCounts[r.prompt_id] = (promptIdCounts[r.prompt_id] || 0) + 1;
-  }
-  const topPromptIds = Object.entries(promptIdCounts)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 3)
-    .map(([id]) => id);
-
-  const { data: promptTexts } = topPromptIds.length > 0
-    ? await supabase
-        .from('monitoring_prompts')
-        .select('id, prompt_text')
-        .in('id', topPromptIds)
-    : { data: [] };
-  const promptTextMap = new Map<string, string>(
-    ((promptTexts || []) as Array<{ id: string; prompt_text: string }>).map((p) => [p.id, p.prompt_text])
-  );
-  const topPrompts: string[] = topPromptIds.map((id) => promptTextMap.get(id) || 'Prompt');
-
-  const actions = [
-    topDomains[0]
-      ? { title: 'Renforcer la présence', detail: `Améliorer votre visibilité sur ${topDomains[0]}.` }
-      : { title: 'Renforcer la présence', detail: 'Travaillez la visibilité sur des sources reconnues.' },
-    topPrompts[0]
-      ? { title: 'Optimiser un prompt clé', detail: `Renforcer le contenu lié à "${topPrompts[0]}".` }
-      : { title: 'Optimiser un prompt clé', detail: 'Créer des contenus qui répondent aux requêtes principales.' },
-  ];
-
-  /* ══════════════════════════════════════════════════════════════ */
-  /*  H. Sandbox snippets (keep existing logic, flat query)        */
-  /* ══════════════════════════════════════════════════════════════ */
-
-  const { data: sandboxRunsData } = await supabase
-    .from('prompt_runs')
-    .select('id, scheduled_at, ai_model')
-    .eq('project_id', projectId)
-    .eq('run_type', 'sandbox')
-    .order('scheduled_at', { ascending: false })
-    .limit(3);
-
-  const sandboxIds = (sandboxRunsData || []).map((r: { id: string }) => r.id);
-  const { data: sandboxAnswers } = sandboxIds.length > 0
-    ? await supabase
+    if (simFallback && simFallback.length > 0) {
+      const fbIds = simFallback.map((r: any) => r.id);
+      const { data: fbAnswers } = await supabase
         .from('ai_answers')
         .select('prompt_run_id, raw_answer_text')
-        .in('prompt_run_id', sandboxIds)
-    : { data: [] };
-  const answerMap = new Map(
-    (sandboxAnswers || []).map((a: { prompt_run_id: string; raw_answer_text: string | null }) => [a.prompt_run_id, a.raw_answer_text])
-  );
-
-  const { data: sandboxVersions } = sandboxIds.length > 0
-    ? await supabase
-        .from('prompt_runs')
-        .select('id, prompt_version_id')
-        .in('id', sandboxIds)
-    : { data: [] };
-  const versionIds = (sandboxVersions || [])
-    .map((r: { prompt_version_id: string | null }) => r.prompt_version_id)
-    .filter(Boolean) as string[];
-  const { data: versionTexts } = versionIds.length > 0
-    ? await supabase
-        .from('prompt_versions')
-        .select('id, prompt_text')
-        .in('id', versionIds)
-    : { data: [] };
-  const versionTextMap = new Map(
-    (versionTexts || []).map((v: { id: string; prompt_text: string }) => [v.id, v.prompt_text])
-  );
-  const versionIdMap = new Map(
-    (sandboxVersions || []).map((r: { id: string; prompt_version_id: string | null }) => [r.id, r.prompt_version_id])
-  );
-
-  const sandboxSnippets = (sandboxRunsData || []).map((r: { id: string; scheduled_at: string; ai_model: string | null }) => ({
-    prompt: versionTextMap.get(versionIdMap.get(r.id) || '') || 'Prompt',
-    response: answerMap.get(r.id) || '',
-    model: r.ai_model,
-    createdAt: r.scheduled_at,
-  }));
+        .in('prompt_run_id', fbIds);
+      const fbMap = new Map<string, string>((fbAnswers || []).map((a: any) => [a.prompt_run_id, a.raw_answer_text ?? '']));
+      for (const run of simFallback as any[]) {
+        const txt = fbMap.get(run.id) || '';
+        if (txt.length > 50) {
+          const prompt = allPrompts.find((p) => p.id === run.prompt_id);
+          simulationData = {
+            promptText: prompt?.prompt_text || 'Prompt',
+            answerText: txt,
+            brandMentioned: run.brand_mentioned === true,
+            competitors: run.competitors_mentioned || [],
+            model: run.ai_model || 'gpt-4o',
+            date: run.scheduled_at,
+          };
+          break;
+        }
+      }
+    }
+  }
 
   /* ══════════════════════════════════════════════════════════════ */
   /*  Render                                                       */
@@ -590,15 +679,22 @@ export default async function OverviewPage() {
 
       <CompetitiveSnapshot trendData={trendData} trendBrands={trendBrands} leaderboard={leaderboard} />
 
-      <TopicPerformance data7={topicMetrics7} data30={topicMetrics30} />
+      <TopicPerformance
+        promptPerformance={promptPerformance}
+        detectedThemes={detectedThemes}
+      />
 
       <div className="grid gap-6 md:grid-cols-2">
         <InsightsWhyModule
-          topDomains={topDomains}
-          topPrompts={topPrompts}
-          actions={actions}
+          topDomains={insightTopDomains}
+          topPrompts={insightTopPrompts}
+          actions={insightActions}
+          ownedPercent={ownedPercent}
         />
-        <UserSimulationSnippets snippets={sandboxSnippets} />
+        <UserSimulationSnippets
+          simulation={simulationData}
+          brandName={activeProject.name}
+        />
       </div>
     </div>
   );

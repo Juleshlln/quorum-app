@@ -3,6 +3,53 @@ import { ingestCitations } from '@/lib/sources/ingest';
 import { getDomainFromUrl, normalizeUrl } from '@/lib/sources/normalize';
 import { logRun } from '@/lib/monitoring/run-logs';
 
+/**
+ * After ingesting citations for a prompt_run, enrich `competitors_mentioned`
+ * on the prompt_run by querying which cited domains belong to competitors.
+ * This supplements the text-based detection with domain-based detection.
+ */
+async function enrichCompetitorsMentioned({
+  supabase,
+  promptRunId,
+  textBasedCompetitors,
+}: {
+  supabase: any;
+  promptRunId: string;
+  textBasedCompetitors: string[];
+}) {
+  const { data: citedCompetitors } = await supabase
+    .from('citations')
+    .select('domain:sources_domains!inner(competitor_id, competitor:competitors!inner(name))')
+    .eq('prompt_run_id', promptRunId)
+    .eq('competitor_mentioned', true);
+
+  const domainBasedNames = new Set<string>();
+  for (const row of citedCompetitors || []) {
+    const name = (row as any)?.domain?.competitor?.name;
+    if (name) domainBasedNames.add(name);
+  }
+
+  // Merge text-based + domain-based, deduplicated (case-insensitive)
+  const seen = new Set<string>();
+  const merged: string[] = [];
+  for (const name of [...textBasedCompetitors, ...domainBasedNames]) {
+    const key = name.toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      merged.push(name);
+    }
+  }
+
+  if (merged.length > textBasedCompetitors.length) {
+    await supabase
+      .from('prompt_runs')
+      .update({ competitors_mentioned: merged })
+      .eq('id', promptRunId);
+  }
+
+  return merged;
+}
+
 type MonitoringPrompt = {
   id: string;
   prompt_text: string;
@@ -469,6 +516,13 @@ export async function runMonitoringForProject({
             competitorMentioned: result!.competitors_mentioned?.length ? true : false,
             positionInAnswer: result!.position,
           });
+
+          // Enrich prompt_run.competitors_mentioned with domain-based matches
+          await enrichCompetitorsMentioned({
+            supabase,
+            promptRunId: runRow.id,
+            textBasedCompetitors: result!.competitors_mentioned ?? [],
+          });
         } else {
           if (REQUIRE_SOURCES && CITATION_MODELS.includes(model)) {
             await logRun({
@@ -534,6 +588,13 @@ export async function runMonitoringForProject({
               brandMentioned: result!.mentioned,
               competitorMentioned: result!.competitors_mentioned?.length ? true : false,
               positionInAnswer: result!.position,
+            });
+
+            // Enrich prompt_run.competitors_mentioned with domain-based matches
+            await enrichCompetitorsMentioned({
+              supabase,
+              promptRunId: runRow.id,
+              textBasedCompetitors: result!.competitors_mentioned ?? [],
             });
             continue;
           }
