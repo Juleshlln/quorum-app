@@ -1,5 +1,35 @@
 import OpenAI from 'openai';
 
+// ---------------------------------------------------------------------------
+//  Retry helper — 3 attempts with exponential backoff.
+//  Skips retry for non-transient errors (auth, bad-request, not-found).
+// ---------------------------------------------------------------------------
+const MAX_RETRIES = 3;
+const INITIAL_BACKOFF_MS = 1000;
+const NON_RETRYABLE_STATUS = new Set([400, 401, 403, 404, 422]);
+
+async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
+  let lastError: any;
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      return await fn();
+    } catch (err: any) {
+      lastError = err;
+      const status: number = err?.status ?? err?.statusCode ?? 0;
+      if (NON_RETRYABLE_STATUS.has(status)) {
+        console.error(`[providers] Non-retryable error (HTTP ${status}): ${err.message}`);
+        throw err;
+      }
+      if (attempt < MAX_RETRIES) {
+        const delay = INITIAL_BACKOFF_MS * Math.pow(2, attempt - 1);
+        console.warn(`[providers] Attempt ${attempt}/${MAX_RETRIES} failed: ${err.message}. Retrying in ${delay}ms…`);
+        await new Promise(r => setTimeout(r, delay));
+      }
+    }
+  }
+  throw lastError;
+}
+
 // Types
 export interface AIProvider {
   id: string;
@@ -66,75 +96,65 @@ export async function queryOpenAI(
   const top_p = options?.top_p ?? 1;
   const max_tokens = options?.max_tokens ?? 1200;
   
-  try {
-    const openai = getOpenAIClient();
-    
-    console.log('📤 Sending request to OpenAI...');
-    const completion = await openai.chat.completions.create({
-      model,
-      messages: [
+  // queryOpenAI throws on failure (after retries). Callers must catch.
+  const openai = getOpenAIClient();
+
+  const completion = await withRetry(async () => {
+    console.log('📤 Sending request to OpenAI…');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60_000);
+    try {
+      return await openai.chat.completions.create(
         {
-          role: 'system',
-          content: [
-            'You are a helpful assistant. Answer questions naturally and thoroughly. When recommending products or services, be specific about names and features.',
-            options?.require_sources
-              ? 'You MUST append a section titled "Sources (URLs)" with 2-3 exact https URLs. If you cannot, output "Sources (URLs): NONE".'
-              : '',
-            context ? `Context: ${context}` : ''
-          ].filter(Boolean).join('\n')
+          model,
+          messages: [
+            {
+              role: 'system',
+              content: [
+                'You are a helpful assistant. Answer questions naturally and thoroughly. When recommending products or services, be specific about names and features.',
+                options?.require_sources
+                  ? 'You MUST append a section titled "Sources (URLs)" with 2-3 exact https URLs. If you cannot, output "Sources (URLs): NONE".'
+                  : '',
+                context ? `Context: ${context}` : '',
+              ]
+                .filter(Boolean)
+                .join('\n'),
+            },
+            { role: 'user', content: prompt },
+          ],
+          max_tokens,
+          temperature,
+          top_p,
         },
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      max_tokens,
-      temperature,
-      top_p,
-    });
+        { signal: controller.signal },
+      );
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  });
 
-    const response = completion.choices[0]?.message?.content || '';
-    const responseTime = Date.now() - startTime;
-    
-    console.log(`📥 Response received in ${responseTime}ms`);
-    console.log(`📝 Response preview: "${response.substring(0, 100)}..."`);
+  const response = completion.choices[0]?.message?.content || '';
+  const responseTime = Date.now() - startTime;
 
-    // Analyze the response
-    const analysis = analyzeResponse(response, brandName, competitors);
-    console.log(`📊 Analysis: mentioned=${analysis.mentioned}, position=${analysis.position}, sentiment=${analysis.sentiment}`);
+  console.log(`📥 Response received in ${responseTime}ms`);
+  console.log(`📝 Response preview: "${response.substring(0, 100)}..."`);
 
-    return {
-      provider: 'openai',
-      model,
-      prompt,
-      response,
-      params: { temperature, top_p, max_tokens },
-      mentioned: analysis.mentioned,
-      position: analysis.position,
-      sentiment: analysis.sentiment,
-      competitors_mentioned: analysis.competitorsMentioned,
-      sources_cited: analysis.sourcesCited,
-      response_time_ms: responseTime,
-    };
-  } catch (error: any) {
-    console.error('❌ OpenAI Error:', error.message);
-    console.error('❌ Error details:', JSON.stringify(error, null, 2));
-    
-    return {
-      provider: 'openai',
-      model: 'gpt-4o-mini',
-      prompt,
-      response: '',
-      params: { temperature, top_p, max_tokens },
-      mentioned: false,
-      position: null,
-      sentiment: null,
-      competitors_mentioned: [],
-      sources_cited: [],
-      response_time_ms: Date.now() - startTime,
-      error: error.message || 'Unknown error',
-    };
-  }
+  const analysis = analyzeResponse(response, brandName, competitors);
+  console.log(`📊 Analysis: mentioned=${analysis.mentioned}, position=${analysis.position}, sentiment=${analysis.sentiment}`);
+
+  return {
+    provider: 'openai',
+    model,
+    prompt,
+    response,
+    params: { temperature, top_p, max_tokens },
+    mentioned: analysis.mentioned,
+    position: analysis.position,
+    sentiment: analysis.sentiment,
+    competitors_mentioned: analysis.competitorsMentioned,
+    sources_cited: analysis.sourcesCited,
+    response_time_ms: responseTime,
+  };
 }
 
 // Analyze AI response for brand mentions

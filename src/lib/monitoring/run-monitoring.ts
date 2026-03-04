@@ -317,6 +317,7 @@ export async function runMonitoringForProject({
       let result: Awaited<ReturnType<typeof queryOpenAI>> | null = null;
       const finalPrompt = buildPromptWithSources(version.prompt_text, model);
       try {
+        // queryOpenAI throws on failure (after retries). We catch and log to DB.
         result = await queryOpenAI(finalPrompt, brandName, competitors, context, {
           model,
           temperature: 0,
@@ -326,6 +327,8 @@ export async function runMonitoringForProject({
         });
       } catch (aiErr: any) {
         result = null;
+        const errMsg = aiErr?.message || String(aiErr);
+        console.error(`[run-monitoring] queryOpenAI failed for prompt=${prompt.id} model=${model}: ${errMsg}`);
         await logRun({
           supabase,
           runId: logRunId,
@@ -333,14 +336,12 @@ export async function runMonitoringForProject({
           projectId,
           level: 'error',
           step: 'query_ai',
-          message: aiErr?.message || String(aiErr),
-          meta: { prompt_id: prompt.id, model },
+          message: `OpenAI error: ${errMsg}`,
+          meta: { prompt_id: prompt.id, model, stack: aiErr?.stack },
         });
       }
 
-      // queryOpenAI never throws — it returns { error } on failure.
-      // Treat error responses as a failed result.
-      const aiSuccess = result && !result.error && result.response !== '';
+      const aiSuccess = result !== null && result.response !== '';
 
       const promptRunPayload = {
         run_id: promptRunMonitoringId,

@@ -79,13 +79,15 @@ async function recoverStuckRuns(supabase: ReturnType<typeof createAdminClient>) 
 /*  Main handler                                                       */
 /* ------------------------------------------------------------------ */
 async function handleDailyRun(request: NextRequest) {
-  // Pre-flight: ensure CRON_SECRET is configured
-  if (!process.env.CRON_SECRET) {
-    console.error('[daily-run] CRON_SECRET environment variable is not set');
-    return NextResponse.json(
-      { error: 'Server misconfiguration: CRON_SECRET not set' },
-      { status: 500 },
-    );
+  // Pre-flight: ensure critical env vars are configured — fail fast with clear message.
+  const missingEnvVars: string[] = [];
+  if (!process.env.CRON_SECRET) missingEnvVars.push('CRON_SECRET');
+  if (!process.env.OPENAI_API_KEY) missingEnvVars.push('OPENAI_API_KEY');
+
+  if (missingEnvVars.length > 0) {
+    const msg = `Server misconfiguration: missing env vars: ${missingEnvVars.join(', ')}`;
+    console.error(`[daily-run] ${msg}`);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 
   const cronHeader = request.headers.get('x-vercel-cron');
