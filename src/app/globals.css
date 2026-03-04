@@ -10,8 +10,8 @@
 
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    background-color: #000000;
-    color: #a1a1aa;
+    background-color: #0A0A0A;
+    color: #F5F0E8;
   }
 
   /* Custom scrollbar */
@@ -31,6 +31,21 @@
   ::-webkit-scrollbar-thumb:hover {
     background: #3f3f46;
   }
+}
+
+/* ── Landing page scroll-triggered animations ──────────────────────────────
+   Elements with [data-lp-animate] start hidden.
+   IntersectionObserver adds .lp-visible to reveal them.
+─────────────────────────────────────────────────────────────────────────── */
+[data-lp-animate] {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity 0.65s ease, transform 0.65s ease;
+}
+
+[data-lp-animate].lp-visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 @layer components {
