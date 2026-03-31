@@ -18,10 +18,14 @@ export function CompetitiveSnapshot({
   trendData,
   trendBrands,
   leaderboard,
+  avg7,
+  brandName,
 }: {
   trendData: Record<string, string | number>[];
   trendBrands: string[];
   leaderboard: BrandRow[];
+  avg7?: number | null;
+  brandName?: string;
 }) {
   const [activeTab, setActiveTab] = useState<'trend' | 'leaderboard'>('trend');
   const [range, setRange] = useState<7 | 30>(7);
@@ -79,7 +83,7 @@ export function CompetitiveSnapshot({
         </button>
       </div>
       {activeTab === 'trend' ? (
-        <VisibilityTrendChart data={filteredTrend} brands={trendBrands} />
+        <VisibilityTrendChart data={filteredTrend} brands={trendBrands} avg7={avg7} brandName={brandName} />
       ) : (
         <BrandsLeaderboardTable rows={leaderboard} />
       )}

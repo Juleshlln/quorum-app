@@ -21,12 +21,12 @@ export function OverviewKpiCards({
   return (
     <div className="grid gap-4 md:grid-cols-4">
       <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-4">
-        <p className="text-xs text-zinc-500 uppercase tracking-wider">Visibilité (7j)</p>
+        <p className="text-xs text-zinc-500 uppercase tracking-wider">Visibilité (moy. 7j)</p>
         <p className="text-2xl font-semibold text-white mt-2">
           {visibilityRate !== null ? `${visibilityRate}%` : '—'}
         </p>
         <p className="text-xs text-zinc-500 mt-2">
-          Basé sur les dernières analyses
+          Moyenne pondérée sur les 7 derniers jours
         </p>
       </div>
       <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-4">

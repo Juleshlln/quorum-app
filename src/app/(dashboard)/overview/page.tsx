@@ -677,7 +677,7 @@ export default async function OverviewPage() {
         </div>
       )}
 
-      <CompetitiveSnapshot trendData={trendData} trendBrands={trendBrands} leaderboard={leaderboard} />
+      <CompetitiveSnapshot trendData={trendData} trendBrands={trendBrands} leaderboard={leaderboard} avg7={visibility7} brandName={activeProject.name} />
 
       <TopicPerformance
         promptPerformance={promptPerformance}
