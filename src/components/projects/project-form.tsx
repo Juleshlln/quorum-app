@@ -128,17 +128,6 @@ export function ProjectForm({ project, mode }: ProjectFormProps) {
       }
 
       if (mode === 'create') {
-        const { data: existingProjects } = await supabase
-          .from('projects')
-          .select('id')
-          .eq('user_id', user.id)
-          .limit(1);
-
-        if ((existingProjects || []).length > 0) {
-          setError('Vous avez déjà une marque active. Modifiez-la depuis Brand settings.');
-          return;
-        }
-
         // Create project
         const { data: newProject, error: projectError } = await supabase
           .from('projects')

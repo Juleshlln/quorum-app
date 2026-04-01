@@ -16,19 +16,21 @@ export function QuorumLogo({
   return (
     <span
       className={cn(
-        'relative inline-flex h-8 w-auto max-w-full shrink-0',
-        adaptive && 'quorum-logo--adaptive',
-        className
+        'inline-flex max-w-full shrink-0 overflow-visible',
+        adaptive && 'quorum-logo--adaptive'
       )}
-      style={{ aspectRatio: `${LOGO_WIDTH} / ${LOGO_HEIGHT}` }}
     >
       <Image
         src="/quorum-logo.png"
         alt="Quorum"
-        fill
+        width={LOGO_WIDTH}
+        height={LOGO_HEIGHT}
         priority={priority}
-        sizes="(max-width: 640px) 132px, (max-width: 1024px) 168px, 192px"
-        className="object-contain object-left"
+        sizes="(max-width: 640px) 110px, (max-width: 1024px) 124px, 192px"
+        className={cn(
+          'block h-auto w-auto max-w-full shrink-0 object-contain object-left',
+          className
+        )}
       />
     </span>
   );

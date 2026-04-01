@@ -293,6 +293,51 @@ export default async function OverviewPage() {
   const visPrev7 = totalPrev7 > 0 ? Math.round((mentionsPrev7 / totalPrev7) * 100) : null;
   const mainDelta = visibility7 !== null && visPrev7 !== null ? visibility7 - visPrev7 : null;
 
+  // --- Previous 7d sentiment (for KPI trend) ---
+  const posPrev7 = rowsPrev7.reduce((s, r) => s + r.positive_count, 0);
+  const negPrev7 = rowsPrev7.reduce((s, r) => s + r.negative_count, 0);
+  const mentionsPrev7Total = rowsPrev7.reduce((s, r) => s + r.mentions_count, 0);
+  const sentimentPrev7 = mentionsPrev7Total > 0 ? Math.round((posPrev7 / mentionsPrev7Total) * 100) : null;
+
+  // --- Current 7d sentiment ---
+  const pos7 = rows7.reduce((s, r) => s + r.positive_count, 0);
+  const mentions7Total = rows7.reduce((s, r) => s + r.mentions_count, 0);
+  const sentiment7 = mentions7Total > 0 ? Math.round((pos7 / mentions7Total) * 100) : null;
+
+  // --- Previous 7d rank (for KPI trend) ---
+  const brandMentions7 = mentions7;
+  const brandMentionsPrev7 = mentionsPrev7;
+  const competitorMentions7 = competitorNames.map((name: string) => {
+    let m7 = 0;
+    let mPrev7 = 0;
+    for (const dr of dailyRows) {
+      const entry = dr.competitor_data?.find(
+        (c) => c.name.toLowerCase() === name.toLowerCase()
+      );
+      if (entry) {
+        if (dr.day >= start7) m7 += entry.mentions;
+        if (dr.day >= start14 && dr.day < start7) mPrev7 += entry.mentions;
+      }
+    }
+    return { name, m7, mPrev7 };
+  });
+
+  const leaderboard7 = [
+    { name: activeProject.name, mentions: brandMentions7 },
+    ...competitorMentions7.map((c) => ({ name: c.name, mentions: c.m7 })),
+  ].sort((a, b) => b.mentions - a.mentions);
+  const rank7 = brandMentions7 > 0
+    ? leaderboard7.findIndex((e) => e.name === activeProject.name) + 1
+    : null;
+
+  const leaderboardPrev7 = [
+    { name: activeProject.name, mentions: brandMentionsPrev7 },
+    ...competitorMentions7.map((c) => ({ name: c.name, mentions: c.mPrev7 })),
+  ].sort((a, b) => b.mentions - a.mentions);
+  const rankPrev7 = brandMentionsPrev7 > 0
+    ? leaderboardPrev7.findIndex((e) => e.name === activeProject.name) + 1
+    : null;
+
   const competitorStats = competitorNames.map((name: string) => {
     let compMentions = 0;
     let compMentions7 = 0;
@@ -659,8 +704,11 @@ export default async function OverviewPage() {
 
       <OverviewKpiCards
         visibilityRate={visibility7}
-        sentimentPositive={sentimentPositive}
-        avgPosition={avgPosition}
+        visibilityPrev={visPrev7}
+        sentimentPositive={sentiment7}
+        sentimentPrev={sentimentPrev7}
+        avgPosition={rank7}
+        avgPositionPrev={rankPrev7}
         coverage={{
           runsPerPrompt: completedRunsCount || 0,
           promptCount: totalPromptsActive,

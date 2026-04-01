@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { getActiveProjectForUser } from '@/lib/projects/get-active-project';
 import { DashboardNav } from '@/components/dashboard/nav';
 import { DashboardHeader } from '@/components/dashboard/header';
 
@@ -14,6 +15,19 @@ export default async function DashboardLayout({
   if (!user) {
     redirect('/login');
   }
+
+  const activeProject = await getActiveProjectForUser(user.id);
+  const { data: projectsData } = await supabase
+    .from('projects')
+    .select('id, name, website')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: true });
+
+  const projects = (projectsData || []).map((project: { id: string; name: string; website: string | null }) => ({
+    id: project.id,
+    name: project.name,
+    website: project.website,
+  }));
 
   return (
     <div className="min-h-screen bg-transparent flex relative overflow-hidden">
@@ -31,7 +45,10 @@ export default async function DashboardLayout({
       </div>
 
       {/* Sidebar */}
-      <DashboardNav />
+      <DashboardNav
+        projects={projects}
+        activeProjectId={activeProject?.id ?? null}
+      />
 
       {/* Main content */}
       <div className="quorum-dashboard-main relative flex min-h-screen flex-1 flex-col">

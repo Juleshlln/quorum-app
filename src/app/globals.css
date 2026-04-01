@@ -583,6 +583,22 @@ html[data-theme='light'] {
     transform: translateY(-1px);
   }
 
+  .theme-toggle--header {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 1rem;
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+
+  .theme-toggle--header:hover {
+    transform: none;
+    border-color: transparent;
+    background: var(--quorum-shell-hover);
+  }
+
   .theme-toggle:focus-visible {
     outline: none;
     box-shadow:
