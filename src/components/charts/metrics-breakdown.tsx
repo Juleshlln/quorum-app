@@ -102,7 +102,7 @@ export function MetricsBreakdown({ current, previous }: MetricsBreakdownProps) {
             </div>
             
             {/* Progress bar */}
-            <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+            <div className="h-2 quorum-surface-strong rounded-full overflow-hidden">
               <div
                 className={`h-full ${colors.bar} rounded-full transition-all duration-500`}
                 style={{ width: `${value}%` }}

@@ -94,24 +94,24 @@ export function PromptsClient({
     <div className="space-y-6">
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="p-4 rounded-xl border border-white/[0.08] bg-zinc-900/30">
-          <p className="text-2xl font-semibold text-white">{prompts.length}</p>
+        <div className="p-4 rounded-xl border quorum-border-default quorum-surface-strong">
+          <p className="text-2xl font-semibold quorum-text-primary">{prompts.length}</p>
           <p className="text-sm text-zinc-500">Total</p>
         </div>
-        <div className="p-4 rounded-xl border border-white/[0.08] bg-zinc-900/30">
+        <div className="p-4 rounded-xl border quorum-border-default quorum-surface-strong">
           <p className="text-2xl font-semibold text-cyan-400">{prompts.filter(p => p.is_active).length}</p>
           <p className="text-sm text-zinc-500">Actifs</p>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 p-1 bg-zinc-900/50 rounded-xl border border-white/[0.06] w-fit">
+      <div className="flex gap-2 p-1 quorum-surface-strong rounded-xl border quorum-border-default w-fit">
         <button
           onClick={() => setActiveTab("custom")}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium ${
             activeTab === "custom"
-              ? "bg-gradient-to-r from-blue-500 via-cyan-500 to-violet-500 text-white"
-              : "text-zinc-400 hover:text-white"
+              ? "bg-gradient-to-r from-blue-500 via-cyan-500 to-violet-500 quorum-text-primary"
+              : "text-zinc-400 hover:quorum-text-primary"
           }`}
         >
           <List className="w-4 h-4" />
@@ -121,8 +121,8 @@ export function PromptsClient({
           onClick={() => setActiveTab("suggestions")}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium ${
             activeTab === "suggestions"
-              ? "bg-gradient-to-r from-blue-500 via-cyan-500 to-violet-500 text-white"
-              : "text-zinc-400 hover:text-white"
+              ? "bg-gradient-to-r from-blue-500 via-cyan-500 to-violet-500 quorum-text-primary"
+              : "text-zinc-400 hover:quorum-text-primary"
           }`}
         >
           <Sparkles className="w-4 h-4" />
@@ -133,7 +133,7 @@ export function PromptsClient({
       {/* Content */}
       {activeTab === "custom" ? (
         <div className="space-y-6">
-          <div className="p-6 rounded-2xl border border-white/[0.08] bg-zinc-900/30">
+          <div className="p-6 rounded-2xl border quorum-border-default quorum-surface-strong">
             <PromptForm
               projectId={projectId}
               onSuccess={(created) => {
@@ -150,7 +150,7 @@ export function PromptsClient({
           />
         </div>
       ) : (
-        <div className="p-6 rounded-2xl border border-white/[0.08] bg-zinc-900/30">
+        <div className="p-6 rounded-2xl border quorum-border-default quorum-surface-strong">
           <PromptSuggestions
             brandName={brandName}
             industry={industry}

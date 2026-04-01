@@ -3,10 +3,11 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { QuorumLogo } from '@/components/logo';
+import { ThemeToggle } from '@/components/theme/theme-toggle';
 import { 
   Menu,
   LogOut,
-  User,
   ChevronDown,
   Settings
 } from 'lucide-react';
@@ -48,66 +49,76 @@ export function DashboardHeader({ user }: HeaderProps) {
   const initials = displayName.charAt(0).toUpperCase();
 
   return (
-    <header className="h-16 flex items-center justify-between px-6 border-b border-white/[0.06] bg-[#0a0a0f]/80 backdrop-blur-xl sticky top-0 z-40">
+    <header className="quorum-shell-panel-strong sticky top-0 z-40 flex h-20 items-center justify-between border-b px-4 backdrop-blur-2xl md:px-6">
       {/* Mobile menu button */}
-      <button className="lg:hidden p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-white/[0.05] transition-colors">
+      <button className="quorum-shell-action rounded-xl border border-transparent p-2 lg:hidden">
         <Menu className="w-5 h-5" />
       </button>
 
       {/* Mobile logo */}
-      <Link href="/overview" className="lg:hidden flex items-center gap-2">
-        <div className="w-8 h-8 bg-gradient-to-br from-blue-500 via-cyan-400 to-violet-500 rounded-lg flex items-center justify-center">
-          <span className="text-white font-bold text-xs">Q</span>
-        </div>
+      <Link href="/overview" className="flex items-center lg:hidden">
+        <QuorumLogo adaptive className="h-7 w-[132px]" priority />
       </Link>
 
-      {/* Spacer */}
-      <div className="flex-1" />
+      <div className="hidden flex-1 lg:block">
+        <p className="text-[11px] font-bold uppercase tracking-[0.24em] quorum-shell-subtle">Control Room</p>
+        <p className="mt-1 text-sm quorum-shell-muted">Suivi quotidien de votre visibilité dans les réponses IA.</p>
+      </div>
 
-      {/* User Menu */}
-      <div className="relative" ref={menuRef}>
-        <button
-          onClick={() => setMenuOpen(!menuOpen)}
-          className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-white/[0.05] transition-colors"
-        >
-          <div className="w-9 h-9 bg-gradient-to-br from-blue-500/20 via-cyan-500/20 to-violet-500/20 border border-white/[0.1] rounded-xl flex items-center justify-center">
-            <span className="text-sm font-medium bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-              {initials}
-            </span>
-          </div>
-          <div className="hidden md:block text-left">
-            <p className="text-sm font-medium text-white">{displayName}</p>
-            <p className="text-xs text-zinc-500">{user?.email}</p>
-          </div>
-          <ChevronDown className={`w-4 h-4 text-zinc-500 transition-transform ${menuOpen ? 'rotate-180' : ''}`} />
-        </button>
+      <div className="flex items-center gap-3">
+        <ThemeToggle />
 
-        {/* Dropdown Menu */}
-        {menuOpen && (
-          <div className="absolute right-0 mt-2 w-56 bg-zinc-900/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl shadow-xl shadow-black/50 overflow-hidden">
-            <div className="p-3 border-b border-white/[0.06]">
-              <p className="text-sm font-medium text-white">{displayName}</p>
-              <p className="text-xs text-zinc-500">{user?.email}</p>
+        {/* User Menu */}
+        <div className="relative" ref={menuRef}>
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="quorum-shell-action flex items-center gap-3 rounded-2xl border border-transparent px-3 py-2.5"
+          >
+            <div
+              className="flex h-10 w-10 items-center justify-center rounded-2xl"
+              style={{
+                border: '1px solid var(--quorum-shell-border)',
+                background: 'var(--quorum-shell-hover)',
+              }}
+            >
+              <span className="text-sm font-semibold quorum-shell-text">
+                {initials}
+              </span>
             </div>
-            <div className="p-2">
-              <Link
-                href="/settings"
-                onClick={() => setMenuOpen(false)}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-zinc-400 hover:text-white hover:bg-white/[0.05] transition-colors"
-              >
-                <Settings className="w-4 h-4" />
-                Paramètres
-              </Link>
-              <button
-                onClick={handleLogout}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-red-400 hover:bg-red-500/10 transition-colors"
-              >
-                <LogOut className="w-4 h-4" />
-                Déconnexion
-              </button>
+            <div className="hidden md:block text-left">
+              <p className="text-sm font-medium quorum-shell-text">{displayName}</p>
+              <p className="text-xs quorum-shell-subtle">{user?.email}</p>
             </div>
-          </div>
-        )}
+            <ChevronDown className={`h-4 w-4 quorum-shell-subtle transition-transform ${menuOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {/* Dropdown Menu */}
+          {menuOpen && (
+            <div className="quorum-shell-panel-strong absolute right-0 mt-2 w-60 overflow-hidden rounded-3xl backdrop-blur-2xl">
+              <div className="p-4" style={{ borderBottom: '1px solid var(--quorum-shell-border)' }}>
+                <p className="text-sm font-medium quorum-shell-text">{displayName}</p>
+                <p className="text-xs quorum-shell-subtle">{user?.email}</p>
+              </div>
+              <div className="p-2">
+                <Link
+                  href="/settings"
+                  onClick={() => setMenuOpen(false)}
+                  className="quorum-shell-action flex items-center gap-3 rounded-2xl border border-transparent px-3 py-2.5 text-sm"
+                >
+                  <Settings className="w-4 h-4" />
+                  Paramètres
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm text-red-300 transition-colors hover:bg-red-500/10"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Déconnexion
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );

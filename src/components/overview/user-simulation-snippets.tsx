@@ -153,17 +153,18 @@ export function UserSimulationSnippets({
   }, [displayText, brandName, simulation]);
 
   return (
-    <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-5 space-y-4">
+    <div className="quorum-panel p-5 space-y-4">
       <div>
-        <p className="text-sm font-semibold text-white">Simulation utilisateur</p>
-        <p className="text-xs text-zinc-500 mt-1">
+        <p className="quorum-kicker">Simulation utilisateur</p>
+        <p className="mt-2 text-sm font-semibold quorum-text-primary">Extrait réel d’une réponse IA récente</p>
+        <p className="text-xs quorum-text-muted mt-1">
           Extrait réel d&apos;une réponse IA récente avec mise en évidence.
         </p>
       </div>
 
       {!simulation ? (
-        <div className="rounded-xl border border-white/[0.06] bg-zinc-900/30 p-6 text-center">
-          <p className="text-sm text-zinc-500">
+        <div className="quorum-panel-soft p-6 text-center">
+          <p className="text-sm quorum-text-muted">
             Les réponses IA complètes seront disponibles à partir du prochain run.
           </p>
         </div>
@@ -171,26 +172,26 @@ export function UserSimulationSnippets({
         <div className="space-y-3">
           {/* Header: prompt + date + model */}
           <div className="space-y-1">
-            <p className="text-xs text-zinc-500 uppercase tracking-wider">
+            <p className="text-xs quorum-text-subtle uppercase tracking-wider">
               Simulation &mdash; {simulation.model}
             </p>
-            <p className="text-sm text-cyan-300 font-medium leading-snug">
+            <p className="text-sm quorum-text-primary font-medium leading-snug">
               {simulation.promptText}
             </p>
-            <p className="text-xs text-zinc-600">{formatDate(simulation.date)}</p>
+            <p className="text-xs quorum-text-subtle">{formatDate(simulation.date)}</p>
           </div>
 
           {/* AI response card — rendered with dangerouslySetInnerHTML for highlights */}
-          <div className="rounded-xl border border-white/[0.06] bg-zinc-800/50 p-4">
+          <div className="quorum-panel-soft p-4">
             <div
-              className="text-sm text-zinc-300 leading-relaxed"
+              className="text-sm quorum-text-primary leading-relaxed"
               dangerouslySetInnerHTML={{ __html: highlightedHtml }}
             />
 
             {isTruncated && (
               <button
                 onClick={() => setExpanded(!expanded)}
-                className="mt-3 text-xs text-cyan-400 hover:text-cyan-300 transition-colors"
+                className="mt-3 text-xs quorum-text-muted transition-colors hover:quorum-text-primary"
               >
                 {expanded ? 'Réduire' : 'Voir la réponse complète'}
               </button>
@@ -199,7 +200,7 @@ export function UserSimulationSnippets({
 
           {/* Visual legend */}
           <div className="flex flex-col gap-2">
-            <div className="flex items-center flex-wrap gap-3 text-xs text-zinc-400">
+            <div className="flex items-center flex-wrap gap-3 text-xs quorum-text-muted">
               <span className="flex items-center gap-1.5">
                 <mark style={{ background: '#FEF08A', color: '#1a1a1a', padding: '1px 6px', borderRadius: '3px', fontSize: '11px' }}>
                   {brandName}
@@ -217,11 +218,11 @@ export function UserSimulationSnippets({
             </div>
             <div className="flex justify-end">
               {simulation.brandMentioned ? (
-                <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-medium">
+                <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-300">
                   {brandName} mentionné
                 </span>
               ) : (
-                <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 font-medium">
+                <span className="rounded-full border border-red-500/20 bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-300">
                   {brandName} absent
                 </span>
               )}

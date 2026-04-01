@@ -54,7 +54,7 @@ export function ScoreEvolutionChart({ data, height = 200 }: ScoreEvolutionChartP
   if (!hasData) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500/20 via-cyan-500/20 to-violet-500/20 border border-white/[0.08] flex items-center justify-center mb-4">
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500/20 via-cyan-500/20 to-violet-500/20 border quorum-border-default flex items-center justify-center mb-4">
           <TrendingUp className="w-7 h-7 text-cyan-400" />
         </div>
         <p className="text-zinc-400 text-sm mb-1">Aucune donnée disponible</p>
@@ -105,7 +105,7 @@ export function ScoreEvolutionChart({ data, height = 200 }: ScoreEvolutionChartP
         <div className="flex gap-6">
           <div className="text-right">
             <p className="text-xs text-zinc-500 mb-0.5">Moyenne</p>
-            <p className="text-lg font-semibold text-white">{avgScore}%</p>
+            <p className="text-lg font-semibold quorum-text-primary">{avgScore}%</p>
           </div>
           <div className="text-right">
             <p className="text-xs text-zinc-500 mb-0.5">Min</p>
@@ -120,7 +120,7 @@ export function ScoreEvolutionChart({ data, height = 200 }: ScoreEvolutionChartP
 
       {/* Tendance longue période */}
       {chartData.length >= 3 && (
-        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-zinc-900/50 border border-white/[0.06]">
+        <div className="flex items-center gap-2 px-3 py-2 rounded-xl quorum-surface-strong border quorum-border-default">
           <Info className="w-4 h-4 text-zinc-500" />
           <p className="text-xs text-zinc-400">
             <span className="text-zinc-300 font-medium">Tendance globale :</span>{" "}
@@ -164,7 +164,7 @@ export function ScoreEvolutionChart({ data, height = 200 }: ScoreEvolutionChartP
               className="absolute left-0 right-0 border-t-2 border-cyan-500/30 z-10"
               style={{ top: `${100 - scaleY(avgScore)}%` }}
             >
-              <span className="absolute -top-3 right-0 text-[10px] text-cyan-400/70 bg-zinc-900 px-1 rounded">
+              <span className="absolute -top-3 right-0 text-[10px] text-cyan-400/70 quorum-surface-strong px-1 rounded">
                 Moy.
               </span>
             </div>
@@ -187,17 +187,17 @@ export function ScoreEvolutionChart({ data, height = 200 }: ScoreEvolutionChartP
                     {/* Tooltip */}
                     {isHovered && (
                       <div className="absolute bottom-full mb-3 z-20 min-w-[120px]">
-                        <div className="relative px-3 py-2.5 rounded-xl bg-zinc-800 border border-white/[0.1] shadow-2xl">
+                        <div className="relative px-3 py-2.5 rounded-xl quorum-surface-strong border quorum-border-default shadow-2xl">
                           <div className="flex items-center gap-2 mb-1">
                             <div className={`w-2 h-2 rounded-full ${isLast ? 'bg-cyan-400' : 'bg-blue-400'}`} />
-                            <span className="text-lg font-bold text-white">{point.score}%</span>
+                            <span className="text-lg font-bold quorum-text-primary">{point.score}%</span>
                           </div>
                           <div className="flex items-center gap-1.5 text-xs text-zinc-400">
                             <Calendar className="w-3 h-3" />
                             {point.fullDate}
                           </div>
                           {i > 0 && (
-                            <div className="mt-1.5 pt-1.5 border-t border-white/[0.06]">
+                            <div className="mt-1.5 pt-1.5 border-t quorum-border-default">
                               <span className={`text-xs ${
                                 point.score > chartData[i-1].score 
                                   ? 'text-emerald-400' 
@@ -211,7 +211,7 @@ export function ScoreEvolutionChart({ data, height = 200 }: ScoreEvolutionChartP
                             </div>
                           )}
                           {/* Arrow */}
-                          <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-zinc-800 border-r border-b border-white/[0.1] rotate-45" />
+                          <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 quorum-surface-strong border-r border-b quorum-border-default rotate-45" />
                         </div>
                       </div>
                     )}
@@ -242,7 +242,7 @@ export function ScoreEvolutionChart({ data, height = 200 }: ScoreEvolutionChartP
               <div
                 key={i}
                 className={`flex-1 text-center text-[10px] truncate transition-colors ${
-                  hoveredIndex === i ? "text-white font-medium" : "text-zinc-500"
+                  hoveredIndex === i ? "quorum-text-primary font-medium" : "text-zinc-500"
                 }`}
               >
                 {point.date}
@@ -253,7 +253,7 @@ export function ScoreEvolutionChart({ data, height = 200 }: ScoreEvolutionChartP
       </div>
 
       {/* Legend */}
-      <div className="flex items-center justify-between pt-2 border-t border-white/[0.06]">
+      <div className="flex items-center justify-between pt-2 border-t quorum-border-default">
         <div className="flex items-center gap-4 text-xs text-zinc-500">
           <div className="flex items-center gap-1.5">
             <div className="w-3 h-3 rounded bg-gradient-to-t from-blue-600 via-cyan-500 to-cyan-400" />

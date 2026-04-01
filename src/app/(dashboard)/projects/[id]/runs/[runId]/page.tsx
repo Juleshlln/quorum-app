@@ -105,7 +105,7 @@ export default async function RunResultsPage({
       <div className="space-y-6">
         <Link
           href="/overview"
-          className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors"
+          className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:quorum-text-primary transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           Retour au projet
@@ -117,14 +117,14 @@ export default async function RunResultsPage({
               <AlertTriangle className="w-6 h-6 text-red-400" />
             </div>
             <div>
-              <h1 className="text-xl font-semibold text-white">Analyse introuvable</h1>
+              <h1 className="text-xl font-semibold quorum-text-primary">Analyse introuvable</h1>
               <p className="text-sm text-zinc-400 mt-1">
                 Cette analyse n&apos;existe pas ou a été supprimée.
               </p>
             </div>
           </div>
 
-          <div className="mt-6 p-4 rounded-xl bg-zinc-900/50 border border-white/[0.06]">
+          <div className="mt-6 p-4 rounded-xl quorum-surface-strong border quorum-border-default">
             <p className="text-xs text-zinc-500 mb-2">Debug info:</p>
             <div className="text-xs text-zinc-400 space-y-1 font-mono">
               <div>projectId: {projectId}</div>
@@ -137,14 +137,14 @@ export default async function RunResultsPage({
           <div className="mt-6 flex gap-3">
             <Link
               href="/overview"
-              className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:opacity-90"
+              className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium bg-gradient-to-r from-blue-500 to-cyan-500 quorum-text-primary hover:opacity-90"
             >
               <ArrowLeft className="w-4 h-4" />
               Retour au projet
             </Link>
             <Link
               href="/overview"
-              className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium border border-white/[0.1] text-zinc-300 hover:bg-white/[0.05]"
+              className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium border quorum-border-default text-zinc-300 hover:quorum-surface"
             >
               Voir toutes les analyses
             </Link>
@@ -198,7 +198,7 @@ export default async function RunResultsPage({
       {/* Back link */}
       <Link
         href="/overview"
-        className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors"
+        className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:quorum-text-primary transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
         Retour au projet
@@ -207,7 +207,7 @@ export default async function RunResultsPage({
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold text-white">Résultats de l&apos;analyse</h1>
+          <h1 className="text-3xl font-semibold quorum-text-primary">Résultats de l&apos;analyse</h1>
           <div className="flex items-center gap-3 mt-2 text-sm text-zinc-400">
             <span>{projectName}</span>
             <span>•</span>
@@ -261,19 +261,19 @@ export default async function RunResultsPage({
           </div>
 
           {/* Summary */}
-          <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/30 p-6">
-            <h2 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">
+          <div className="rounded-2xl border quorum-border-default quorum-surface-strong p-6">
+            <h2 className="text-sm font-semibold quorum-text-primary uppercase tracking-wider mb-4">
               Résumé
             </h2>
             <div className="grid md:grid-cols-3 gap-6">
               <div>
                 <p className="text-zinc-500 text-sm mb-1">Prompts analysés</p>
-                <p className="text-3xl font-semibold text-white">{run?.total_prompts ?? totalItems}</p>
+                <p className="text-3xl font-semibold quorum-text-primary">{run?.total_prompts ?? totalItems}</p>
                 <p className="text-xs text-zinc-500 mt-1">{runCount} runs par prompt</p>
               </div>
               <div>
                 <p className="text-zinc-500 text-sm mb-1">Mentions de la marque</p>
-                <p className="text-3xl font-semibold text-white">
+                <p className="text-3xl font-semibold quorum-text-primary">
                   {mentionedCount}{" "}
                   <span className="text-lg text-zinc-500">/ {totalItems}</span>
                 </p>
@@ -302,12 +302,12 @@ export default async function RunResultsPage({
 
       {/* Run Items */}
       <div>
-        <h2 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">
+        <h2 className="text-sm font-semibold quorum-text-primary uppercase tracking-wider mb-4">
           Détail des réponses ({totalItems})
         </h2>
 
         {totalItems === 0 ? (
-          <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/30 p-8 text-center text-zinc-400">
+          <div className="rounded-2xl border quorum-border-default quorum-surface-strong p-8 text-center text-zinc-400">
             Aucune réponse enregistrée pour cette analyse.
           </div>
         ) : (
@@ -324,17 +324,17 @@ export default async function RunResultsPage({
               return (
                 <div
                   key={item.id}
-                  className="rounded-2xl border border-white/[0.08] bg-zinc-900/30 overflow-hidden"
+                  className="rounded-2xl border quorum-border-default quorum-surface-strong overflow-hidden"
                 >
                   {/* Header */}
-                  <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
+                  <div className="px-5 py-4 border-b quorum-border-default flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <span className="text-sm text-zinc-500 font-mono">#{index + 1}</span>
                       <div className="flex items-center gap-2">
                         <Sparkles className="w-4 h-4 text-cyan-400" />
-                        <span className="font-medium text-white">{provider}</span>
+                        <span className="font-medium quorum-text-primary">{provider}</span>
                       </div>
-                      <span className="text-xs text-zinc-500 px-2 py-0.5 bg-zinc-800 rounded">
+                      <span className="text-xs text-zinc-500 px-2 py-0.5 quorum-surface-strong rounded">
                         {model}
                       </span>
                     </div>
@@ -388,7 +388,7 @@ export default async function RunResultsPage({
                           <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
                           Voir la réponse complète
                         </summary>
-                        <div className="mt-3 p-4 rounded-xl bg-zinc-800/50 border border-white/[0.06] text-sm text-zinc-300 whitespace-pre-wrap max-h-80 overflow-y-auto">
+                        <div className="mt-3 p-4 rounded-xl quorum-surface-strong border quorum-border-default text-sm text-zinc-300 whitespace-pre-wrap max-h-80 overflow-y-auto">
                           {responseText}
                         </div>
                       </details>
@@ -422,11 +422,11 @@ function ScoreCard({
   gradient: string;
 }) {
   return (
-    <div className="p-5 rounded-2xl border border-white/[0.08] bg-zinc-900/30">
+    <div className="p-5 rounded-2xl border quorum-border-default quorum-surface-strong">
       <div
         className={`w-10 h-10 bg-gradient-to-br ${gradient} rounded-xl flex items-center justify-center mb-3 shadow-lg`}
       >
-        <div className="text-white">{icon}</div>
+        <div className="quorum-text-primary">{icon}</div>
       </div>
       <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">{label}</p>
       <p

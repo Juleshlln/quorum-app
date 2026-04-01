@@ -3,24 +3,24 @@ type CategoryKey = 'visibility' | 'position' | 'sentiment';
 const STYLES: Record<CategoryKey, { label: string; solid: string; outline: string }> = {
   visibility: {
     label: 'Visibilité',
-    solid: 'bg-blue-500/15 text-blue-300 border-blue-500/30',
-    outline: 'border-blue-500/40 text-blue-300',
+    solid: 'quorum-border-strong quorum-surface-strong quorum-text-primary',
+    outline: 'quorum-border-strong quorum-text-muted',
   },
   position: {
     label: 'Position',
-    solid: 'bg-violet-500/15 text-violet-300 border-violet-500/30',
-    outline: 'border-violet-500/40 text-violet-300',
+    solid: 'border-amber-500/20 bg-amber-500/10 text-amber-300',
+    outline: 'border-amber-500/20 text-amber-300',
   },
   sentiment: {
     label: 'Sentiment',
-    solid: 'bg-pink-500/15 text-pink-300 border-pink-500/30',
-    outline: 'border-pink-500/40 text-pink-300',
+    solid: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300',
+    outline: 'border-emerald-500/20 text-emerald-300',
   },
 };
 
 const LEGACY = {
-  solid: 'bg-zinc-500/15 text-zinc-300 border-zinc-500/30',
-  outline: 'border-zinc-500/40 text-zinc-300',
+  solid: 'quorum-border-strong quorum-surface-strong quorum-text-primary',
+  outline: 'quorum-border-strong quorum-text-muted',
 };
 
 export function PromptBadge({

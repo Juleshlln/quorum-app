@@ -57,12 +57,12 @@ export function PromptSuggestionsList({
     : suggestions.filter((s) => s.primary_objective === category);
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-zinc-900/40 p-4 space-y-3">
+    <div className="quorum-panel-soft p-4 space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-medium">Option B — Prompts suggérés</p>
+        <p className="text-sm font-medium quorum-text-primary">Option B — Prompts suggérés</p>
         <button
           onClick={() => setShowAll((v) => !v)}
-          className="text-xs text-zinc-300 border border-white/10 px-2.5 py-1 rounded-lg hover:bg-white/5"
+          className="quorum-btn-secondary px-2.5 py-1 text-xs"
         >
           {showAll ? 'Filtrer par objectif' : 'Afficher tout'}
         </button>
@@ -84,8 +84,8 @@ export function PromptSuggestionsList({
           return (
             <label
               key={s.id}
-              className={`flex items-start gap-3 rounded-xl border px-3 py-3 text-sm ${
-                checked ? 'border-cyan-500/40 bg-cyan-500/10' : 'border-white/10 hover:bg-white/5'
+              className={`flex items-start gap-3 rounded-2xl border px-3 py-3 text-sm ${
+                checked ? 'quorum-border-strong quorum-surface-strong' : 'quorum-border-default quorum-surface-strong hover:quorum-surface'
               }`}
             >
               <input
@@ -95,7 +95,7 @@ export function PromptSuggestionsList({
                 className="mt-1"
               />
               <div className="flex-1">
-                <p className="text-zinc-200">{s.text}</p>
+                <p className="quorum-text-primary">{s.text}</p>
                 <div className="mt-2">
                   <div className="flex flex-wrap items-center gap-2">
                     <PromptBadge category={s.primary_objective} />
@@ -103,7 +103,7 @@ export function PromptSuggestionsList({
                       <PromptBadge key={`${s.id}_${obj}`} category={obj} variant="outline" />
                     ))}
                     {s.primary_objective !== category && (
-                      <span className="text-xs text-zinc-500">Hors objectif</span>
+                      <span className="text-xs quorum-text-subtle">Hors objectif</span>
                     )}
                   </div>
                 </div>
@@ -116,7 +116,7 @@ export function PromptSuggestionsList({
         <div className="flex justify-center">
           <button
             onClick={() => setVisibleCount((c) => c + 4)}
-            className="text-xs text-zinc-300 border border-white/10 px-3 py-1.5 rounded-lg hover:bg-white/5"
+            className="quorum-btn-secondary px-3 py-1.5 text-xs"
           >
             Afficher plus
           </button>

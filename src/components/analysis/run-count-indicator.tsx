@@ -14,7 +14,7 @@ export function RunCountIndicator({
   const clamped = Math.min(max, Math.max(min, value));
 
   return (
-    <div className="rounded-xl border border-white/10 bg-zinc-900/40 p-4 space-y-3">
+    <div className="rounded-xl border quorum-border-default quorum-surface-strong p-4 space-y-3">
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium">Nombre de runs par prompt</p>
         <span className="text-xs text-zinc-500">{clamped} runs</span>
@@ -22,7 +22,7 @@ export function RunCountIndicator({
       <div className="flex items-center gap-3">
         <button
           onClick={() => onChange(Math.max(min, clamped - 1))}
-          className="h-9 w-9 rounded-lg border border-white/10 text-white hover:bg-white/5 disabled:opacity-40"
+          className="h-9 w-9 rounded-lg border quorum-border-default quorum-text-primary hover:quorum-surface disabled:opacity-40"
           disabled={clamped <= min}
           aria-label="Réduire le nombre de runs"
         >
@@ -41,7 +41,7 @@ export function RunCountIndicator({
         </div>
         <button
           onClick={() => onChange(Math.min(max, clamped + 1))}
-          className="h-9 w-9 rounded-lg border border-white/10 text-white hover:bg-white/5 disabled:opacity-40"
+          className="h-9 w-9 rounded-lg border quorum-border-default quorum-text-primary hover:quorum-surface disabled:opacity-40"
           disabled={clamped >= max}
           aria-label="Augmenter le nombre de runs"
         >

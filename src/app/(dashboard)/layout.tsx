@@ -16,21 +16,28 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-[#050508] flex relative overflow-hidden">
-      {/* Background gradients */}
+    <div className="min-h-screen bg-transparent flex relative overflow-hidden">
+      {/* Ambient layers */}
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] bg-blue-600/[0.07] rounded-full blur-[150px]" />
-        <div className="absolute bottom-[-20%] left-[-10%] w-[500px] h-[500px] bg-violet-600/[0.07] rounded-full blur-[130px]" />
+        <div className="quorum-ambient-grid absolute inset-0 opacity-[0.08]" />
+        <div
+          className="absolute top-[-18%] right-[-6%] h-[32rem] w-[32rem] rounded-full blur-[170px]"
+          style={{ background: 'var(--quorum-orb-top)' }}
+        />
+        <div
+          className="absolute bottom-[-22%] left-[-10%] h-[28rem] w-[28rem] rounded-full blur-[140px]"
+          style={{ background: 'var(--quorum-orb-bottom)' }}
+        />
       </div>
 
       {/* Sidebar */}
       <DashboardNav />
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-h-screen relative">
+      <div className="quorum-dashboard-main relative flex min-h-screen flex-1 flex-col">
         <DashboardHeader user={user} />
-        <main className="flex-1 p-6 lg:p-8 overflow-y-auto">
-          <div className="max-w-7xl mx-auto">
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+          <div className="mx-auto max-w-[1400px]">
             {children}
           </div>
         </main>

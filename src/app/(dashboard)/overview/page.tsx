@@ -56,7 +56,7 @@ export default async function OverviewPage() {
   const activeProject = await getActiveProjectForUser(user.id);
   if (!activeProject) {
     return (
-      <div className="rounded-3xl border border-white/[0.08] bg-zinc-900/40 p-10 text-center text-zinc-400">
+      <div className="rounded-3xl border quorum-border-default quorum-surface-strong p-10 text-center text-zinc-400">
         Aucun projet actif. Créez votre marque pour commencer.
       </div>
     );
@@ -648,10 +648,11 @@ export default async function OverviewPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="quorum-panel-strong flex flex-col gap-5 p-6 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-3xl font-semibold text-white">Overview</h1>
-          <p className="text-zinc-400 mt-1">Marque active: {activeProject.name}</p>
+          <p className="quorum-kicker">Overview</p>
+          <h1 className="mt-2 text-4xl font-bold tracking-[-0.05em] quorum-text-primary">Pilotage de la visibilité IA</h1>
+          <p className="mt-2 text-sm quorum-text-muted">Marque active: {activeProject.name}</p>
         </div>
         <ExportButtons />
       </div>
@@ -669,7 +670,7 @@ export default async function OverviewPage() {
       />
 
       {!hasMonitoringData && (
-        <div className="rounded-3xl border border-white/[0.08] bg-zinc-900/40 p-8 text-center text-zinc-400">
+        <div className="quorum-panel p-8 text-center quorum-text-muted">
           Aucune analyse quotidienne détectée.
           <div className="mt-4 flex items-center justify-center gap-3">
             <ExportButtons />

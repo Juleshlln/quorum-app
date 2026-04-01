@@ -58,7 +58,7 @@ export function PromptSuggestions({
         {suggestions.map((s, i) => (
           <div
             key={i}
-            className="flex items-start justify-between gap-4 rounded-xl border border-white/[0.06] bg-zinc-900/40 p-4"
+            className="flex items-start justify-between gap-4 rounded-xl border quorum-border-default quorum-surface-strong p-4"
           >
             <p className="text-sm text-zinc-300">{s}</p>
             <button

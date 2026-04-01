@@ -23,7 +23,7 @@ export default async function BrandSettingsPage() {
 
   if (!project) {
     return (
-      <div className="rounded-3xl border border-white/[0.08] bg-zinc-900/40 p-10 text-center text-zinc-400">
+      <div className="rounded-3xl border quorum-border-default quorum-surface-strong p-10 text-center text-zinc-400">
         Aucun projet actif. Créez votre marque pour commencer.
       </div>
     );
@@ -31,16 +31,17 @@ export default async function BrandSettingsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="quorum-panel-strong flex items-center justify-between p-6">
         <div>
-          <h1 className="text-2xl font-semibold text-white">Brand settings</h1>
-          <p className="text-zinc-400 mt-1">
+          <p className="quorum-kicker">Brand settings</p>
+          <h1 className="mt-2 text-3xl font-bold tracking-[-0.05em] quorum-text-primary">Paramètres de marque</h1>
+          <p className="mt-2 text-sm quorum-text-muted">
             Mettez à jour les informations de votre marque.
           </p>
         </div>
         <Link
           href="/overview"
-          className="text-sm text-zinc-400 hover:text-white"
+          className="quorum-btn-secondary"
         >
           Retour à l’overview
         </Link>

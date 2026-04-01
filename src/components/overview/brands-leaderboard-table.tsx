@@ -11,16 +11,16 @@ type BrandRow = {
 export function BrandsLeaderboardTable({ rows }: { rows: BrandRow[] }) {
   if (!rows || rows.length === 0) {
     return (
-      <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/30 p-8 text-center text-zinc-500">
+      <div className="quorum-panel-soft p-8 text-center quorum-text-muted">
         Aucun comparatif disponible pour le moment.
       </div>
     );
   }
 
   return (
-    <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 overflow-hidden">
+    <div className="overflow-hidden rounded-[26px] border quorum-border-default quorum-surface-strong backdrop-blur-xl">
       <table className="w-full text-sm">
-        <thead className="bg-zinc-900/60 text-zinc-400">
+        <thead className="quorum-surface quorum-text-muted">
           <tr>
             <th className="text-left px-4 py-3 font-medium">Brand</th>
             <th className="text-left px-4 py-3 font-medium">Visibilité</th>
@@ -30,25 +30,32 @@ export function BrandsLeaderboardTable({ rows }: { rows: BrandRow[] }) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
-            <tr key={row.brand} className="border-t border-white/[0.06]">
-              <td className="px-4 py-3 text-white font-medium">{row.brand}</td>
-              <td className="px-4 py-3 text-zinc-200">
+          {rows.map((row, index) => (
+            <tr key={row.brand} className="border-t quorum-border-default transition-colors hover:quorum-surface">
+              <td className="px-4 py-3 quorum-text-primary font-medium">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full border quorum-border-default quorum-surface text-xs quorum-text-muted">
+                    {index + 1}
+                  </span>
+                  <span>{row.brand}</span>
+                </div>
+              </td>
+              <td className="px-4 py-3 quorum-text-primary">
                 {row.visibilityRate !== null ? `${row.visibilityRate}%` : '—'}
               </td>
               <td className="px-4 py-3">
                 {row.delta !== null ? (
-                  <span className={row.delta > 0 ? 'text-emerald-400' : row.delta < 0 ? 'text-red-400' : 'text-zinc-500'}>
+                  <span className={row.delta > 0 ? 'text-emerald-300' : row.delta < 0 ? 'text-red-300' : 'quorum-text-subtle'}>
                     {row.delta > 0 ? '+' : ''}{row.delta}pt
                   </span>
                 ) : (
-                  <span className="text-zinc-500">—</span>
+                  <span className="quorum-text-subtle">—</span>
                 )}
               </td>
-              <td className="px-4 py-3 text-zinc-200">
+              <td className="px-4 py-3 quorum-text-primary">
                 {row.avgPosition !== null ? `#${row.avgPosition}` : '—'}
               </td>
-              <td className="px-4 py-3 text-zinc-400">
+              <td className="px-4 py-3 quorum-text-muted">
                 {row.mentions}/{row.runs}
               </td>
             </tr>

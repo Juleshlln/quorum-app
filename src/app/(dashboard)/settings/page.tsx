@@ -14,64 +14,65 @@ export default async function SettingsPage() {
 
   return (
     <div className="space-y-8 max-w-4xl">
-      <div>
-        <h1 className="text-3xl font-semibold text-white">Paramètres</h1>
-        <p className="text-zinc-400 mt-1">Gérez votre compte et vos préférences</p>
+      <div className="quorum-panel-strong p-6">
+        <p className="quorum-kicker">Paramètres</p>
+        <h1 className="mt-2 text-4xl font-bold tracking-[-0.05em] quorum-text-primary">Gérez votre compte</h1>
+        <p className="mt-2 text-sm quorum-text-muted">Gérez votre compte et vos préférences</p>
       </div>
 
       {/* Profile Section */}
-      <section className="rounded-2xl border border-white/[0.08] bg-zinc-900/30 overflow-hidden">
-        <div className="px-6 py-4 border-b border-white/[0.06]">
-          <h2 className="font-semibold text-white flex items-center gap-2">
-            <User className="w-5 h-5 text-cyan-400" />
+      <section className="quorum-panel overflow-hidden">
+        <div className="px-6 py-4 border-b quorum-border-default">
+          <h2 className="font-semibold quorum-text-primary flex items-center gap-2">
+            <User className="w-5 h-5 quorum-text-muted" />
             Profil
           </h2>
         </div>
         <div className="p-6 space-y-6">
           <div className="flex items-center gap-5">
-            <div className="w-20 h-20 bg-gradient-to-br from-blue-500/20 via-cyan-500/20 to-violet-500/20 border border-white/[0.1] rounded-2xl flex items-center justify-center">
-              <span className="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
+            <div className="flex h-20 w-20 items-center justify-center rounded-3xl border quorum-border-default quorum-surface-strong">
+              <span className="text-3xl font-bold quorum-text-primary">
                 {displayName.charAt(0).toUpperCase()}
               </span>
             </div>
             <div>
-              <h3 className="text-xl font-semibold text-white">{displayName}</h3>
-              <p className="text-zinc-400">{user?.email}</p>
-              <p className="text-xs text-zinc-500 mt-1">Membre depuis janvier 2026</p>
+              <h3 className="text-xl font-semibold quorum-text-primary">{displayName}</h3>
+              <p className="quorum-text-muted">{user?.email}</p>
+              <p className="mt-1 text-xs quorum-text-subtle">Membre depuis janvier 2026</p>
             </div>
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-sm text-zinc-400">Nom complet</label>
+              <label className="quorum-label mb-0">Nom complet</label>
               <input 
                 type="text" 
                 defaultValue={displayName}
-                className="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl px-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:border-cyan-500/50 transition-colors"
+                className="quorum-input"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm text-zinc-400">Email</label>
+              <label className="quorum-label mb-0">Email</label>
               <input 
                 type="email" 
                 defaultValue={user?.email || ''}
                 disabled
-                className="w-full bg-white/[0.03] border border-white/[0.05] rounded-xl px-4 py-3 text-zinc-500 cursor-not-allowed"
+                className="w-full cursor-not-allowed rounded-xl border quorum-border-default quorum-surface px-4 py-3 quorum-text-subtle"
               />
             </div>
           </div>
 
-          <button className="px-5 py-2.5 bg-gradient-to-r from-blue-500 via-cyan-500 to-violet-500 text-white text-sm font-medium rounded-xl hover:opacity-90 transition-all">
+          <button className="quorum-btn-primary">
             Sauvegarder
           </button>
         </div>
       </section>
 
       {/* Subscription Section */}
-      <section className="rounded-2xl border border-white/[0.08] bg-zinc-900/30 overflow-hidden">
-        <div className="px-6 py-4 border-b border-white/[0.06]">
-          <h2 className="font-semibold text-white flex items-center gap-2">
-            <CreditCard className="w-5 h-5 text-cyan-400" />
+      <section className="quorum-panel overflow-hidden">
+        <div className="px-6 py-4 border-b quorum-border-default">
+          <h2 className="font-semibold quorum-text-primary flex items-center gap-2">
+            <CreditCard className="w-5 h-5 quorum-text-muted" />
             Abonnement
           </h2>
         </div>
@@ -79,41 +80,41 @@ export default async function SettingsPage() {
           <div className="flex items-start justify-between mb-6">
             <div>
               <div className="flex items-center gap-3 mb-2">
-                <span className="text-xl font-semibold text-white">Plan Starter</span>
-                <span className="px-2 py-0.5 bg-zinc-800 text-zinc-400 text-xs rounded-full">Gratuit</span>
+                <span className="text-xl font-semibold quorum-text-primary">Plan Starter</span>
+                <span className="rounded-full border quorum-border-default quorum-surface px-2 py-0.5 text-xs quorum-text-muted">Gratuit</span>
               </div>
-              <p className="text-sm text-zinc-400">1 projet • 5 analyses/mois • 1 modèle IA</p>
+              <p className="text-sm quorum-text-muted">1 projet • 5 analyses/mois • 1 modèle IA</p>
             </div>
           </div>
 
           {/* Upgrade Card */}
-          <div className="p-5 rounded-2xl bg-gradient-to-br from-blue-500/10 via-cyan-500/10 to-violet-500/10 border border-blue-500/20">
+          <div className="rounded-3xl border quorum-border-default quorum-surface p-5">
             <div className="flex items-center gap-2 mb-3">
-              <Sparkles className="w-5 h-5 text-cyan-400" />
-              <span className="font-semibold text-white">Passez à Pro</span>
+              <Sparkles className="w-5 h-5 quorum-text-primary" />
+              <span className="font-semibold quorum-text-primary">Passez à Pro</span>
             </div>
-            <p className="text-sm text-zinc-400 mb-4">
+            <p className="mb-4 text-sm quorum-text-muted">
               Débloquez les analyses illimitées, tous les modèles IA et les fonctionnalités avancées.
             </p>
             <ul className="space-y-2 mb-5">
-              <li className="flex items-center gap-2 text-sm text-zinc-300">
-                <Check className="w-4 h-4 text-cyan-400" />
+              <li className="flex items-center gap-2 text-sm quorum-text-primary">
+                <Check className="w-4 h-4 quorum-text-primary" />
                 Projets illimités
               </li>
-              <li className="flex items-center gap-2 text-sm text-zinc-300">
-                <Check className="w-4 h-4 text-cyan-400" />
+              <li className="flex items-center gap-2 text-sm quorum-text-primary">
+                <Check className="w-4 h-4 quorum-text-primary" />
                 Analyses illimitées
               </li>
-              <li className="flex items-center gap-2 text-sm text-zinc-300">
-                <Check className="w-4 h-4 text-cyan-400" />
+              <li className="flex items-center gap-2 text-sm quorum-text-primary">
+                <Check className="w-4 h-4 quorum-text-primary" />
                 ChatGPT, Claude, Gemini, Perplexity
               </li>
-              <li className="flex items-center gap-2 text-sm text-zinc-300">
-                <Check className="w-4 h-4 text-cyan-400" />
+              <li className="flex items-center gap-2 text-sm quorum-text-primary">
+                <Check className="w-4 h-4 quorum-text-primary" />
                 Export PDF/CSV
               </li>
             </ul>
-            <button className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-blue-500 via-cyan-500 to-violet-500 text-white font-medium rounded-xl hover:opacity-90 transition-all w-full justify-center">
+            <button className="quorum-btn-primary w-full justify-center">
               Passer à Pro — 29€/mois
               <ArrowRight className="w-4 h-4" />
             </button>
@@ -122,39 +123,39 @@ export default async function SettingsPage() {
       </section>
 
       {/* API Keys Section */}
-      <section className="rounded-2xl border border-white/[0.08] bg-zinc-900/30 overflow-hidden">
-        <div className="px-6 py-4 border-b border-white/[0.06]">
-          <h2 className="font-semibold text-white flex items-center gap-2">
-            <Key className="w-5 h-5 text-cyan-400" />
+      <section className="quorum-panel overflow-hidden">
+        <div className="px-6 py-4 border-b quorum-border-default">
+          <h2 className="font-semibold quorum-text-primary flex items-center gap-2">
+            <Key className="w-5 h-5 quorum-text-muted" />
             Clés API
           </h2>
         </div>
         <div className="p-6 space-y-4">
-          <p className="text-sm text-zinc-400">
+          <p className="text-sm quorum-text-muted">
             Configurez vos propres clés API pour utiliser vos crédits personnels.
           </p>
           
           <div className="space-y-2">
-            <label className="text-sm text-zinc-400">OpenAI API Key</label>
+            <label className="quorum-label mb-0">OpenAI API Key</label>
             <input 
               type="password" 
               placeholder="sk-..."
-              className="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl px-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:border-cyan-500/50 transition-colors"
+              className="quorum-input"
             />
-            <p className="text-xs text-zinc-500">Utilisée pour les analyses ChatGPT</p>
+            <p className="text-xs quorum-text-subtle">Utilisée pour les analyses ChatGPT</p>
           </div>
 
-          <button className="px-5 py-2.5 bg-zinc-800 text-white text-sm font-medium rounded-xl hover:bg-zinc-700 transition-colors">
+          <button className="quorum-btn-secondary">
             Sauvegarder les clés
           </button>
         </div>
       </section>
 
       {/* Notifications Section */}
-      <section className="rounded-2xl border border-white/[0.08] bg-zinc-900/30 overflow-hidden">
-        <div className="px-6 py-4 border-b border-white/[0.06]">
-          <h2 className="font-semibold text-white flex items-center gap-2">
-            <Bell className="w-5 h-5 text-cyan-400" />
+      <section className="quorum-panel overflow-hidden">
+        <div className="px-6 py-4 border-b quorum-border-default">
+          <h2 className="font-semibold quorum-text-primary flex items-center gap-2">
+            <Bell className="w-5 h-5 quorum-text-muted" />
             Notifications
           </h2>
         </div>
@@ -178,27 +179,27 @@ export default async function SettingsPage() {
       </section>
 
       {/* Security Section */}
-      <section className="rounded-2xl border border-white/[0.08] bg-zinc-900/30 overflow-hidden">
-        <div className="px-6 py-4 border-b border-white/[0.06]">
-          <h2 className="font-semibold text-white flex items-center gap-2">
-            <Shield className="w-5 h-5 text-cyan-400" />
+      <section className="quorum-panel overflow-hidden">
+        <div className="px-6 py-4 border-b quorum-border-default">
+          <h2 className="font-semibold quorum-text-primary flex items-center gap-2">
+            <Shield className="w-5 h-5 quorum-text-muted" />
             Sécurité
           </h2>
         </div>
         <div className="p-6 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium text-white">Changer le mot de passe</p>
-              <p className="text-sm text-zinc-400">Dernière modification il y a 30 jours</p>
+              <p className="font-medium quorum-text-primary">Changer le mot de passe</p>
+              <p className="text-sm quorum-text-muted">Dernière modification il y a 30 jours</p>
             </div>
-            <button className="px-4 py-2 text-sm font-medium text-zinc-400 hover:text-white border border-white/[0.08] rounded-xl hover:border-white/[0.15] transition-all">
+            <button className="quorum-btn-secondary">
               Modifier
             </button>
           </div>
-          <div className="flex items-center justify-between pt-4 border-t border-white/[0.06]">
+          <div className="flex items-center justify-between pt-4 border-t quorum-border-default">
             <div>
               <p className="font-medium text-red-400">Supprimer le compte</p>
-              <p className="text-sm text-zinc-400">Cette action est irréversible</p>
+              <p className="text-sm quorum-text-muted">Cette action est irréversible</p>
             </div>
             <button className="px-4 py-2 text-sm font-medium text-red-400 hover:text-red-300 border border-red-500/20 rounded-xl hover:border-red-500/40 transition-all">
               Supprimer
@@ -222,12 +223,12 @@ function NotificationToggle({
   return (
     <div className="flex items-center justify-between">
       <div>
-        <p className="font-medium text-white">{label}</p>
-        <p className="text-sm text-zinc-400">{description}</p>
+        <p className="font-medium quorum-text-primary">{label}</p>
+        <p className="text-sm quorum-text-muted">{description}</p>
       </div>
       <label className="relative inline-flex items-center cursor-pointer">
         <input type="checkbox" defaultChecked={defaultChecked} className="sr-only peer" />
-        <div className="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-cyan-500 peer-checked:to-blue-500"></div>
+        <div className="quorum-switch"></div>
       </label>
     </div>
   );

@@ -320,35 +320,36 @@ export function MonitoringTopics({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold text-white">Monitoring</h1>
-        <p className="text-zinc-400 mt-1">
+      <div className="quorum-panel-strong p-6">
+        <p className="quorum-kicker">Monitoring</p>
+        <h1 className="mt-2 text-4xl font-bold tracking-[-0.05em] quorum-text-primary">Cadrez vos enjeux et vos prompts</h1>
+        <p className="mt-2 text-sm quorum-text-muted">
           Surveillez des enjeux business via des questions analysées quotidiennement.
         </p>
-        <p className="text-xs text-zinc-500 mt-2">
+        <p className="text-xs quorum-text-subtle mt-4">
           {topics.length} enjeux • {questions.filter((q) => q.is_active).length} questions actives • Analyse quotidienne
         </p>
       </div>
 
-      <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-4 text-sm text-zinc-300 flex items-center justify-between">
+      <div className="quorum-panel flex items-center justify-between p-4 text-sm quorum-text-muted">
         <span>Couverture du monitoring</span>
-        <span className="text-white font-medium">{coverage}%</span>
+        <span className="text-2xl font-bold tracking-[-0.04em] quorum-text-primary">{coverage}%</span>
       </div>
 
       {message && (
-        <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+        <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
           {message}
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
-        <aside className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-4 space-y-4">
+      <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
+        <aside className="quorum-panel p-4 space-y-5">
           <div className="space-y-2">
-            <p className="text-xs text-zinc-500 uppercase">Enjeux</p>
+            <p className="quorum-kicker">Enjeux</p>
             <button
               onClick={() => setSelectedTopicId('unassigned')}
-              className={`w-full text-left px-3 py-2 rounded-lg text-sm ${
-                selectedTopicId === 'unassigned' ? 'bg-white/10 text-white' : 'text-zinc-400 hover:bg-white/5'
+              className={`w-full rounded-2xl px-3 py-3 text-left text-sm transition-all ${
+                selectedTopicId === 'unassigned' ? 'border quorum-border-strong quorum-surface-strong quorum-text-primary' : 'quorum-text-muted hover:quorum-surface hover:quorum-text-primary'
               }`}
             >
               Questions sans enjeu ({unassigned.length})
@@ -357,32 +358,32 @@ export function MonitoringTopics({
               <button
                 key={topic.id}
                 onClick={() => setSelectedTopicId(topic.id)}
-                className={`w-full text-left px-3 py-2 rounded-lg text-sm ${
-                  selectedTopicId === topic.id ? 'bg-white/10 text-white' : 'text-zinc-400 hover:bg-white/5'
+                className={`w-full rounded-2xl px-3 py-3 text-left text-sm transition-all ${
+                  selectedTopicId === topic.id ? 'border quorum-border-strong quorum-surface-strong quorum-text-primary' : 'quorum-text-muted hover:quorum-surface hover:quorum-text-primary'
                 }`}
               >
-                {topic.name} <span className="text-xs text-zinc-500">({topic.count})</span>
+                {topic.name} <span className="text-xs quorum-text-subtle">({topic.count})</span>
               </button>
             ))}
           </div>
 
-          <div className="border-t border-white/5 pt-4 space-y-2">
-            <p className="text-xs text-zinc-500 uppercase">Créer un enjeu</p>
+          <div className="border-t quorum-border-default pt-4 space-y-3">
+            <p className="quorum-kicker">Créer un enjeu</p>
             <input
               value={newTopicName}
               onChange={(e) => setNewTopicName(e.target.value)}
               placeholder="Nom de l’enjeu"
-              className="w-full rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-white"
+              className="quorum-input"
             />
             <input
               value={newTopicDesc}
               onChange={(e) => setNewTopicDesc(e.target.value)}
               placeholder="Description (optionnel)"
-              className="w-full rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-white"
+              className="quorum-input"
             />
             <button
               onClick={addTopic}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-medium text-black"
+              className="quorum-btn-primary w-full"
             >
               <Plus className="h-4 w-4" />
               Créer l’enjeu
@@ -390,11 +391,11 @@ export function MonitoringTopics({
           </div>
         </aside>
 
-        <section className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-6 space-y-4">
+        <section className="quorum-panel-strong p-6 space-y-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs uppercase text-zinc-500">Détail de l’enjeu</p>
-              <h2 className="text-xl font-semibold text-white">
+              <p className="quorum-kicker">Détail de l’enjeu</p>
+              <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] quorum-text-primary">
                 {selectedTopicId === 'unassigned'
                   ? 'Questions sans enjeu'
                   : topics.find((t) => t.id === selectedTopicId)?.name || 'Enjeu'}
@@ -404,16 +405,16 @@ export function MonitoringTopics({
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => toggleTopic(selectedTopicId, !(topics.find((t) => t.id === selectedTopicId)?.is_active))}
-                  className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1 text-xs text-zinc-300"
+                  className="quorum-chip"
                 >
                   {(topics.find((t) => t.id === selectedTopicId)?.is_active)
                     ? <CheckCircle2 className="h-3 w-3 text-emerald-300" />
-                    : <CircleDashed className="h-3 w-3 text-orange-300" />}
+                    : <CircleDashed className="h-3 w-3 text-amber-300" />}
                   {(topics.find((t) => t.id === selectedTopicId)?.is_active) ? 'Actif' : 'Inactif'}
                 </button>
                 <button
                   onClick={() => deleteTopic(selectedTopicId)}
-                  className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1 text-xs text-zinc-300"
+                  className="quorum-chip"
                 >
                   <Trash2 className="h-3 w-3" />
                   Supprimer
@@ -423,30 +424,30 @@ export function MonitoringTopics({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-2 rounded-full border border-white/10 bg-zinc-900/60 px-2 py-1 text-xs text-zinc-300">
+            <div className="flex items-center gap-2 rounded-full border quorum-border-default quorum-surface-strong px-3 py-1.5 text-xs quorum-text-muted">
               <Search className="h-3 w-3" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Rechercher une question"
-                className="bg-transparent outline-none text-xs text-zinc-200 w-48"
+                className="w-48 bg-transparent text-xs quorum-text-primary outline-none placeholder:quorum-text-subtle"
               />
             </div>
             <button
               onClick={() => setFilterTab('active')}
-              className={`px-3 py-1 rounded-full text-xs border ${filterTab === 'active' ? 'border-cyan-500/40 text-cyan-300' : 'border-white/10 text-zinc-400'}`}
+              className={`quorum-chip ${filterTab === 'active' ? 'quorum-chip-active' : ''}`}
             >
               Actives
             </button>
             <button
               onClick={() => setFilterTab('inactive')}
-              className={`px-3 py-1 rounded-full text-xs border ${filterTab === 'inactive' ? 'border-cyan-500/40 text-cyan-300' : 'border-white/10 text-zinc-400'}`}
+              className={`quorum-chip ${filterTab === 'inactive' ? 'quorum-chip-active' : ''}`}
             >
               Inactives
             </button>
             <button
               onClick={() => setFilterTab('suggested')}
-              className={`px-3 py-1 rounded-full text-xs border ${filterTab === 'suggested' ? 'border-cyan-500/40 text-cyan-300' : 'border-white/10 text-zinc-400'}`}
+              className={`quorum-chip ${filterTab === 'suggested' ? 'quorum-chip-active' : ''}`}
             >
               Suggérées
             </button>
@@ -454,20 +455,20 @@ export function MonitoringTopics({
 
           <div className="space-y-3">
             {filterTab !== 'suggested' && filteredQuestions.length === 0 && (
-              <div className="rounded-xl border border-white/10 bg-zinc-900/60 p-6 text-sm text-zinc-400">
+              <div className="quorum-panel-soft p-6 text-sm quorum-text-muted">
                 Aucune question pour cet enjeu pour le moment.
               </div>
             )}
             {filterTab !== 'suggested' && filteredQuestions.map((q) => (
-              <div key={q.id} className="rounded-xl border border-white/10 bg-zinc-900/60 p-4 flex items-center justify-between">
+              <div key={q.id} className="quorum-panel-soft flex items-center justify-between p-4">
                 <div>
-                  <p className="text-sm text-white">{q.prompt_text}</p>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-sm quorum-text-primary">{q.prompt_text}</p>
+                  <p className="text-xs quorum-text-muted">
                     {q.intent || 'Information'} · {q.language || 'Français'} · {q.country || 'France'}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <label className="inline-flex items-center gap-2 text-xs text-zinc-400">
+                  <label className="inline-flex items-center gap-2 text-xs quorum-text-muted">
                     <input
                       type="checkbox"
                       checked={q.is_active}
@@ -478,7 +479,7 @@ export function MonitoringTopics({
                   {selectedTopicId === 'unassigned' && topics[0] && (
                     <button
                       onClick={() => assignQuestion(q.id, topics[0].id)}
-                      className="text-xs text-cyan-300 underline"
+                      className="text-xs quorum-text-primary underline underline-offset-2"
                     >
                       Ajouter à {topics[0].name}
                     </button>
@@ -490,13 +491,13 @@ export function MonitoringTopics({
             {filterTab === 'suggested' && (
               <div className="space-y-3">
                 {suggestedForSelected.length === 0 && (
-                  <div className="rounded-xl border border-white/10 bg-zinc-900/60 p-6 text-sm text-zinc-400">
+                  <div className="quorum-panel-soft p-6 text-sm quorum-text-muted">
                     Aucune recommandation supplémentaire.
                   </div>
                 )}
                 {suggestedForSelected.map((template) => (
-                  <div key={template.id} className="rounded-xl border border-white/10 bg-zinc-900/60 p-4 space-y-3">
-                    <p className="text-sm text-white">{template.prompt_text}</p>
+                  <div key={template.id} className="quorum-panel-soft p-4 space-y-3">
+                    <p className="text-sm quorum-text-primary">{template.prompt_text}</p>
                     <div className="flex flex-wrap items-center gap-2">
                       <button
                         onClick={() => {
@@ -508,7 +509,7 @@ export function MonitoringTopics({
                           setModalTab('single');
                           setModalOpen(true);
                         }}
-                        className="rounded-full border border-white/10 px-3 py-1 text-xs text-zinc-300"
+                        className="quorum-chip"
                       >
                         Tester maintenant
                       </button>
@@ -519,7 +520,7 @@ export function MonitoringTopics({
                           }
                           addQuestion(template.prompt_text, 'template');
                         }}
-                        className="rounded-full bg-white px-3 py-1 text-xs font-medium text-black"
+                        className="quorum-btn-primary px-3 py-1.5 text-xs"
                       >
                         Activer dans le monitoring
                       </button>
@@ -538,14 +539,14 @@ export function MonitoringTopics({
                 }
                 setModalOpen(true);
               }}
-              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black"
+              className="quorum-btn-primary"
             >
               Ajouter une question
             </button>
             {selectedTopicId && selectedTopicId !== 'unassigned' && (
               <button
                 onClick={() => setSelectedTopicId('unassigned')}
-                className="rounded-lg border border-white/10 px-4 py-2 text-sm text-zinc-300"
+                className="quorum-btn-secondary"
               >
                 Voir les questions sans enjeu
               </button>
@@ -555,22 +556,22 @@ export function MonitoringTopics({
       </div>
 
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-          <div className="w-full max-w-xl rounded-2xl bg-zinc-950 border border-white/10 p-6 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center quorum-backdrop px-4">
+          <div className="quorum-panel-strong w-full max-w-xl p-6 space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-white">Ajouter une question</h3>
-              <button onClick={() => setModalOpen(false)} className="text-zinc-400">Fermer</button>
+              <h3 className="text-lg font-semibold quorum-text-primary">Ajouter une question</h3>
+              <button onClick={() => setModalOpen(false)} className="quorum-text-muted hover:quorum-text-primary">Fermer</button>
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setModalTab('single')}
-                className={`px-3 py-1 rounded-full text-xs border ${modalTab === 'single' ? 'border-cyan-500/40 text-cyan-300' : 'border-white/10 text-zinc-400'}`}
+                className={`quorum-chip ${modalTab === 'single' ? 'quorum-chip-active' : ''}`}
               >
                 Ajout unique
               </button>
               <button
                 onClick={() => setModalTab('bulk')}
-                className={`px-3 py-1 rounded-full text-xs border ${modalTab === 'bulk' ? 'border-cyan-500/40 text-cyan-300' : 'border-white/10 text-zinc-400'}`}
+                className={`quorum-chip ${modalTab === 'bulk' ? 'quorum-chip-active' : ''}`}
               >
                 Bulk upload
               </button>
@@ -580,26 +581,26 @@ export function MonitoringTopics({
                 value={form.text}
                 onChange={(e) => setForm({ ...form, text: e.target.value })}
                 placeholder="Ex : Quel est le meilleur CRM pour PME ?"
-                className="w-full min-h-[100px] rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-white"
+                className="quorum-textarea min-h-[100px]"
               />
             ) : (
               <textarea
                 value={bulkText}
                 onChange={(e) => setBulkText(e.target.value)}
                 placeholder="Une question par ligne"
-                className="w-full min-h-[140px] rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-white"
+                className="quorum-textarea min-h-[140px]"
               />
             )}
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs quorum-text-subtle">
               Les questions ne doivent pas citer votre marque.
             </p>
             <div className="grid gap-3 md:grid-cols-2">
               <div>
-                <label className="text-xs text-zinc-500">Enjeu</label>
+                <label className="quorum-label text-xs">Enjeu</label>
                 <select
                   value={form.topicId}
                   onChange={(e) => setForm({ ...form, topicId: e.target.value })}
-                  className="w-full rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-white"
+                  className="quorum-select"
                 >
                   {topics.map((t) => (
                     <option key={t.id} value={t.id}>
@@ -609,11 +610,11 @@ export function MonitoringTopics({
                 </select>
               </div>
               <div>
-                <label className="text-xs text-zinc-500">Intention</label>
+                <label className="quorum-label text-xs">Intention</label>
                 <select
                   value={form.intent}
                   onChange={(e) => setForm({ ...form, intent: e.target.value })}
-                  className="w-full rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-white"
+                  className="quorum-select"
                 >
                   {INTENTS.map((intent) => (
                     <option key={intent.value} value={intent.value}>
@@ -623,33 +624,33 @@ export function MonitoringTopics({
                 </select>
               </div>
               <div>
-                <label className="text-xs text-zinc-500">Pays</label>
+                <label className="quorum-label text-xs">Pays</label>
                 <input
                   value={form.country}
                   onChange={(e) => setForm({ ...form, country: e.target.value })}
-                  className="w-full rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-white"
+                  className="quorum-input"
                 />
               </div>
               <div>
-                <label className="text-xs text-zinc-500">Langue</label>
+                <label className="quorum-label text-xs">Langue</label>
                 <input
                   value={form.language}
                   onChange={(e) => setForm({ ...form, language: e.target.value })}
-                  className="w-full rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-white"
+                  className="quorum-input"
                 />
               </div>
             </div>
             <div>
-              <label className="text-xs text-zinc-500">Tags (optionnel, séparés par virgule)</label>
+              <label className="quorum-label text-xs">Tags (optionnel, séparés par virgule)</label>
               <input
                 value={form.tags}
                 onChange={(e) => setForm({ ...form, tags: e.target.value })}
-                className="w-full rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-white"
+                className="quorum-input"
               />
             </div>
 
             {testMessage && (
-              <div className="rounded-lg border border-white/10 bg-zinc-900/60 px-3 py-2 text-xs text-zinc-300">
+              <div className="quorum-panel-soft px-3 py-2 text-xs quorum-text-muted">
                 {testMessage}
               </div>
             )}
@@ -658,12 +659,12 @@ export function MonitoringTopics({
               {modalTab === 'single' ? (
                 <button
                   onClick={runSandboxTest}
-                  className="rounded-lg border border-white/10 px-4 py-2 text-sm text-zinc-300"
+                  className="quorum-btn-secondary"
                 >
                   Tester maintenant
                 </button>
               ) : (
-                <div className="flex items-center gap-2 text-xs text-zinc-400">
+                <div className="flex items-center gap-2 text-xs quorum-text-muted">
                   <Sparkles className="h-4 w-4" />
                   Chaque ligne devient une question active
                 </div>
@@ -671,21 +672,21 @@ export function MonitoringTopics({
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setModalOpen(false)}
-                  className="rounded-lg border border-white/10 px-4 py-2 text-sm text-zinc-300"
+                  className="quorum-btn-secondary"
                 >
                   Annuler
                 </button>
                 {modalTab === 'single' ? (
                   <button
                     onClick={() => addQuestion()}
-                    className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black"
+                    className="quorum-btn-primary"
                   >
                     Ajouter au monitoring
                   </button>
                 ) : (
                   <button
                     onClick={addBulkQuestions}
-                    className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black"
+                    className="quorum-btn-primary"
                   >
                     Importer
                   </button>

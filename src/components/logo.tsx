@@ -1,17 +1,35 @@
-import { Montserrat } from 'next/font/google';
+import Image from 'next/image';
+import { cn } from '@/lib/utils';
 
-const montserrat = Montserrat({
-  subsets: ['latin'],
-  weight: '900',
-  display: 'swap',
-});
+const LOGO_WIDTH = 1179;
+const LOGO_HEIGHT = 304;
 
-export function QuorumLogo({ className = '' }: { className?: string }) {
+export function QuorumLogo({
+  className = '',
+  adaptive = false,
+  priority = false,
+}: {
+  className?: string;
+  adaptive?: boolean;
+  priority?: boolean;
+}) {
   return (
     <span
-      className={`tracking-[-0.04em] text-[#F5F0E8] ${montserrat.className} ${className}`}
+      className={cn(
+        'relative inline-flex h-8 w-auto max-w-full shrink-0',
+        adaptive && 'quorum-logo--adaptive',
+        className
+      )}
+      style={{ aspectRatio: `${LOGO_WIDTH} / ${LOGO_HEIGHT}` }}
     >
-      QUORUM
+      <Image
+        src="/quorum-logo.png"
+        alt="Quorum"
+        fill
+        priority={priority}
+        sizes="(max-width: 640px) 132px, (max-width: 1024px) 168px, 192px"
+        className="object-contain object-left"
+      />
     </span>
   );
 }

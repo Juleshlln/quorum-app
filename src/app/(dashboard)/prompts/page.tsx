@@ -21,7 +21,7 @@ export default async function PromptsPage() {
   const project = await getActiveProjectForUser(user.id);
   if (!project) {
     return (
-      <div className="rounded-3xl border border-white/[0.08] bg-zinc-900/40 p-10 text-center text-zinc-400">
+      <div className="rounded-3xl border quorum-border-default quorum-surface-strong p-10 text-center text-zinc-400">
         Aucun projet actif. Créez votre marque pour commencer.
       </div>
     );

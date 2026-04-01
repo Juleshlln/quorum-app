@@ -16,33 +16,27 @@ type MetricCardProps = {
 const colorMap = {
   emerald: {
     iconBg: 'bg-emerald-500/10',
-    iconColor: 'text-emerald-400',
-    valueBorder: 'border-emerald-500/20',
+    iconColor: 'text-emerald-300',
   },
   red: {
     iconBg: 'bg-red-500/10',
-    iconColor: 'text-red-400',
-    valueBorder: 'border-red-500/20',
+    iconColor: 'text-red-300',
   },
   zinc: {
-    iconBg: 'bg-zinc-500/10',
-    iconColor: 'text-zinc-400',
-    valueBorder: 'border-zinc-500/20',
+    iconBg: 'quorum-surface',
+    iconColor: 'quorum-text-muted',
   },
   violet: {
-    iconBg: 'bg-violet-500/10',
-    iconColor: 'text-violet-400',
-    valueBorder: 'border-violet-500/20',
+    iconBg: 'quorum-surface',
+    iconColor: 'quorum-text-muted',
   },
   blue: {
-    iconBg: 'bg-blue-500/10',
-    iconColor: 'text-blue-400',
-    valueBorder: 'border-blue-500/20',
+    iconBg: 'quorum-surface',
+    iconColor: 'quorum-text-muted',
   },
   cyan: {
-    iconBg: 'bg-cyan-500/10',
-    iconColor: 'text-cyan-400',
-    valueBorder: 'border-cyan-500/20',
+    iconBg: 'quorum-surface',
+    iconColor: 'quorum-text-muted',
   },
 };
 
@@ -50,22 +44,22 @@ export function MetricCard({ label, value, suffix, description, tooltip, icon: I
   const c = colorMap[color];
 
   return (
-    <div className="group rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-5 transition-all duration-200 hover:border-white/[0.12] hover:bg-zinc-900/50">
+    <div className="quorum-panel p-5 transition-all duration-200 hover:quorum-border-strong">
       <div className="flex items-start justify-between mb-3">
-        <p className="text-xs text-zinc-500 uppercase tracking-wider font-medium inline-flex items-center gap-1">
+        <p className="text-xs font-medium uppercase tracking-[0.22em] quorum-text-subtle inline-flex items-center gap-1">
           {label}
           {tooltip && <InfoTip text={tooltip} />}
         </p>
-        <div className={`w-8 h-8 rounded-xl ${c.iconBg} flex items-center justify-center`}>
+        <div className={`flex h-9 w-9 items-center justify-center rounded-2xl ${c.iconBg}`}>
           <Icon className={`w-4 h-4 ${c.iconColor}`} />
         </div>
       </div>
       <div className="flex items-baseline gap-1">
-        <span className="text-2xl font-semibold text-white tabular-nums">{value}</span>
-        {suffix && <span className="text-sm text-zinc-500">{suffix}</span>}
+        <span className="text-3xl font-bold tracking-[-0.04em] quorum-text-primary tabular-nums">{value}</span>
+        {suffix && <span className="text-sm quorum-text-subtle">{suffix}</span>}
       </div>
       {description && (
-        <p className="text-xs text-zinc-500 mt-2 leading-relaxed">{description}</p>
+        <p className="mt-2 text-xs leading-relaxed quorum-text-muted">{description}</p>
       )}
     </div>
   );

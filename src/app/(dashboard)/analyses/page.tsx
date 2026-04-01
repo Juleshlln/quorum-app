@@ -22,7 +22,7 @@ export default async function AnalysesPage() {
   const project = await getActiveProjectForUser(user.id);
   if (!project) {
     return (
-      <div className="rounded-3xl border border-white/[0.08] bg-zinc-900/40 p-10 text-center text-zinc-400">
+      <div className="rounded-3xl border quorum-border-default quorum-surface-strong p-10 text-center text-zinc-400">
         Aucun projet actif. Créez votre marque pour commencer.
       </div>
     );
@@ -46,10 +46,11 @@ export default async function AnalysesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="quorum-panel-strong flex flex-col gap-4 p-6 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-3xl font-semibold text-white">Analyses</h1>
-          <p className="text-zinc-400 mt-1">
+          <p className="quorum-kicker">Analyses</p>
+          <h1 className="mt-2 text-4xl font-bold tracking-[-0.05em] quorum-text-primary">Lancez des analyses manuelles</h1>
+          <p className="mt-2 text-sm quorum-text-muted">
             Bac à sable pour lancer des analyses manuelles.
           </p>
         </div>
@@ -63,13 +64,13 @@ export default async function AnalysesPage() {
       </div>
 
       {analyses.length === 0 ? (
-        <div className="rounded-3xl border border-white/[0.08] bg-zinc-900/40 p-10 text-center text-zinc-400">
+        <div className="quorum-panel p-10 text-center quorum-text-muted">
           Aucune analyse manuelle pour le moment.
         </div>
       ) : (
-        <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 overflow-hidden">
+        <div className="overflow-hidden rounded-[28px] border quorum-border-default quorum-surface-strong backdrop-blur-xl">
           <table className="w-full text-sm">
-            <thead className="bg-zinc-900/60 text-zinc-400">
+            <thead className="quorum-surface quorum-text-muted">
               <tr>
                 <th className="text-left px-4 py-3 font-medium">Date</th>
                 <th className="text-left px-4 py-3 font-medium">Mode</th>
@@ -80,21 +81,21 @@ export default async function AnalysesPage() {
             </thead>
             <tbody>
               {analyses.map((a) => (
-                <tr key={a.id} className="border-t border-white/[0.06]">
-                  <td className="px-4 py-3 text-zinc-200">
+                <tr key={a.id} className="border-t quorum-border-default transition-colors hover:quorum-surface">
+                  <td className="px-4 py-3 quorum-text-primary">
                     {new Date(a.created_at).toLocaleDateString('fr-FR')}
                   </td>
-                  <td className="px-4 py-3 text-zinc-200">
+                  <td className="px-4 py-3 quorum-text-primary">
                     {a.analysis_mode === 'trend' ? 'Tendance IA' : 'Simulation'}
                   </td>
-                  <td className="px-4 py-3 text-zinc-400">
+                  <td className="px-4 py-3 quorum-text-muted">
                     {(a.objectives || []).join(', ') || '—'}
                   </td>
-                  <td className="px-4 py-3 text-zinc-400">{a.status}</td>
+                  <td className="px-4 py-3 quorum-text-muted">{a.status}</td>
                   <td className="px-4 py-3 text-right">
                     <Link
                       href={`/projects/${project.id}/runs/${a.id}`}
-                      className="text-cyan-300 text-sm hover:text-cyan-200"
+                      className="text-sm quorum-text-muted hover:quorum-text-primary"
                     >
                       Voir
                     </Link>

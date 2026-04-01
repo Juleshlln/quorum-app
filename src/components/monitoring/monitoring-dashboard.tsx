@@ -262,9 +262,9 @@ export function MonitoringDashboard({
 
   return (
     <div className="space-y-8">
-      <div className="rounded-3xl border border-white/[0.08] bg-zinc-900/40 p-6">
+      <div className="rounded-3xl border quorum-border-default quorum-surface-strong p-6">
         <div className="flex flex-col gap-2">
-          <h1 className="text-3xl font-semibold text-white">Monitoring automatique</h1>
+          <h1 className="text-3xl font-semibold quorum-text-primary">Monitoring automatique</h1>
           <p className="text-zinc-400">
             {activeTopicsCount} enjeux surveillés • {activeQuestionsCount} questions actives • Analyse quotidienne
           </p>
@@ -272,7 +272,7 @@ export function MonitoringDashboard({
       </div>
 
       {monitoringStatus !== 'idle' && (
-        <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 px-4 py-3 text-sm text-zinc-300">
+        <div className="rounded-2xl border quorum-border-default quorum-surface-strong px-4 py-3 text-sm text-zinc-300">
           {monitoringMessage ||
             (monitoringStatus === 'error'
               ? 'Impossible de lancer le monitoring. Réessaie dans un instant.'
@@ -291,7 +291,7 @@ export function MonitoringDashboard({
           value={newTopicName}
           onChange={(e) => setNewTopicName(e.target.value)}
           placeholder="Créer un nouvel enjeu"
-          className="flex-1 rounded-xl border border-white/10 bg-zinc-900/60 px-4 py-3 text-sm text-white"
+          className="flex-1 rounded-xl border quorum-border-default quorum-surface-strong px-4 py-3 text-sm quorum-text-primary"
         />
         <button
           onClick={addTopic}
@@ -311,14 +311,14 @@ export function MonitoringDashboard({
           const isExpanded = expandedTopics.has(topic.id);
 
           return (
-            <div key={topic.id} className="rounded-3xl border border-white/[0.08] bg-zinc-900/40 p-6 space-y-4">
+            <div key={topic.id} className="rounded-3xl border quorum-border-default quorum-surface-strong p-6 space-y-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-start gap-3">
                   <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-blue-500/20 via-cyan-500/20 to-violet-500/20 flex items-center justify-center">
                     <Icon className="h-5 w-5 text-cyan-300" />
                   </div>
                   <div>
-                    <p className="text-lg font-semibold text-white">{topic.name}</p>
+                    <p className="text-lg font-semibold quorum-text-primary">{topic.name}</p>
                     <p className="text-sm text-zinc-400">
                       {activeCount} questions analysées quotidiennement
                     </p>
@@ -336,7 +336,7 @@ export function MonitoringDashboard({
                   </button>
                   <button
                     onClick={() => deleteTopic(topic.id)}
-                    className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium border border-white/10 text-zinc-300"
+                    className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium border quorum-border-default text-zinc-300"
                   >
                     <Trash2 className="h-3 w-3" />
                     Supprimer
@@ -359,7 +359,7 @@ export function MonitoringDashboard({
                       return next;
                     })
                   }
-                  className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-xs text-zinc-300 hover:bg-white/5"
+                  className="inline-flex items-center gap-2 rounded-xl border quorum-border-default px-3 py-2 text-xs text-zinc-300 hover:quorum-surface"
                 >
                   Voir les questions
                 </button>
@@ -373,20 +373,20 @@ export function MonitoringDashboard({
               </div>
 
               {isExpanded && (
-                <div className="mt-4 space-y-6 border-t border-white/5 pt-4">
+                <div className="mt-4 space-y-6 border-t quorum-border-default pt-4">
                   <div className="space-y-3">
-                    <p className="text-sm font-medium text-white">Questions actives</p>
+                    <p className="text-sm font-medium quorum-text-primary">Questions actives</p>
                     {topicQuestions.length === 0 && (
                       <p className="text-xs text-zinc-500">Aucune question active.</p>
                     )}
                     {topicQuestions.map((q) => (
-                      <div key={q.id} className="rounded-2xl border border-white/10 bg-zinc-900/60 p-3">
+                      <div key={q.id} className="rounded-2xl border quorum-border-default quorum-surface-strong p-3">
                         {editingId === q.id ? (
                           <div className="flex flex-col gap-2">
                             <input
                               value={editingValue}
                               onChange={(e) => setEditingValue(e.target.value)}
-                              className="rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-white"
+                              className="rounded-lg border quorum-border-default quorum-surface-strong px-3 py-2 text-sm quorum-text-primary"
                             />
                             <div className="flex gap-2">
                               <button
@@ -397,7 +397,7 @@ export function MonitoringDashboard({
                               </button>
                               <button
                                 onClick={() => setEditingId(null)}
-                                className="rounded-lg border border-white/10 px-3 py-2 text-xs text-zinc-300"
+                                className="rounded-lg border quorum-border-default px-3 py-2 text-xs text-zinc-300"
                               >
                                 Annuler
                               </button>
@@ -420,7 +420,7 @@ export function MonitoringDashboard({
                                   setEditingId(q.id);
                                   setEditingValue(q.prompt_text);
                                 }}
-                                className="rounded-full border border-white/10 px-3 py-1 text-xs text-zinc-300"
+                                className="rounded-full border quorum-border-default px-3 py-1 text-xs text-zinc-300"
                               >
                                 Modifier
                               </button>
@@ -433,9 +433,9 @@ export function MonitoringDashboard({
 
                   {unassignedQuestions.length > 0 && (
                     <div className="space-y-3">
-                      <p className="text-sm font-medium text-white">Questions sans enjeu</p>
+                      <p className="text-sm font-medium quorum-text-primary">Questions sans enjeu</p>
                       {unassignedQuestions.map((q) => (
-                        <div key={q.id} className="rounded-2xl border border-white/10 bg-zinc-900/60 p-3 space-y-2">
+                        <div key={q.id} className="rounded-2xl border quorum-border-default quorum-surface-strong p-3 space-y-2">
                           <p className="text-sm text-zinc-100">{q.prompt_text}</p>
                           <button
                             onClick={() => assignQuestionToTopic(q.id, topic.id)}
@@ -449,17 +449,17 @@ export function MonitoringDashboard({
                   )}
 
                   <div className="space-y-3">
-                    <p className="text-sm font-medium text-white">Questions recommandées</p>
+                    <p className="text-sm font-medium quorum-text-primary">Questions recommandées</p>
                     {((templatesByTopic.get(topic.id) || []).length === 0) && (
                       <p className="text-xs text-zinc-500">Aucune recommandation disponible.</p>
                     )}
                     {(templatesByTopic.get(topic.id) || []).map((template) => (
-                      <div key={template.id} className="rounded-2xl border border-white/10 bg-zinc-900/60 p-3 space-y-3">
+                      <div key={template.id} className="rounded-2xl border quorum-border-default quorum-surface-strong p-3 space-y-3">
                         <p className="text-sm text-zinc-100">{template.prompt_text}</p>
                         <div className="flex flex-wrap items-center gap-2">
                           <button
                             onClick={() => runSandboxTest(template.prompt_text)}
-                            className="rounded-full border border-white/10 px-3 py-1 text-xs text-zinc-300"
+                            className="rounded-full border quorum-border-default px-3 py-1 text-xs text-zinc-300"
                           >
                             Tester maintenant
                           </button>
@@ -489,19 +489,19 @@ export function MonitoringDashboard({
                   </div>
 
                   <div className="space-y-3">
-                    <p className="text-sm font-medium text-white">Ajouter une question personnalisée</p>
+                    <p className="text-sm font-medium quorum-text-primary">Ajouter une question personnalisée</p>
                     <input
                       value={customQuestionByTopic[topic.id] || ''}
                       onChange={(e) =>
                         setCustomQuestionByTopic((prev) => ({ ...prev, [topic.id]: e.target.value }))
                       }
                       placeholder="Que voulez-vous analyser ?"
-                      className="w-full rounded-xl border border-white/10 bg-zinc-900/60 px-4 py-3 text-sm text-white"
+                      className="w-full rounded-xl border quorum-border-default quorum-surface-strong px-4 py-3 text-sm quorum-text-primary"
                     />
                     <div className="flex flex-wrap gap-2">
                       <button
                         onClick={() => runSandboxTest(customQuestionByTopic[topic.id] || '')}
-                        className="rounded-full border border-white/10 px-3 py-1 text-xs text-zinc-300"
+                        className="rounded-full border quorum-border-default px-3 py-1 text-xs text-zinc-300"
                       >
                         Tester avant d’activer
                       </button>

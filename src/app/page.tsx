@@ -16,6 +16,7 @@ import {
   EyeOff,
 } from 'lucide-react';
 import { QuorumLogo } from '@/components/logo';
+import { ThemeToggle } from '@/components/theme/theme-toggle';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    ROOT PAGE — Quorum Landing
@@ -47,7 +48,7 @@ export default function HomePage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#0A0A0F] text-white overflow-x-hidden">
+    <div className="min-h-screen bg-transparent quorum-text-primary overflow-x-hidden">
       {/* Ambient glows */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
         <div className="absolute -top-60 left-1/4 w-[800px] h-[800px] bg-blue-600/[0.08] rounded-full blur-[160px]" />
@@ -61,13 +62,13 @@ export default function HomePage() {
       <header
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
           scrolled
-            ? 'bg-[#0A0A0F]/90 backdrop-blur-xl border-b border-white/[0.06]'
+            ? 'quorum-shell-panel-strong border-b quorum-border-default'
             : 'bg-transparent'
         }`}
       >
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/" className="flex-shrink-0">
-            <QuorumLogo className="text-2xl" />
+            <QuorumLogo adaptive className="h-8 w-[168px]" priority />
           </Link>
 
           {/* Desktop nav — hidden on mobile */}
@@ -80,7 +81,7 @@ export default function HomePage() {
               <Link
                 key={href}
                 href={href}
-                className="text-sm text-zinc-400 hover:text-white transition-colors duration-200"
+                className="text-sm quorum-text-muted hover:quorum-text-primary transition-colors duration-200"
               >
                 {label}
               </Link>
@@ -89,33 +90,37 @@ export default function HomePage() {
 
           {/* Desktop CTAs — hidden on mobile */}
           <div className="hidden md:flex items-center gap-4">
+            <ThemeToggle />
             <Link
               href="/login"
-              className="text-sm text-zinc-400 hover:text-white transition-colors duration-200"
+              className="text-sm quorum-text-muted hover:quorum-text-primary transition-colors duration-200"
             >
               Connexion
             </Link>
             <Link
               href="/signup"
-              className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all duration-200 hover:shadow-[0_0_28px_rgba(59,130,246,0.5)]"
+              className="bg-blue-600 hover:bg-blue-500 quorum-text-primary text-sm font-semibold px-5 py-2.5 rounded-xl transition-all duration-200 hover:shadow-[0_0_28px_rgba(59,130,246,0.5)]"
             >
               Démarrer gratuitement
             </Link>
           </div>
 
           {/* Hamburger — mobile only */}
-          <button
-            className="md:hidden text-zinc-400 hover:text-white transition-colors p-1.5"
-            onClick={() => setMobileOpen(!mobileOpen)}
-            aria-label={mobileOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
-          >
-            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
+          <div className="md:hidden flex items-center gap-2">
+            <ThemeToggle />
+            <button
+              className="quorum-text-muted hover:quorum-text-primary transition-colors p-1.5"
+              onClick={() => setMobileOpen(!mobileOpen)}
+              aria-label={mobileOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+            >
+              {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
         </div>
 
         {/* Mobile menu */}
         {mobileOpen && (
-          <div className="md:hidden bg-[#111118] border-b border-white/[0.06] px-6 py-5 space-y-1">
+          <div className="md:hidden quorum-surface-strong border-b quorum-border-default px-6 py-5 space-y-1">
 
             {[
               { label: 'Fonctionnalités', href: '#features' },
@@ -125,23 +130,23 @@ export default function HomePage() {
               <Link
                 key={href}
                 href={href}
-                className="block text-sm text-zinc-300 py-2.5 hover:text-white transition-colors"
+                className="block text-sm quorum-text-muted py-2.5 hover:quorum-text-primary transition-colors"
                 onClick={() => setMobileOpen(false)}
               >
                 {label}
               </Link>
             ))}
-            <div className="pt-4 border-t border-white/[0.06] flex flex-col gap-2">
+            <div className="pt-4 border-t quorum-border-default flex flex-col gap-2">
               <Link
                 href="/login"
-                className="block text-sm text-zinc-400 py-2 hover:text-white transition-colors"
+                className="block text-sm quorum-text-muted py-2 hover:quorum-text-primary transition-colors"
                 onClick={() => setMobileOpen(false)}
               >
                 Connexion
               </Link>
               <Link
                 href="/signup"
-                className="block text-center bg-blue-600 text-white text-sm font-semibold px-5 py-3 rounded-xl hover:bg-blue-500 transition-colors"
+                className="block text-center bg-blue-600 quorum-text-primary text-sm font-semibold px-5 py-3 rounded-xl hover:bg-blue-500 transition-colors"
                 onClick={() => setMobileOpen(false)}
               >
                 Démarrer gratuitement
@@ -182,7 +187,7 @@ export default function HomePage() {
           {/* Subtitle */}
           <p
             data-lp-animate
-            className="text-lg md:text-xl text-zinc-400 max-w-2xl mx-auto leading-relaxed mb-10 delay-150"
+            className="text-lg md:text-xl quorum-text-muted max-w-2xl mx-auto leading-relaxed mb-10 delay-150"
           >
             Quorum mesure votre visibilité dans ChatGPT, Claude et Perplexity.
             <br className="hidden md:block" />
@@ -196,21 +201,21 @@ export default function HomePage() {
           >
             <Link
               href="/signup"
-              className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-xl text-lg font-semibold transition-all duration-200 hover:shadow-[0_0_44px_rgba(59,130,246,0.55)]"
+              className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 quorum-text-primary px-8 py-4 rounded-xl text-lg font-semibold transition-all duration-200 hover:shadow-[0_0_44px_rgba(59,130,246,0.55)]"
             >
               Démarrer gratuitement
               <ArrowRight className="w-5 h-5" />
             </Link>
             <Link
               href="/dashboard"
-              className="flex items-center justify-center px-8 py-4 rounded-xl text-lg font-semibold text-white border border-white/20 hover:border-white/40 transition-all duration-200"
+              className="flex items-center justify-center px-8 py-4 rounded-xl text-lg font-semibold quorum-text-primary border quorum-border-strong hover:quorum-surface transition-all duration-200"
             >
               Voir la démo
             </Link>
           </div>
 
           {/* Social proof */}
-          <p data-lp-animate className="text-sm text-zinc-600 delay-300">
+          <p data-lp-animate className="text-sm quorum-text-subtle delay-300">
             Déjà utilisé par des équipes marketing B2B
           </p>
         </div>
@@ -218,7 +223,7 @@ export default function HomePage() {
         {/* Dashboard mockup avec frame glow */}
         <div
           data-lp-animate
-          className="max-w-5xl mx-auto w-full mt-20 rounded-2xl border border-white/10 bg-zinc-900/60 backdrop-blur-sm overflow-hidden shadow-2xl shadow-blue-500/10 p-1"
+          className="max-w-5xl mx-auto w-full mt-20 rounded-2xl border quorum-border-default quorum-panel-soft overflow-hidden shadow-2xl shadow-blue-500/10 p-1"
           style={{ transitionDelay: '400ms' }}
         >
           <DashboardMockup />
@@ -228,7 +233,7 @@ export default function HomePage() {
       {/* ════════════════════════════════════
           3. METRICS BAR
       ════════════════════════════════════ */}
-      <section className="py-14 px-6 bg-[#111118] border-y border-white/[0.06]">
+      <section className="py-14 px-6 quorum-surface-strong border-y quorum-border-default">
         <div
           data-lp-animate
           className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center"
@@ -243,13 +248,13 @@ export default function HomePage() {
       {/* ════════════════════════════════════
           4. PAIN POINTS
       ════════════════════════════════════ */}
-      <section className="py-24 px-6 border-t border-white/5">
+      <section className="py-24 px-6 border-t quorum-border-default">
         <div className="max-w-6xl mx-auto">
           <div data-lp-animate className="text-center mb-16">
             <h2 className="text-3xl md:text-[2.6rem] font-bold tracking-tight leading-tight mb-4">
               L&apos;IA change comment vos clients vous trouvent
             </h2>
-            <p className="text-zinc-400 max-w-xl mx-auto">
+            <p className="quorum-text-muted max-w-xl mx-auto">
               Les comportements de recherche évoluent. Êtes-vous visible là où ça compte&nbsp;?
             </p>
           </div>
@@ -280,13 +285,13 @@ export default function HomePage() {
       {/* ════════════════════════════════════
           5. FEATURES (alternating)
       ════════════════════════════════════ */}
-      <section id="features" className="py-24 px-6 border-t border-white/5 bg-[#0D0D14]">
+      <section id="features" className="py-24 px-6 border-t quorum-border-default quorum-surface-strong">
         <div className="max-w-6xl mx-auto">
           <div data-lp-animate className="text-center mb-20">
             <h2 className="text-3xl md:text-[2.6rem] font-bold tracking-tight leading-tight mb-4">
               Quorum vous donne la visibilité complète
             </h2>
-            <p className="text-zinc-400 max-w-xl mx-auto">
+            <p className="quorum-text-muted max-w-xl mx-auto">
               Tout ce qu&apos;il faut pour piloter votre présence IA au quotidien
             </p>
           </div>
@@ -329,19 +334,19 @@ export default function HomePage() {
       {/* ════════════════════════════════════
           6. HOW IT WORKS
       ════════════════════════════════════ */}
-      <section id="how-it-works" className="py-24 px-6 border-t border-white/5">
+      <section id="how-it-works" className="py-24 px-6 border-t quorum-border-default">
         <div className="max-w-5xl mx-auto">
           <div data-lp-animate className="text-center mb-20">
             <h2 className="text-3xl md:text-[2.6rem] font-bold tracking-tight leading-tight mb-4">
               Opérationnel en 3 étapes
             </h2>
-            <p className="text-zinc-400">Setup en 5 minutes, résultats dès le lendemain matin</p>
+            <p className="quorum-text-muted">Setup en 5 minutes, résultats dès le lendemain matin</p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-10 relative">
             {/* Connector — desktop only */}
             <div
-              className="hidden md:block absolute top-7 h-px border-t border-dashed border-white/10"
+              className="hidden md:block absolute top-7 h-px border-t border-dashed quorum-border-default"
               style={{ left: 'calc(16.7% + 2.5rem)', right: 'calc(16.7% + 2.5rem)' }}
               aria-hidden="true"
             />
@@ -370,13 +375,13 @@ export default function HomePage() {
       {/* ════════════════════════════════════
           7. PRICING
       ════════════════════════════════════ */}
-      <section id="pricing" className="py-24 px-6 border-t border-white/5 bg-[#0D0D14]">
+      <section id="pricing" className="py-24 px-6 border-t quorum-border-default quorum-surface-strong">
         <div className="max-w-6xl mx-auto">
           <div data-lp-animate className="text-center mb-16">
             <h2 className="text-3xl md:text-[2.6rem] font-bold tracking-tight leading-tight mb-4">
               Simple et transparent
             </h2>
-            <p className="text-zinc-400">Commencez gratuitement, évoluez selon vos besoins</p>
+            <p className="quorum-text-muted">Commencez gratuitement, évoluez selon vos besoins</p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto items-start">
@@ -436,14 +441,14 @@ export default function HomePage() {
       {/* ════════════════════════════════════
           8. FINAL CTA
       ════════════════════════════════════ */}
-      <section className="py-32 px-6 border-t border-white/5">
+      <section className="py-32 px-6 border-t quorum-border-default">
         <div data-lp-animate className="max-w-4xl mx-auto">
           <div className="relative rounded-3xl overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-700" />
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_20%_20%,rgba(255,255,255,0.15),transparent)]" />
 
             <div className="relative px-8 py-24 text-center">
-              <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-white mb-5 leading-tight">
+              <h2 className="text-3xl md:text-5xl font-bold tracking-tight quorum-text-primary mb-5 leading-tight">
                 Commencez à tracker votre visibilité IA
                 <br className="hidden sm:block" />
                 dès aujourd&apos;hui
@@ -469,23 +474,23 @@ export default function HomePage() {
       {/* ════════════════════════════════════
           9. FOOTER
       ════════════════════════════════════ */}
-      <footer className="border-t border-white/[0.06] py-12 px-6">
+      <footer className="border-t quorum-border-default py-12 px-6">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
           <div>
             <Link href="/" className="inline-block mb-2.5">
-              <QuorumLogo className="text-xl" />
+              <QuorumLogo adaptive className="h-7 w-[150px]" />
             </Link>
-            <p className="text-sm text-zinc-600">Visibilité IA pour les marques B2B</p>
+            <p className="text-sm quorum-text-subtle">Visibilité IA pour les marques B2B</p>
           </div>
 
-          <nav className="flex flex-wrap gap-x-8 gap-y-2 text-sm text-zinc-500">
-            <Link href="#features" className="hover:text-white transition-colors">Fonctionnalités</Link>
-            <Link href="#pricing" className="hover:text-white transition-colors">Tarifs</Link>
-            <Link href="/blog" className="hover:text-white transition-colors">Blog</Link>
-            <Link href="/contact" className="hover:text-white transition-colors">Contact</Link>
+          <nav className="flex flex-wrap gap-x-8 gap-y-2 text-sm quorum-text-subtle">
+            <Link href="#features" className="hover:quorum-text-primary transition-colors">Fonctionnalités</Link>
+            <Link href="#pricing" className="hover:quorum-text-primary transition-colors">Tarifs</Link>
+            <Link href="/blog" className="hover:quorum-text-primary transition-colors">Blog</Link>
+            <Link href="/contact" className="hover:quorum-text-primary transition-colors">Contact</Link>
           </nav>
 
-          <p className="text-sm text-zinc-700">© 2026 Quorum. Tous droits réservés.</p>
+          <p className="text-sm quorum-text-soft">© 2026 Quorum. Tous droits réservés.</p>
         </div>
       </footer>
     </div>
@@ -499,8 +504,8 @@ export default function HomePage() {
 function MetricStat({ value, label }: { value: string; label: string }) {
   return (
     <div>
-      <div className="text-3xl md:text-4xl font-bold text-white mb-1.5 tabular-nums">{value}</div>
-      <div className="text-sm text-zinc-500">{label}</div>
+      <div className="text-3xl md:text-4xl font-bold quorum-text-primary mb-1.5 tabular-nums">{value}</div>
+      <div className="text-sm quorum-text-subtle">{label}</div>
     </div>
   );
 }
@@ -520,13 +525,13 @@ function PainCard({
     <div
       data-lp-animate
       style={{ transitionDelay: `${delay}ms` }}
-      className="p-8 rounded-2xl bg-zinc-900/40 border border-white/[0.08] hover:border-white/20 transition-colors duration-300"
+      className="quorum-panel-soft p-8 hover:quorum-border-strong transition-colors duration-300"
     >
       <div className="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/20 flex items-center justify-center mb-5">
         {icon}
       </div>
-      <h3 className="text-base font-semibold text-white mb-2.5 leading-snug">{title}</h3>
-      <p className="text-sm text-zinc-400 leading-relaxed">{description}</p>
+      <h3 className="text-base font-semibold quorum-text-primary mb-2.5 leading-snug">{title}</h3>
+      <p className="text-sm quorum-text-muted leading-relaxed">{description}</p>
     </div>
   );
 }
@@ -550,17 +555,17 @@ function FeatureRow({
     <div
       data-lp-animate
       className={`grid grid-cols-1 lg:grid-cols-2 gap-16 items-center py-16 ${
-        !last ? 'border-b border-white/5' : ''
+        !last ? 'border-b quorum-border-default' : ''
       }`}
     >
       <div className={reverse ? 'lg:order-2' : ''}>
         <span className="text-xs font-bold tracking-widest text-blue-400 uppercase mb-3 block">
           {eyebrow}
         </span>
-        <h3 className="text-3xl font-bold text-white leading-snug mb-4">{title}</h3>
-        <p className="text-zinc-400 text-lg leading-relaxed">{description}</p>
+        <h3 className="text-3xl font-bold quorum-text-primary leading-snug mb-4">{title}</h3>
+        <p className="quorum-text-muted text-lg leading-relaxed">{description}</p>
       </div>
-      <div className={`${reverse ? 'lg:order-1' : ''} rounded-2xl border border-white/10 bg-zinc-900/50 p-4 shadow-xl shadow-black/40`}>
+      <div className={`${reverse ? 'lg:order-1' : ''} quorum-panel-soft p-4 shadow-xl shadow-black/20`}>
         {visual}
       </div>
     </div>
@@ -583,8 +588,8 @@ function HowStep({
       <div className="w-14 h-14 mx-auto rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center mb-6">
         <span className="text-xl font-bold text-blue-400">{number}</span>
       </div>
-      <h3 className="text-lg font-semibold text-white mb-3">{title}</h3>
-      <p className="text-sm text-zinc-400 leading-relaxed max-w-xs mx-auto">{description}</p>
+      <h3 className="text-lg font-semibold quorum-text-primary mb-3">{title}</h3>
+      <p className="text-sm quorum-text-muted leading-relaxed max-w-xs mx-auto">{description}</p>
     </div>
   );
 }
@@ -619,28 +624,28 @@ function PricingCard({
         className={`relative flex flex-col h-full p-8 rounded-2xl transition-all duration-300 ${
           highlighted
             ? 'bg-gradient-to-b from-blue-950/80 to-zinc-900/80 border-2 border-blue-500/50 shadow-[0_0_60px_rgba(59,130,246,0.15)] scale-105'
-            : 'bg-zinc-900/40 border border-white/10 hover:border-white/20'
+            : 'quorum-panel-soft hover:quorum-border-strong'
         }`}
       >
         {badge && (
-          <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-blue-600 text-white text-xs font-bold rounded-full shadow-[0_0_20px_rgba(59,130,246,0.5)] whitespace-nowrap">
+          <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-blue-600 quorum-text-primary text-xs font-bold rounded-full shadow-[0_0_20px_rgba(59,130,246,0.5)] whitespace-nowrap">
             {badge}
           </div>
         )}
         <div className="mb-6">
-          <h3 className="text-lg font-semibold text-white mb-1">{name}</h3>
-          <p className="text-sm text-zinc-500">{description}</p>
+          <h3 className="text-lg font-semibold quorum-text-primary mb-1">{name}</h3>
+          <p className="text-sm quorum-text-subtle">{description}</p>
         </div>
         <div className="mb-6 flex items-baseline gap-1">
-          <span className="text-4xl font-bold text-white tabular-nums">{price}</span>
-          {period && <span className="text-zinc-500 text-sm">{period}</span>}
+          <span className="text-4xl font-bold quorum-text-primary tabular-nums">{price}</span>
+          {period && <span className="quorum-text-subtle text-sm">{period}</span>}
         </div>
         <ul className="space-y-3 mb-8 flex-1">
           {features.map((f, i) => (
-            <li key={i} className="flex items-start gap-3 text-sm text-zinc-300">
+            <li key={i} className="flex items-start gap-3 text-sm quorum-text-muted">
               <Check
                 className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
-                  highlighted ? 'text-blue-400' : 'text-zinc-600'
+                  highlighted ? 'text-blue-400' : 'quorum-text-subtle'
                 }`}
               />
               {f}
@@ -651,8 +656,8 @@ function PricingCard({
           href={ctaHref}
           className={`mt-auto block w-full text-center py-3 rounded-xl font-medium text-sm transition-all duration-200 ${
             highlighted
-              ? 'bg-blue-600 text-white hover:bg-blue-500 hover:shadow-[0_0_30px_rgba(59,130,246,0.45)]'
-              : 'border border-white/20 text-white hover:bg-white/5 hover:border-white/30'
+              ? 'bg-blue-600 quorum-text-primary hover:bg-blue-500 hover:shadow-[0_0_30px_rgba(59,130,246,0.45)]'
+              : 'border quorum-border-strong quorum-text-primary hover:quorum-surface'
           }`}
         >
           {ctaLabel}
@@ -671,18 +676,18 @@ function DashboardMockup() {
   const competitors = [45, 48, 47, 50, 48, 50, 52, 50, 51, 54, 53, 55];
 
   return (
-    <div className="relative rounded-xl border border-white/[0.06] bg-[#111118] overflow-hidden">
+    <div className="relative rounded-xl border quorum-border-default quorum-surface-strong overflow-hidden">
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-500/40 to-transparent" />
 
       {/* Browser chrome */}
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-white/[0.05] bg-[#0D0D14]">
+      <div className="flex items-center gap-2 px-4 py-3 border-b quorum-border-default bg-[#0D0D14]">
         <div className="flex gap-1.5">
           <div className="w-2.5 h-2.5 rounded-full bg-red-500/70" />
           <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/70" />
           <div className="w-2.5 h-2.5 rounded-full bg-green-500/70" />
         </div>
         <div className="flex-1 flex justify-center">
-          <div className="bg-white/[0.04] rounded px-4 py-1 text-xs text-zinc-500 font-mono">
+          <div className="quorum-surface rounded px-4 py-1 text-xs quorum-text-subtle font-mono">
             app.quorum.ai/overview
           </div>
         </div>
@@ -697,11 +702,11 @@ function DashboardMockup() {
             { label: 'Prompts actifs', value: '18', badge: 'stable', good: null },
             { label: 'Concurrents', value: '5', badge: '', good: null },
           ].map((kpi, i) => (
-            <div key={i} className="bg-[#0A0A0F] rounded-xl border border-white/[0.05] p-3.5">
-              <p className="text-xs text-zinc-500 mb-1.5">{kpi.label}</p>
-              <p className="text-xl font-bold text-white tabular-nums">{kpi.value}</p>
+            <div key={i} className="bg-transparent rounded-xl border quorum-border-default p-3.5">
+              <p className="text-xs quorum-text-subtle mb-1.5">{kpi.label}</p>
+              <p className="text-xl font-bold quorum-text-primary tabular-nums">{kpi.value}</p>
               {kpi.badge && (
-                <p className={`text-xs mt-1 ${kpi.good === true ? 'text-green-400' : 'text-zinc-600'}`}>
+                <p className={`text-xs mt-1 ${kpi.good === true ? 'text-green-400' : 'quorum-text-subtle'}`}>
                   {kpi.badge}
                 </p>
               )}
@@ -710,10 +715,10 @@ function DashboardMockup() {
         </div>
 
         {/* Chart */}
-        <div className="bg-[#0A0A0F] rounded-xl border border-white/[0.05] p-4 md:p-5">
+        <div className="bg-transparent rounded-xl border quorum-border-default p-4 md:p-5">
           <div className="flex items-center justify-between mb-4">
-            <p className="text-sm font-medium text-white">Visibilité vs Concurrents — 30 jours</p>
-            <span className="text-xs text-zinc-600">Mise à jour il y a 2 h</span>
+            <p className="text-sm font-medium quorum-text-primary">Visibilité vs Concurrents — 30 jours</p>
+            <span className="text-xs quorum-text-subtle">Mise à jour il y a 2 h</span>
           </div>
           <div className="relative h-28 md:h-36">
             <svg viewBox="0 0 480 100" className="w-full h-full" preserveAspectRatio="none">
@@ -744,13 +749,13 @@ function DashboardMockup() {
           <div className="flex items-center gap-6 mt-3">
             <div className="flex items-center gap-2">
               <div className="w-5 h-0.5 bg-blue-500 rounded-full" />
-              <span className="text-xs text-zinc-400">Votre marque</span>
+              <span className="text-xs quorum-text-muted">Votre marque</span>
             </div>
             <div className="flex items-center gap-2">
               <svg width="20" height="4" viewBox="0 0 20 4" aria-hidden="true">
                 <line x1="0" y1="2" x2="20" y2="2" stroke="#6366F1" strokeWidth="1.5" strokeDasharray="5,3" />
               </svg>
-              <span className="text-xs text-zinc-400">Concurrent #1</span>
+              <span className="text-xs quorum-text-muted">Concurrent #1</span>
             </div>
           </div>
         </div>
@@ -767,23 +772,23 @@ function TopicsCard() {
     { label: 'Mobilier ergonomique', score: 71, trend: '+11 %', up: true },
   ];
   return (
-    <div className="bg-[#0A0A0F] rounded-xl p-5">
+    <div className="bg-transparent rounded-xl p-5">
       <div className="flex items-center gap-2 mb-5">
         <BarChart3 className="w-4 h-4 text-blue-400" />
-        <span className="text-sm font-medium text-white">Topics actifs</span>
+        <span className="text-sm font-medium quorum-text-primary">Topics actifs</span>
         <span className="ml-auto text-xs text-green-400 bg-green-400/10 px-2.5 py-0.5 rounded-full">Live</span>
       </div>
       <div className="space-y-4">
         {topics.map((t, i) => (
           <div key={i}>
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs text-zinc-400">{t.label}</span>
+              <span className="text-xs quorum-text-muted">{t.label}</span>
               <div className="flex items-center gap-2">
                 <span className={`text-xs font-medium ${t.up ? 'text-green-400' : 'text-red-400'}`}>{t.trend}</span>
-                <span className="text-xs font-bold text-white tabular-nums">{t.score} %</span>
+                <span className="text-xs font-bold quorum-text-primary tabular-nums">{t.score} %</span>
               </div>
             </div>
-            <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+            <div className="h-1.5 quorum-surface-strong rounded-full overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full"
                 style={{ width: `${t.score}%` }}
@@ -805,24 +810,24 @@ function CompetitiveChart() {
     { name: 'Concurrent D', score: 22, color: '#C4B5FD' },
   ];
   return (
-    <div className="bg-[#0A0A0F] rounded-xl p-5">
+    <div className="bg-transparent rounded-xl p-5">
       <div className="flex items-center gap-2 mb-5">
         <TrendingUp className="w-4 h-4 text-indigo-400" />
-        <span className="text-sm font-medium text-white">Competitive Snapshot</span>
-        <span className="ml-auto text-xs text-zinc-600">Aujourd'hui</span>
+        <span className="text-sm font-medium quorum-text-primary">Competitive Snapshot</span>
+        <span className="ml-auto text-xs quorum-text-subtle">Aujourd'hui</span>
       </div>
       <div className="space-y-3.5">
         {brands.map((b, i) => (
           <div key={i} className="flex items-center gap-3">
-            <span className={`text-xs w-28 truncate flex-shrink-0 ${i === 0 ? 'text-white font-medium' : 'text-zinc-400'}`}>
+            <span className={`text-xs w-28 truncate flex-shrink-0 ${i === 0 ? 'quorum-text-primary font-medium' : 'quorum-text-muted'}`}>
               {b.name}
             </span>
-            <div className="flex-1 h-7 bg-white/[0.03] rounded-lg overflow-hidden relative border border-white/[0.04]">
+            <div className="flex-1 h-7 quorum-surface rounded-lg overflow-hidden relative border quorum-border-default">
               <div
                 className="h-full rounded-lg"
                 style={{ width: `${b.score}%`, backgroundColor: `${b.color}22`, borderRight: `2px solid ${b.color}66` }}
               />
-              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-white tabular-nums">
+              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-semibold quorum-text-primary tabular-nums">
                 {b.score} %
               </span>
             </div>
@@ -835,18 +840,18 @@ function CompetitiveChart() {
 
 function PDFPreview() {
   return (
-    <div className="bg-[#0A0A0F] rounded-xl p-5">
+    <div className="bg-transparent rounded-xl p-5">
       <div className="flex items-center gap-2 mb-5">
         <FileText className="w-4 h-4 text-green-400" />
-        <span className="text-sm font-medium text-white">Rapport Mensuel — Manutan</span>
-        <span className="ml-auto text-xs text-zinc-600 bg-zinc-800 px-2 py-0.5 rounded font-mono">PDF</span>
+        <span className="text-sm font-medium quorum-text-primary">Rapport Mensuel — Manutan</span>
+        <span className="ml-auto text-xs quorum-text-subtle quorum-surface-strong px-2 py-0.5 rounded font-mono">PDF</span>
       </div>
-      <div className="bg-white/[0.03] rounded-xl border border-white/[0.05] p-4 space-y-4">
+      <div className="quorum-surface rounded-xl border quorum-border-default p-4 space-y-4">
         <div className="flex items-center justify-between">
-          <span className="text-xs text-zinc-500">Score global</span>
-          <span className="text-2xl font-bold text-white tabular-nums">74 / 100</span>
+          <span className="text-xs quorum-text-subtle">Score global</span>
+          <span className="text-2xl font-bold quorum-text-primary tabular-nums">74 / 100</span>
         </div>
-        <div className="h-px bg-white/[0.05]" />
+        <div className="h-px quorum-surface" />
         <div className="grid grid-cols-2 gap-3">
           {[
             { label: 'Visibilité', val: '77 %', good: true },
@@ -854,13 +859,13 @@ function PDFPreview() {
             { label: 'Concurrents battus', val: '3 / 5', good: null },
             { label: 'Prompts gagnants', val: '12', good: true },
           ].map((k, i) => (
-            <div key={i} className="bg-white/[0.03] rounded-lg p-3 border border-white/[0.04]">
-              <p className="text-xs text-zinc-500 mb-1">{k.label}</p>
-              <p className={`text-lg font-bold tabular-nums ${k.good ? 'text-green-400' : 'text-white'}`}>{k.val}</p>
+            <div key={i} className="quorum-surface rounded-lg p-3 border quorum-border-default">
+              <p className="text-xs quorum-text-subtle mb-1">{k.label}</p>
+              <p className={`text-lg font-bold tabular-nums ${k.good ? 'text-green-400' : 'quorum-text-primary'}`}>{k.val}</p>
             </div>
           ))}
         </div>
-        <button className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-white/[0.08] text-xs text-zinc-400 hover:text-white hover:border-white/20 transition-colors">
+        <button className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border quorum-border-default text-xs quorum-text-muted hover:quorum-text-primary hover:quorum-border-strong transition-colors">
           <FileText className="w-3.5 h-3.5" />
           Télécharger le PDF
         </button>
@@ -871,10 +876,10 @@ function PDFPreview() {
 
 function InsightsCard() {
   return (
-    <div className="bg-[#0A0A0F] rounded-xl p-5">
+    <div className="bg-transparent rounded-xl p-5">
       <div className="flex items-center gap-2 mb-5">
         <Zap className="w-4 h-4 text-yellow-400" />
-        <span className="text-sm font-medium text-white">Pourquoi vous gagnez / perdez</span>
+        <span className="text-sm font-medium quorum-text-primary">Pourquoi vous gagnez / perdez</span>
       </div>
       <div className="space-y-3">
         <div className="p-4 rounded-xl bg-green-500/[0.05] border border-green-500/[0.15]">
@@ -882,7 +887,7 @@ function InsightsCard() {
             <div className="w-2 h-2 rounded-full bg-green-400 flex-shrink-0" />
             <span className="text-xs font-semibold text-green-300 uppercase tracking-wide">Vous gagnez</span>
           </div>
-          <p className="text-xs text-zinc-300 mb-1.5">&ldquo;meilleur fournisseur fournitures bureau B2B&rdquo;</p>
+          <p className="text-xs quorum-text-muted mb-1.5">&ldquo;meilleur fournisseur fournitures bureau B2B&rdquo;</p>
           <p className="text-xs text-green-400/70">Cité en 1re position dans 8 / 10 réponses</p>
         </div>
         <div className="p-4 rounded-xl bg-red-500/[0.05] border border-red-500/[0.15]">
@@ -890,7 +895,7 @@ function InsightsCard() {
             <div className="w-2 h-2 rounded-full bg-red-400 flex-shrink-0" />
             <span className="text-xs font-semibold text-red-300 uppercase tracking-wide">Vous perdez</span>
           </div>
-          <p className="text-xs text-zinc-300 mb-1.5">&ldquo;outillage professionnel pour PME&rdquo;</p>
+          <p className="text-xs quorum-text-muted mb-1.5">&ldquo;outillage professionnel pour PME&rdquo;</p>
           <p className="text-xs text-red-400/70">Concurrent A cité 3× plus souvent</p>
         </div>
         <div className="p-4 rounded-xl bg-blue-500/[0.05] border border-blue-500/[0.15]">
@@ -898,7 +903,7 @@ function InsightsCard() {
             <Zap className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
             <span className="text-xs font-semibold text-blue-300 uppercase tracking-wide">Action recommandée</span>
           </div>
-          <p className="text-xs text-zinc-300">
+          <p className="text-xs quorum-text-muted">
             Créer du contenu sur &ldquo;outillage PME&rdquo; — potentiel +18 % de score
           </p>
         </div>

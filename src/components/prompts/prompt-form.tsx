@@ -69,7 +69,7 @@ export function PromptForm({ projectId, onSuccess }: PromptFormProps) {
           }}
           placeholder="Ex: Quels sont les meilleurs logiciels de comptabilité pour PME ?"
           rows={3}
-          className="w-full px-4 py-3 rounded-xl bg-zinc-900/50 border border-white/[0.08] text-white placeholder:text-zinc-600 focus:outline-none focus:border-cyan-500/50 resize-none"
+          className="w-full px-4 py-3 rounded-xl quorum-surface-strong border quorum-border-default quorum-text-primary placeholder:text-zinc-600 focus:outline-none focus:border-cyan-500/50 resize-none"
         />
         <p className="mt-1 text-xs text-zinc-500">
           Écrivez une question que vos clients potentiels pourraient poser à une IA
@@ -86,7 +86,7 @@ export function PromptForm({ projectId, onSuccess }: PromptFormProps) {
       <button
         type="submit"
         disabled={isLoading || !promptText.trim()}
-        className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-500 via-cyan-500 to-violet-500 text-white text-sm font-medium rounded-xl hover:opacity-90 transition-all disabled:opacity-50"
+        className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-500 via-cyan-500 to-violet-500 quorum-text-primary text-sm font-medium rounded-xl hover:opacity-90 transition-all disabled:opacity-50"
       >
         {isLoading ? (
           <Loader2 className="w-4 h-4 animate-spin" />

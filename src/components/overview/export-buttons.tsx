@@ -72,7 +72,7 @@ export function ExportButtons() {
       <button
         onClick={handleCsvExport}
         disabled={csvLoading}
-        className="px-4 py-2 rounded-xl border border-white/10 text-sm text-zinc-300 hover:bg-white/5 disabled:opacity-50 disabled:cursor-wait transition-opacity"
+        className="quorum-btn-secondary"
       >
         {csvLoading ? (
           <span className="flex items-center gap-2">
@@ -86,7 +86,7 @@ export function ExportButtons() {
       <button
         onClick={handlePdfExport}
         disabled={pdfLoading}
-        className="px-4 py-2 rounded-xl bg-white text-black text-sm font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-wait transition-opacity"
+        className="quorum-btn-primary"
       >
         {pdfLoading ? (
           <span className="flex items-center gap-2">
@@ -104,7 +104,7 @@ export function ExportButtons() {
 function Spinner({ dark }: { dark?: boolean }) {
   return (
     <svg
-      className={`animate-spin h-4 w-4 ${dark ? 'text-black/60' : 'text-white/60'}`}
+      className={`animate-spin h-4 w-4 ${dark ? 'text-black/60' : 'quorum-text-muted'}`}
       xmlns="http://www.w3.org/2000/svg"
       fill="none"
       viewBox="0 0 24 24"

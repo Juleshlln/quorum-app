@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { QuorumLogo } from '@/components/logo';
 import { 
   LayoutDashboard, 
   Settings,
@@ -27,19 +28,22 @@ export function DashboardNav() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-64 flex-shrink-0 border-r border-white/[0.06] bg-[#0a0a0f]/50 backdrop-blur-xl hidden lg:flex flex-col">
+    <aside className="quorum-shell-panel hidden w-[280px] flex-shrink-0 flex-col border-r backdrop-blur-2xl lg:flex">
       {/* Logo */}
-      <div className="h-16 flex items-center px-6 border-b border-white/[0.06]">
-        <Link href="/overview" className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-gradient-to-br from-blue-500 via-cyan-400 to-violet-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
-            <span className="text-white font-bold text-sm">Q</span>
-          </div>
-          <span className="font-semibold text-lg text-white tracking-tight">Quorum</span>
+      <div className="flex h-20 items-center px-6" style={{ borderBottom: '1px solid var(--quorum-shell-border)' }}>
+        <Link href="/overview" className="flex flex-col gap-2">
+          <QuorumLogo adaptive className="h-9 w-[176px]" priority />
+          <span className="pl-0.5 text-[10px] font-semibold uppercase tracking-[0.28em] quorum-shell-subtle">
+            AI visibility OS
+          </span>
         </Link>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-4 py-6 space-y-1">
+      <nav className="flex-1 space-y-6 px-4 py-6">
+        <div className="px-3">
+          <p className="text-[11px] font-bold uppercase tracking-[0.24em] quorum-shell-subtle">Workspace</p>
+        </div>
         {navItems.map((item) => {
           const isActive = pathname === item.href || 
             (item.href !== '/dashboard' && pathname.startsWith(item.href));
@@ -48,14 +52,12 @@ export function DashboardNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
-                isActive
-                  ? 'bg-gradient-to-r from-blue-500/10 via-cyan-500/10 to-violet-500/10 text-white border border-blue-500/20'
-                  : 'text-zinc-400 hover:text-white hover:bg-white/[0.03]'
+              className={`quorum-nav-item group flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-medium ${
+                isActive ? 'quorum-nav-item-active' : ''
               }`}
             >
-              <item.icon className={`w-5 h-5 ${isActive ? 'text-cyan-400' : ''}`} />
-              {item.label}
+              <item.icon className="quorum-nav-icon h-5 w-5" />
+              <span className="tracking-[-0.01em]">{item.label}</span>
             </Link>
           );
         })}
@@ -63,17 +65,17 @@ export function DashboardNav() {
 
       {/* Upgrade card */}
       <div className="p-4">
-        <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-500/10 via-cyan-500/10 to-violet-500/10 border border-white/[0.08]">
-          <div className="flex items-center gap-2 mb-3">
-            <Sparkles className="w-5 h-5 text-cyan-400" />
-            <span className="text-sm font-medium text-white">Passer à Pro</span>
+        <div className="quorum-panel p-5">
+          <div className="mb-4 flex items-center gap-2">
+            <Sparkles className="quorum-text-muted h-4 w-4" />
+            <span className="text-sm font-medium quorum-text-primary">Passer à Pro</span>
           </div>
-          <p className="text-xs text-zinc-400 mb-4">
+          <p className="mb-5 text-xs leading-relaxed quorum-text-muted">
             Débloquez les analyses illimitées et tous les modèles IA
           </p>
           <Link 
             href="/settings" 
-            className="block text-center text-sm font-medium py-2 rounded-lg bg-gradient-to-r from-blue-500 via-cyan-500 to-violet-500 text-white hover:opacity-90 transition-all"
+            className="quorum-btn-primary w-full"
           >
             Upgrade
           </Link>

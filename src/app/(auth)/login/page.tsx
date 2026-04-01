@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { QuorumLogo } from '@/components/logo';
+import { ThemeToggle } from '@/components/theme/theme-toggle';
 import { Mail, Lock, ArrowRight, Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
@@ -34,49 +36,60 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#050508] flex items-center justify-center px-4 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden">
       {/* Background gradients */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-[-30%] left-[-10%] w-[600px] h-[600px] bg-blue-600/20 rounded-full blur-[150px]" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-violet-600/20 rounded-full blur-[130px]" />
-        <div className="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-cyan-500/10 rounded-full blur-[100px]" />
+        <div
+          className="absolute top-[-30%] left-[-10%] h-[600px] w-[600px] rounded-full blur-[150px]"
+          style={{ background: 'var(--quorum-orb-top)' }}
+        />
+        <div
+          className="absolute bottom-[-20%] right-[-10%] h-[500px] w-[500px] rounded-full blur-[130px]"
+          style={{ background: 'var(--quorum-orb-bottom)' }}
+        />
+        <div
+          className="absolute left-1/2 top-[50%] h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[100px]"
+          style={{ background: 'var(--quorum-body-glow-b)' }}
+        />
+      </div>
+
+      <div className="fixed right-5 top-5 z-20">
+        <ThemeToggle />
       </div>
 
       <div className="w-full max-w-md relative">
         {/* Logo */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 via-cyan-400 to-violet-500 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/25">
-              <span className="text-white font-bold text-xl">Q</span>
-            </div>
+            <QuorumLogo adaptive className="h-12 w-[192px]" priority />
           </Link>
-          <h1 className="mt-6 text-3xl font-semibold text-white">
+          <h1 className="mt-6 text-3xl font-semibold quorum-text-primary">
             Bon retour
           </h1>
-          <p className="mt-2 text-zinc-400">
+          <p className="mt-2 quorum-text-muted">
             Connectez-vous à votre compte
           </p>
         </div>
 
         {/* Form Card */}
-        <div className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-3xl p-8">
+        <div className="quorum-panel-strong p-8">
           <form onSubmit={handleLogin} className="space-y-5">
             {error && (
-              <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-400 text-sm">
+              <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-100">
                 {error}
               </div>
             )}
 
             <div className="space-y-2">
-              <label className="text-sm text-zinc-400 block">Email</label>
+              <label className="quorum-label">Email</label>
               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+                <Mail className="quorum-input-icon absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5" />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="vous@exemple.com"
-                  className="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl pl-12 pr-4 py-3.5 text-white placeholder:text-zinc-600 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all"
+                  className="quorum-input-with-icon py-3.5"
                   required
                 />
               </div>
@@ -84,19 +97,22 @@ export default function LoginPage() {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-sm text-zinc-400">Mot de passe</label>
-                <Link href="/forgot-password" className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors">
+                <label className="quorum-label mb-0">Mot de passe</label>
+                <Link
+                  href="/forgot-password"
+                  className="text-sm quorum-text-muted transition-colors hover:quorum-text-primary"
+                >
                   Oublié ?
                 </Link>
               </div>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+                <Lock className="quorum-input-icon absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5" />
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl pl-12 pr-4 py-3.5 text-white placeholder:text-zinc-600 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all"
+                  className="quorum-input-with-icon py-3.5"
                   required
                 />
               </div>
@@ -105,7 +121,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-blue-500 via-cyan-500 to-violet-500 text-white font-medium py-3.5 rounded-xl hover:opacity-90 transition-all hover:shadow-lg hover:shadow-blue-500/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="quorum-btn-primary w-full py-3.5"
             >
               {loading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -118,10 +134,10 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-white/[0.06]">
-            <p className="text-center text-zinc-400 text-sm">
+          <div className="mt-6 pt-6 border-t quorum-border-default">
+            <p className="text-center text-sm quorum-text-muted">
               Pas encore de compte ?{' '}
-              <Link href="/signup" className="text-cyan-400 hover:text-cyan-300 font-medium transition-colors">
+              <Link href="/signup" className="font-medium quorum-text-primary transition-opacity hover:opacity-70">
                 Créer un compte
               </Link>
             </p>
@@ -129,11 +145,11 @@ export default function LoginPage() {
         </div>
 
         {/* Footer */}
-        <p className="mt-8 text-center text-xs text-zinc-600">
+        <p className="mt-8 text-center text-xs quorum-text-subtle">
           En vous connectant, vous acceptez nos{' '}
-          <Link href="/terms" className="text-zinc-500 hover:text-zinc-400 transition-colors">CGU</Link>
+          <Link href="/terms" className="quorum-text-muted transition-colors hover:quorum-text-primary">CGU</Link>
           {' '}et notre{' '}
-          <Link href="/privacy" className="text-zinc-500 hover:text-zinc-400 transition-colors">Politique de confidentialité</Link>
+          <Link href="/privacy" className="quorum-text-muted transition-colors hover:quorum-text-primary">Politique de confidentialité</Link>
         </p>
       </div>
     </div>

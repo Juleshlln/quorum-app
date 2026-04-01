@@ -37,27 +37,28 @@ export function CompetitiveSnapshot({
   }, [trendData, range]);
 
   return (
-    <div className="rounded-3xl border border-white/[0.08] bg-zinc-900/40 p-6 space-y-5">
+    <div className="quorum-panel-strong p-6 space-y-5">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div>
-          <p className="text-lg font-semibold text-white">Competitive Snapshot</p>
-          <p className="text-xs text-zinc-500">
+          <p className="quorum-kicker">Competitive Snapshot</p>
+          <p className="mt-2 text-lg font-semibold quorum-text-primary">Vue combinée des tendances et du classement</p>
+          <p className="text-xs quorum-text-muted">
             Vue combinée des tendances et du classement des marques.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setRange(7)}
-            className={`px-3 py-1.5 rounded-full text-xs border ${
-              range === 7 ? 'border-cyan-500/40 text-cyan-300' : 'border-white/10 text-zinc-400'
+            className={`quorum-chip ${
+              range === 7 ? 'quorum-chip-active' : ''
             }`}
           >
             7 jours
           </button>
           <button
             onClick={() => setRange(30)}
-            className={`px-3 py-1.5 rounded-full text-xs border ${
-              range === 30 ? 'border-cyan-500/40 text-cyan-300' : 'border-white/10 text-zinc-400'
+            className={`quorum-chip ${
+              range === 30 ? 'quorum-chip-active' : ''
             }`}
           >
             30 jours
@@ -67,16 +68,16 @@ export function CompetitiveSnapshot({
       <div className="flex items-center gap-2">
         <button
           onClick={() => setActiveTab('trend')}
-          className={`px-3 py-1.5 rounded-full text-xs border ${
-            activeTab === 'trend' ? 'border-cyan-500/40 text-cyan-300' : 'border-white/10 text-zinc-400'
+          className={`quorum-chip ${
+            activeTab === 'trend' ? 'quorum-chip-active' : ''
           }`}
         >
           Trend
         </button>
         <button
           onClick={() => setActiveTab('leaderboard')}
-          className={`px-3 py-1.5 rounded-full text-xs border ${
-            activeTab === 'leaderboard' ? 'border-cyan-500/40 text-cyan-300' : 'border-white/10 text-zinc-400'
+          className={`quorum-chip ${
+            activeTab === 'leaderboard' ? 'quorum-chip-active' : ''
           }`}
         >
           Leaderboard

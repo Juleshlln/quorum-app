@@ -32,10 +32,10 @@ function getInsight(owned: number, competitor: number, quality: number): {
 }
 
 const toneColors: Record<'positive' | 'warning' | 'opportunity' | 'neutral', { bg: string; border: string; text: string; icon: typeof TrendingUp }> = {
-  positive: { bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', text: 'text-emerald-400', icon: TrendingUp },
-  warning: { bg: 'bg-amber-500/10', border: 'border-amber-500/20', text: 'text-amber-400', icon: TrendingDown },
-  opportunity: { bg: 'bg-violet-500/10', border: 'border-violet-500/20', text: 'text-violet-400', icon: Activity },
-  neutral: { bg: 'bg-zinc-500/10', border: 'border-zinc-500/20', text: 'text-zinc-400', icon: Minus },
+  positive: { bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', text: 'text-emerald-300', icon: TrendingUp },
+  warning: { bg: 'bg-amber-500/10', border: 'border-amber-500/20', text: 'text-amber-300', icon: TrendingDown },
+  opportunity: { bg: 'quorum-surface-strong', border: 'quorum-border-strong', text: 'quorum-text-primary', icon: Activity },
+  neutral: { bg: 'quorum-surface', border: 'quorum-border-default', text: 'quorum-text-muted', icon: Minus },
 };
 
 export function ScoreHero({ qualityScore, ownedShare, competitorShare, totalCitations, isRunning }: ScoreHeroProps) {
@@ -49,37 +49,37 @@ export function ScoreHero({ qualityScore, ownedShare, competitorShare, totalCita
 
   // Score color based on value
   const scoreGradient = qualityScore >= 60
-    ? 'from-emerald-400 via-cyan-400 to-blue-400'
+    ? 'from-white via-[#f3efe6] to-[#d7d1c6]'
     : qualityScore >= 35
-      ? 'from-amber-400 via-orange-400 to-yellow-400'
-      : 'from-red-400 via-rose-400 to-pink-400';
+      ? 'from-[#f5f0e5] via-[#d7cfbf] to-[#b8b0a1]'
+      : 'from-[#e7dfd2] via-[#b3aa9b] to-[#8b8173]';
 
   return (
-    <div className="relative rounded-3xl border border-white/[0.08] bg-zinc-900/40 p-8 overflow-hidden">
+    <div className="quorum-panel-strong relative overflow-hidden p-8">
       {/* Subtle glow behind score */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full bg-violet-500/[0.04] blur-[80px] pointer-events-none" />
+      <div className="pointer-events-none absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full quorum-surface-strong blur-[90px]" />
 
       <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-6">
         {/* Left: Score + insight */}
         <div className="space-y-4">
           <div className="flex items-center gap-2">
-            <p className="text-xs text-zinc-500 uppercase tracking-wider font-medium inline-flex items-center gap-1">
+            <p className="inline-flex items-center gap-1 text-xs font-medium uppercase tracking-[0.24em] quorum-text-subtle">
               Score de visibilité sources
               <InfoTip text="Score composite calculé à partir du nombre de citations, de leur fraîcheur, et de la diversité des sources qui citent votre marque dans les réponses IA." />
             </p>
             {isRunning && (
-              <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-[10px] text-cyan-400 font-medium">
-                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+              <span className="flex items-center gap-1.5 rounded-full border quorum-border-strong quorum-surface-strong px-2 py-0.5 text-[10px] font-medium quorum-text-muted">
+                <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
                 Analyse en cours
               </span>
             )}
           </div>
 
           <div className="flex items-baseline gap-4">
-            <span className={`text-6xl font-bold bg-gradient-to-r ${scoreGradient} bg-clip-text text-transparent tabular-nums tracking-tight`}>
+            <span className={`bg-gradient-to-r ${scoreGradient} bg-clip-text text-6xl font-bold tracking-[-0.06em] text-transparent tabular-nums`}>
               {qualityScore}
             </span>
-            <span className="text-2xl text-zinc-500 font-light">/100</span>
+            <span className="text-2xl font-light quorum-text-subtle">/100</span>
           </div>
 
           {/* Dynamic insight badge */}
@@ -88,7 +88,7 @@ export function ScoreHero({ qualityScore, ownedShare, competitorShare, totalCita
             <span className={`text-sm font-medium ${tone.text}`}>{insight.message}</span>
           </div>
 
-          <p className="text-xs text-zinc-500 max-w-md leading-relaxed">
+          <p className="max-w-md text-xs leading-relaxed quorum-text-muted">
             Calculé à partir de la fréquence, du type et de la fraîcheur des sources citant votre marque dans les réponses IA.
           </p>
         </div>
@@ -96,25 +96,25 @@ export function ScoreHero({ qualityScore, ownedShare, competitorShare, totalCita
         {/* Right: Mini stats */}
         <div className="flex gap-8">
           <div className="text-center">
-            <p className="text-xs text-zinc-500 mb-1 inline-flex items-center gap-1">
+            <p className="mb-1 inline-flex items-center gap-1 text-xs quorum-text-subtle">
               Citations
               <InfoTip text="Nombre de fois où une URL de votre marché a été explicitement citée dans une réponse IA sur la période sélectionnée." />
             </p>
-            <p className="text-2xl font-semibold text-white tabular-nums">{totalCitations}</p>
+            <p className="text-2xl font-semibold quorum-text-primary tabular-nums">{totalCitations}</p>
           </div>
           <div className="text-center">
-            <p className="text-xs text-zinc-500 mb-1 inline-flex items-center gap-1">
+            <p className="mb-1 inline-flex items-center gap-1 text-xs quorum-text-subtle">
               Part marque
               <InfoTip text="Pourcentage de citations qui pointent vers vos propres domaines (owned) parmi toutes les citations détectées." />
             </p>
-            <p className="text-2xl font-semibold text-emerald-400 tabular-nums">{ownedShare}%</p>
+            <p className="text-2xl font-semibold text-emerald-300 tabular-nums">{ownedShare}%</p>
           </div>
           <div className="text-center">
-            <p className="text-xs text-zinc-500 mb-1 inline-flex items-center gap-1">
+            <p className="mb-1 inline-flex items-center gap-1 text-xs quorum-text-subtle">
               Part concurrents
               <InfoTip text="Pourcentage de citations qui pointent vers des domaines classifiés comme concurrents." />
             </p>
-            <p className="text-2xl font-semibold text-red-400 tabular-nums">{competitorShare}%</p>
+            <p className="text-2xl font-semibold text-red-300 tabular-nums">{competitorShare}%</p>
           </div>
         </div>
       </div>

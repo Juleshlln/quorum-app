@@ -141,10 +141,10 @@ export function DailyExportsPanel({ projectId }: { projectId: string }) {
   };
 
   return (
-    <section id="daily-exports" className="rounded-3xl border border-white/[0.08] bg-zinc-900/40 p-5 md:p-6 space-y-4">
+    <section id="daily-exports" className="rounded-3xl border quorum-border-default quorum-surface-strong p-5 md:p-6 space-y-4">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-white">Daily Exports</h2>
+          <h2 className="text-lg font-semibold quorum-text-primary">Daily Exports</h2>
           <p className="text-sm text-zinc-400 mt-1">
             Générez un CSV quotidien ou un PDF "Daily GEO Audit" avec méthodologie.
           </p>
@@ -154,7 +154,7 @@ export function DailyExportsPanel({ projectId }: { projectId: string }) {
             loadRuns();
             loadExports();
           }}
-          className="inline-flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs text-zinc-300 hover:bg-white/[0.06]"
+          className="inline-flex items-center gap-2 rounded-xl border quorum-border-default quorum-surface px-3 py-2 text-xs text-zinc-300 hover:quorum-surface"
         >
           <RefreshCw className="h-3.5 w-3.5" />
           Rafraîchir
@@ -169,7 +169,7 @@ export function DailyExportsPanel({ projectId }: { projectId: string }) {
             setSelectedRunId(e.target.value);
             setSelectedRunDate(nextRun?.run_date || selectedRunDate);
           }}
-          className="rounded-xl border border-white/[0.08] bg-zinc-900/60 px-3 py-2 text-sm text-zinc-300"
+          className="rounded-xl border quorum-border-default quorum-surface-strong px-3 py-2 text-sm text-zinc-300"
         >
           {runs.length === 0 && <option value="">Aucun run disponible</option>}
           {runs.map((run) => (
@@ -183,13 +183,13 @@ export function DailyExportsPanel({ projectId }: { projectId: string }) {
           type="date"
           value={selectedRunDate}
           onChange={(e) => setSelectedRunDate(e.target.value)}
-          className="rounded-xl border border-white/[0.08] bg-zinc-900/60 px-3 py-2 text-sm text-zinc-300"
+          className="rounded-xl border quorum-border-default quorum-surface-strong px-3 py-2 text-sm text-zinc-300"
         />
 
         <button
           onClick={() => createExport('csv_export')}
           disabled={action !== 'idle'}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-2 text-sm text-zinc-200 hover:bg-white/[0.06] disabled:opacity-40"
+          className="inline-flex items-center justify-center gap-2 rounded-xl border quorum-border-default quorum-surface px-4 py-2 text-sm text-zinc-200 hover:quorum-surface disabled:opacity-40"
         >
           <Download className="h-4 w-4" />
           {action === 'csv' ? 'Génération...' : 'Exporter CSV'}
@@ -219,7 +219,7 @@ export function DailyExportsPanel({ projectId }: { projectId: string }) {
         {exportsRows.map((row) => (
           <div
             key={row.id}
-            className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 rounded-xl border border-white/[0.06] bg-zinc-950/60 px-3 py-2"
+            className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 rounded-xl border quorum-border-default quorum-surface-strong px-3 py-2"
           >
             <div className="text-sm text-zinc-300">
               <span className="font-medium">
@@ -233,7 +233,7 @@ export function DailyExportsPanel({ projectId }: { projectId: string }) {
             <button
               onClick={() => downloadExport(row.id)}
               disabled={row.status !== 'done'}
-              className="inline-flex items-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-xs text-zinc-300 hover:bg-white/[0.06] disabled:opacity-30"
+              className="inline-flex items-center gap-2 rounded-lg border quorum-border-default quorum-surface px-3 py-1.5 text-xs text-zinc-300 hover:quorum-surface disabled:opacity-30"
             >
               <Download className="h-3.5 w-3.5" />
               Download

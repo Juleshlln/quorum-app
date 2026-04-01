@@ -54,12 +54,12 @@ export function StatsOverview({
       {stats.map((stat) => (
         <div
           key={stat.label}
-          className="p-4 rounded-xl border border-white/10 bg-zinc-900/20"
+          className="p-4 rounded-xl border quorum-border-default quorum-surface-strong"
         >
           <div className={`w-10 h-10 ${stat.bgColor} rounded-lg flex items-center justify-center mb-3`}>
             <stat.icon className={`w-5 h-5 ${stat.color}`} />
           </div>
-          <p className="text-2xl font-semibold text-white">{stat.value}</p>
+          <p className="text-2xl font-semibold quorum-text-primary">{stat.value}</p>
           <p className="text-sm text-zinc-500">{stat.label}</p>
         </div>
       ))}

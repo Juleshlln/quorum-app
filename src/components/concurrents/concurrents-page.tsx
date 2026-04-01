@@ -236,7 +236,7 @@ export function ConcurrentsPage({ projectId, projectName, initialConcurrents }: 
 
     return (
       <div
-        className={`rounded-xl bg-zinc-900 border border-white/10 flex items-center justify-center overflow-hidden ${className || ''}`}
+        className={`flex items-center justify-center overflow-hidden rounded-2xl border quorum-border-default quorum-surface ${className || ''}`}
       >
         {!failed && src ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -254,7 +254,7 @@ export function ConcurrentsPage({ projectId, projectName, initialConcurrents }: 
             }}
           />
         ) : (
-          <span className={textClassName || 'text-xs font-semibold text-white'}>
+          <span className={textClassName || 'text-xs font-semibold quorum-text-primary'}>
             {getInitials(name)}
           </span>
         )}
@@ -275,24 +275,25 @@ export function ConcurrentsPage({ projectId, projectName, initialConcurrents }: 
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="quorum-panel-strong flex flex-col gap-4 p-6 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-white">Concurrents</h1>
-          <p className="text-zinc-400 mt-1">
+          <p className="quorum-kicker">Concurrents</p>
+          <h1 className="mt-2 text-3xl font-bold tracking-[-0.05em] quorum-text-primary">Cartographiez votre paysage concurrentiel</h1>
+          <p className="mt-2 quorum-text-muted">
             Analysez les marques proches de {projectName}.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button
             onClick={triggerDetection}
-            className="inline-flex items-center gap-2 rounded-lg border border-white/10 px-4 py-2 text-sm text-zinc-300 hover:text-white"
+            className="quorum-btn-secondary"
           >
             <RefreshCw className="h-4 w-4" />
             Relancer la détection
           </button>
           <button
             onClick={() => setModalOpen(true)}
-            className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-black"
+            className="quorum-btn-primary"
           >
             <Plus className="h-4 w-4" />
             Ajouter un concurrent
@@ -301,19 +302,19 @@ export function ConcurrentsPage({ projectId, projectName, initialConcurrents }: 
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+        <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-100">
           {error}
         </div>
       )}
 
       {isBusy && (
-        <div className="rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-400">
+        <div className="rounded-2xl border quorum-border-default bg-white/5 px-4 py-3 text-sm quorum-text-muted">
           Chargement en cours...
         </div>
       )}
 
       {emptyState ? (
-        <div className="rounded-3xl border border-white/[0.08] bg-zinc-900/40 p-10 text-center text-zinc-400">
+        <div className="quorum-panel p-10 text-center quorum-text-muted">
           Aucun concurrent détecté pour le moment.
         </div>
       ) : (
@@ -321,7 +322,7 @@ export function ConcurrentsPage({ projectId, projectName, initialConcurrents }: 
           {concurrents.map((item) => (
             <div
               key={item.id}
-              className="rounded-2xl border border-white/10 bg-zinc-950/60 p-5 space-y-4"
+              className="quorum-panel p-5 space-y-4"
             >
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -330,29 +331,29 @@ export function ConcurrentsPage({ projectId, projectName, initialConcurrents }: 
                       name={item.nom}
                       domain={item.domaine}
                       className="h-10 w-10"
-                      textClassName="text-xs font-semibold text-white"
+                      textClassName="text-xs font-semibold quorum-text-primary"
                     />
-                    <h3 className="text-lg font-semibold text-white">{item.nom}</h3>
+                    <h3 className="text-lg font-semibold quorum-text-primary">{item.nom}</h3>
                     {item.verrouille && (
                       <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-300">
                         Verrouillé
                       </span>
                     )}
                     {item.type_concurrence && (
-                      <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-xs text-zinc-300">
+                      <span className="rounded-full border quorum-border-default bg-white/5 px-2 py-0.5 text-xs quorum-text-muted">
                         {item.type_concurrence}
                       </span>
                     )}
                   </div>
-                  <p className="text-sm text-zinc-400">
+                  <p className="text-sm quorum-text-muted">
                     {item.domaine || 'Domaine non renseigné'}
                   </p>
                 </div>
                 <span
                   className={`rounded-full border px-2 py-0.5 text-xs ${
                     item.type_detection === 'auto'
-                      ? 'border-cyan-500/30 text-cyan-300 bg-cyan-500/10'
-                      : 'border-zinc-600 text-zinc-300 bg-zinc-800/60'
+                      ? 'quorum-border-strong quorum-surface-strong quorum-text-primary'
+                      : 'quorum-border-default quorum-surface quorum-text-muted'
                   }`}
                 >
                   {item.type_detection === 'auto' ? 'Auto' : 'Manuel'}
@@ -362,14 +363,14 @@ export function ConcurrentsPage({ projectId, projectName, initialConcurrents }: 
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => updateConcurrent(item.id, { verrouille: !item.verrouille })}
-                  className="inline-flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-xs text-zinc-300 hover:text-white"
+                  className="quorum-btn-secondary px-3 py-2 text-xs"
                 >
                   {item.verrouille ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
                   {item.verrouille ? 'Déverrouiller' : 'Verrouiller'}
                 </button>
                 <button
                   onClick={() => openDetails(item)}
-                  className="inline-flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-xs text-zinc-300 hover:text-white"
+                  className="quorum-btn-secondary px-3 py-2 text-xs"
                 >
                   <Eye className="h-4 w-4" />
                   Voir le détail
@@ -378,7 +379,7 @@ export function ConcurrentsPage({ projectId, projectName, initialConcurrents }: 
                   onClick={() => deleteConcurrent(item)}
                   className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs ${
                     item.verrouille
-                      ? 'border-white/5 text-zinc-600 cursor-not-allowed'
+                      ? 'cursor-not-allowed quorum-border-default quorum-text-subtle'
                       : 'border-red-500/30 text-red-300 hover:text-red-200'
                   }`}
                 >
@@ -392,48 +393,48 @@ export function ConcurrentsPage({ projectId, projectName, initialConcurrents }: 
       )}
 
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-          <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-zinc-950 p-6 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center quorum-backdrop px-4">
+          <div className="quorum-panel-strong w-full max-w-lg p-6 space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-white">Ajouter un concurrent</h3>
-              <button onClick={() => setModalOpen(false)} className="text-zinc-400">
+              <h3 className="text-lg font-semibold quorum-text-primary">Ajouter un concurrent</h3>
+              <button onClick={() => setModalOpen(false)} className="quorum-text-muted hover:quorum-text-primary">
                 <X className="h-4 w-4" />
               </button>
             </div>
             <div className="grid gap-3">
               <div>
-                <label className="text-xs text-zinc-500">Nom</label>
+                <label className="quorum-label text-xs">Nom</label>
                 <input
                   value={createForm.nom}
                   onChange={(e) => setCreateForm((prev) => ({ ...prev, nom: e.target.value }))}
-                  className="w-full rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-white"
+                  className="quorum-input"
                   placeholder="Nom du concurrent"
                 />
               </div>
               <div>
-                <label className="text-xs text-zinc-500">Domaine (optionnel)</label>
+                <label className="quorum-label text-xs">Domaine (optionnel)</label>
                 <input
                   value={createForm.domaine}
                   onChange={(e) => setCreateForm((prev) => ({ ...prev, domaine: e.target.value }))}
-                  className="w-full rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-white"
+                  className="quorum-input"
                   placeholder="exemple.com"
                 />
               </div>
               <div>
-                <label className="text-xs text-zinc-500">Alias (séparés par virgule)</label>
+                <label className="quorum-label text-xs">Alias (séparés par virgule)</label>
                 <input
                   value={createForm.alias}
                   onChange={(e) => setCreateForm((prev) => ({ ...prev, alias: e.target.value }))}
-                  className="w-full rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-white"
+                  className="quorum-input"
                   placeholder="Nom alternatif, Acronyme"
                 />
               </div>
               <div>
-                <label className="text-xs text-zinc-500">Type de concurrence</label>
+                <label className="quorum-label text-xs">Type de concurrence</label>
                 <select
                   value={createForm.type_concurrence}
                   onChange={(e) => setCreateForm((prev) => ({ ...prev, type_concurrence: e.target.value }))}
-                  className="w-full rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-white"
+                  className="quorum-select"
                 >
                   <option value="">Sélectionner</option>
                   <option value="Direct">Direct</option>
@@ -445,13 +446,13 @@ export function ConcurrentsPage({ projectId, projectName, initialConcurrents }: 
             <div className="flex items-center justify-end gap-2">
               <button
                 onClick={() => setModalOpen(false)}
-                className="rounded-lg border border-white/10 px-4 py-2 text-sm text-zinc-300"
+                className="quorum-btn-secondary"
               >
                 Annuler
               </button>
               <button
                 onClick={addConcurrent}
-                className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black"
+                className="quorum-btn-primary"
               >
                 Ajouter
               </button>
@@ -461,40 +462,40 @@ export function ConcurrentsPage({ projectId, projectName, initialConcurrents }: 
       )}
 
       {detailOpen && active && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/60">
-          <div className="h-full w-full max-w-xl bg-zinc-950 border-l border-white/10 p-6 space-y-6">
+        <div className="fixed inset-0 z-50 flex justify-end quorum-backdrop">
+          <div className="h-full w-full max-w-xl border-l quorum-border-default quorum-surface-strong p-6 space-y-6 backdrop-blur-2xl">
             <div className="flex items-start justify-between">
               <div>
-                <h3 className="text-lg font-semibold text-white">Profil concurrent</h3>
-                <p className="text-sm text-zinc-400">Informations clés et édition manuelle.</p>
+                <h3 className="text-lg font-semibold quorum-text-primary">Profil concurrent</h3>
+                <p className="text-sm quorum-text-muted">Informations clés et édition manuelle.</p>
               </div>
-              <button onClick={() => setDetailOpen(false)} className="text-zinc-400">
+              <button onClick={() => setDetailOpen(false)} className="quorum-text-muted hover:quorum-text-primary">
                 <X className="h-4 w-4" />
               </button>
             </div>
 
             <div className="space-y-3">
-              <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
-                <div className="h-24 bg-gradient-to-r from-blue-500/30 via-cyan-500/20 to-transparent" />
+              <div className="overflow-hidden rounded-3xl border quorum-border-default bg-white/5">
+                <div className="h-24 bg-gradient-to-r from-white/[0.12] via-white/[0.04] to-transparent" />
                 <div className="p-5 flex items-center gap-4 -mt-10">
                   <LogoAvatar
                     name={active.nom}
                     domain={active.domaine}
                     className="h-16 w-16 rounded-2xl"
-                    textClassName="text-lg font-semibold text-white"
+                    textClassName="text-lg font-semibold quorum-text-primary"
                   />
                   <div>
-                    <h4 className="text-xl font-semibold text-white">{active.nom}</h4>
-                    <p className="text-sm text-zinc-400">
+                    <h4 className="text-xl font-semibold quorum-text-primary">{active.nom}</h4>
+                    <p className="text-sm quorum-text-muted">
                       {active.domaine || 'Domaine non renseigné'}
                     </p>
                     <div className="mt-2 flex flex-wrap gap-2 text-xs">
                       {active.type_concurrence && (
-                        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-zinc-300">
+                        <span className="rounded-full border quorum-border-default bg-white/5 px-2 py-0.5 quorum-text-muted">
                           {active.type_concurrence}
                         </span>
                       )}
-                      <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-zinc-300">
+                      <span className="rounded-full border quorum-border-default bg-white/5 px-2 py-0.5 quorum-text-muted">
                         {active.type_detection === 'auto' ? 'Détection auto' : 'Ajout manuel'}
                       </span>
                     </div>
@@ -504,35 +505,35 @@ export function ConcurrentsPage({ projectId, projectName, initialConcurrents }: 
 
               <div className="grid gap-3">
                 <div>
-                  <label className="text-xs text-zinc-500">Nom</label>
+                  <label className="quorum-label text-xs">Nom</label>
                   <input
                     value={detailForm.nom}
                     onChange={(e) => setDetailForm((prev) => ({ ...prev, nom: e.target.value }))}
-                    className="w-full rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-white"
+                    className="quorum-input"
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-zinc-500">Domaine</label>
+                  <label className="quorum-label text-xs">Domaine</label>
                   <input
                     value={detailForm.domaine}
                     onChange={(e) => setDetailForm((prev) => ({ ...prev, domaine: e.target.value }))}
-                    className="w-full rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-white"
+                    className="quorum-input"
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-zinc-500">Alias</label>
+                  <label className="quorum-label text-xs">Alias</label>
                   <input
                     value={detailForm.alias}
                     onChange={(e) => setDetailForm((prev) => ({ ...prev, alias: e.target.value }))}
-                    className="w-full rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-white"
+                    className="quorum-input"
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-zinc-500">Type de concurrence</label>
+                  <label className="quorum-label text-xs">Type de concurrence</label>
                   <select
                     value={detailForm.type_concurrence}
                     onChange={(e) => setDetailForm((prev) => ({ ...prev, type_concurrence: e.target.value }))}
-                    className="w-full rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-white"
+                    className="quorum-select"
                   >
                     <option value="">Sélectionner</option>
                     <option value="Direct">Direct</option>
@@ -558,7 +559,7 @@ export function ConcurrentsPage({ projectId, projectName, initialConcurrents }: 
                     type_concurrence: detailForm.type_concurrence || null,
                   });
                 }}
-                className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-black"
+                className="quorum-btn-primary"
               >
                 <Save className="h-4 w-4" />
                 Enregistrer

@@ -61,48 +61,48 @@ export function DeleteProjectButton({ projectId, projectName }: DeleteProjectBut
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowModal(false)} />
+          <div className="absolute inset-0 quorum-backdrop backdrop-blur-sm" onClick={() => setShowModal(false)} />
           
-          <div className="relative w-full max-w-md bg-zinc-900 border border-white/[0.1] rounded-2xl shadow-2xl">
+          <div className="relative w-full max-w-md quorum-surface-strong border quorum-border-default rounded-2xl shadow-2xl">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="w-12 h-12 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center justify-center">
                   <AlertTriangle className="w-6 h-6 text-red-400" />
                 </div>
-                <button onClick={() => setShowModal(false)} className="p-2 text-zinc-400 hover:text-white transition-colors">
+                <button onClick={() => setShowModal(false)} className="p-2 text-zinc-400 hover:quorum-text-primary transition-colors">
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <h3 className="text-xl font-semibold text-white mb-2">Supprimer le projet</h3>
+              <h3 className="text-xl font-semibold quorum-text-primary mb-2">Supprimer le projet</h3>
               <p className="text-zinc-400 text-sm mb-6">
                 Cette action est irréversible. Toutes les données associées seront définitivement supprimées.
               </p>
 
               <div className="space-y-2 mb-6">
                 <label className="text-sm text-zinc-400">
-                  Tapez <span className="font-medium text-white">{projectName}</span> pour confirmer
+                  Tapez <span className="font-medium quorum-text-primary">{projectName}</span> pour confirmer
                 </label>
                 <input
                   type="text"
                   value={confirmText}
                   onChange={(e) => setConfirmText(e.target.value)}
                   placeholder={projectName}
-                  className="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl px-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:border-red-500/50 transition-colors"
+                  className="w-full quorum-surface border quorum-border-default rounded-xl px-4 py-3 quorum-text-primary placeholder:text-zinc-600 focus:outline-none focus:border-red-500/50 transition-colors"
                 />
               </div>
 
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowModal(false)}
-                  className="flex-1 px-4 py-3 text-sm font-medium text-zinc-300 bg-zinc-800 rounded-xl hover:bg-zinc-700 transition-colors"
+                  className="flex-1 px-4 py-3 text-sm font-medium text-zinc-300 quorum-surface-strong rounded-xl hover:bg-zinc-700 transition-colors"
                 >
                   Annuler
                 </button>
                 <button
                   onClick={handleDelete}
                   disabled={confirmText !== projectName || loading}
-                  className="flex-1 px-4 py-3 text-sm font-medium text-white bg-red-600 rounded-xl hover:bg-red-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-3 text-sm font-medium quorum-text-primary bg-red-600 rounded-xl hover:bg-red-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {loading ? (
                     <Loader2 className="w-4 h-4 animate-spin" />

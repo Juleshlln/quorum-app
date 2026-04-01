@@ -10,9 +10,9 @@ type ShareBarProps = {
 
 export function ShareBar({ ownedShare, competitorShare, thirdPartyShare }: ShareBarProps) {
   const segments = [
-    { label: 'Votre marque', value: ownedShare, color: 'bg-emerald-500', textColor: 'text-emerald-400', dotColor: 'bg-emerald-400' },
-    { label: 'Concurrents', value: competitorShare, color: 'bg-red-500', textColor: 'text-red-400', dotColor: 'bg-red-400' },
-    { label: 'Tiers', value: thirdPartyShare, color: 'bg-zinc-600', textColor: 'text-zinc-400', dotColor: 'bg-zinc-500' },
+    { label: 'Votre marque', value: ownedShare, color: 'bg-emerald-300', textColor: 'text-emerald-300', dotColor: 'bg-emerald-300' },
+    { label: 'Concurrents', value: competitorShare, color: 'bg-red-300', textColor: 'text-red-300', dotColor: 'bg-red-300' },
+    { label: 'Tiers', value: thirdPartyShare, color: 'bg-white/50', textColor: 'quorum-text-muted', dotColor: 'bg-white/50' },
   ];
 
   // Compute strategic insight
@@ -23,19 +23,19 @@ export function ShareBar({ ownedShare, competitorShare, thirdPartyShare }: Share
       : 'Équilibre serré avec vos concurrents — chaque point compte.';
 
   return (
-    <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-6">
+    <div className="quorum-panel p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-sm font-medium text-white inline-flex items-center gap-1">
+          <h3 className="text-sm font-medium quorum-text-primary inline-flex items-center gap-1">
             Répartition des sources
             <InfoTip text="Répartition entre vos domaines (Marque), ceux de vos concurrents, et les sites tiers (comparateurs, médias, etc.)." />
           </h3>
-          <p className="text-xs text-zinc-500 mt-0.5">Part de chaque acteur dans les citations IA</p>
+          <p className="text-xs quorum-text-subtle mt-0.5">Part de chaque acteur dans les citations IA</p>
         </div>
       </div>
 
       {/* Stacked bar */}
-      <div className="flex h-3 rounded-full overflow-hidden bg-zinc-800 mb-5">
+      <div className="mb-5 flex h-3 overflow-hidden rounded-full quorum-surface-strong">
         {segments.map((seg) =>
           seg.value > 0 ? (
             <div
@@ -53,7 +53,7 @@ export function ShareBar({ ownedShare, competitorShare, thirdPartyShare }: Share
           <div key={seg.label} className="flex items-center gap-3">
             <div className={`w-2.5 h-2.5 rounded-full ${seg.dotColor} shrink-0`} />
             <div>
-              <p className="text-xs text-zinc-500">{seg.label}</p>
+              <p className="text-xs quorum-text-subtle">{seg.label}</p>
               <p className={`text-lg font-semibold ${seg.textColor} tabular-nums`}>{seg.value}%</p>
             </div>
           </div>
@@ -61,8 +61,8 @@ export function ShareBar({ ownedShare, competitorShare, thirdPartyShare }: Share
       </div>
 
       {/* Strategic micro-insight */}
-      <div className="mt-5 pt-4 border-t border-white/[0.06]">
-        <p className="text-xs text-zinc-400 leading-relaxed">{insight}</p>
+      <div className="mt-5 pt-4 border-t quorum-border-default">
+        <p className="text-xs quorum-text-muted leading-relaxed">{insight}</p>
       </div>
     </div>
   );

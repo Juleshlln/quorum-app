@@ -46,7 +46,7 @@ export function PromptList({ prompts, onDelete, onUpdate, onToggleActive }: Prom
 
   if (prompts.length === 0) {
     return (
-      <div className="text-center py-12 rounded-2xl border border-dashed border-white/[0.1] bg-zinc-900/20">
+      <div className="text-center py-12 rounded-2xl border border-dashed quorum-border-default quorum-surface-strong">
         <p className="text-zinc-500">Aucun prompt personnalisé</p>
         <p className="text-sm text-zinc-600 mt-1">
           Ajoutez vos propres prompts ou utilisez les suggestions
@@ -62,8 +62,8 @@ export function PromptList({ prompts, onDelete, onUpdate, onToggleActive }: Prom
           key={prompt.id}
           className={`rounded-xl border transition-all ${
             prompt.is_active
-              ? "border-white/[0.08] bg-zinc-900/30"
-              : "border-white/[0.05] bg-zinc-900/10 opacity-60"
+              ? "quorum-border-default quorum-surface-strong"
+              : "quorum-border-default quorum-surface opacity-60"
           }`}
         >
           {editingId === prompt.id ? (
@@ -72,14 +72,14 @@ export function PromptList({ prompts, onDelete, onUpdate, onToggleActive }: Prom
                 value={editText}
                 onChange={(e) => setEditText(e.target.value)}
                 rows={2}
-                className="w-full px-3 py-2 rounded-lg bg-zinc-800 border border-white/[0.1] text-white text-sm focus:outline-none focus:border-cyan-500/50 resize-none"
+                className="w-full px-3 py-2 rounded-lg quorum-surface-strong border quorum-border-default quorum-text-primary text-sm focus:outline-none focus:border-cyan-500/50 resize-none"
                 autoFocus
               />
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleSaveEdit(prompt.id)}
                   disabled={loadingId === prompt.id}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-cyan-500 text-white text-sm rounded-lg hover:bg-cyan-600 disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-cyan-500 quorum-text-primary text-sm rounded-lg hover:bg-cyan-600 disabled:opacity-50"
                 >
                   {loadingId === prompt.id ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -90,7 +90,7 @@ export function PromptList({ prompts, onDelete, onUpdate, onToggleActive }: Prom
                 </button>
                 <button
                   onClick={() => setEditingId(null)}
-                  className="px-3 py-1.5 text-zinc-400 text-sm rounded-lg hover:text-white hover:bg-zinc-800"
+                  className="px-3 py-1.5 text-zinc-400 text-sm rounded-lg hover:quorum-text-primary hover:quorum-surface-strong"
                 >
                   Annuler
                 </button>
@@ -103,7 +103,7 @@ export function PromptList({ prompts, onDelete, onUpdate, onToggleActive }: Prom
                 <button
                   onClick={() => handleDelete(prompt.id)}
                   disabled={loadingId === prompt.id}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-500 quorum-text-primary text-sm rounded-lg hover:bg-red-600 disabled:opacity-50"
                 >
                   {loadingId === prompt.id ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -114,7 +114,7 @@ export function PromptList({ prompts, onDelete, onUpdate, onToggleActive }: Prom
                 </button>
                 <button
                   onClick={() => setDeletingId(null)}
-                  className="px-3 py-1.5 text-zinc-400 text-sm rounded-lg hover:text-white hover:bg-zinc-800"
+                  className="px-3 py-1.5 text-zinc-400 text-sm rounded-lg hover:quorum-text-primary hover:quorum-surface-strong"
                 >
                   Annuler
                 </button>
@@ -125,7 +125,7 @@ export function PromptList({ prompts, onDelete, onUpdate, onToggleActive }: Prom
               <div className="flex items-start gap-3 flex-1">
                 <span className="text-xs text-zinc-600 font-mono pt-1">#{index + 1}</span>
                 <div className="flex-1">
-                  <p className="text-white">{prompt.prompt_text}</p>
+                  <p className="quorum-text-primary">{prompt.prompt_text}</p>
                   <p className="text-xs text-zinc-600 mt-1">
                     Ajouté le {new Date(prompt.created_at).toLocaleDateString("fr-FR")}
                   </p>
@@ -144,7 +144,7 @@ export function PromptList({ prompts, onDelete, onUpdate, onToggleActive }: Prom
                 </button>
                 <button
                   onClick={() => handleStartEdit(prompt)}
-                  className="p-2 rounded-lg text-zinc-500 hover:text-white hover:bg-zinc-800"
+                  className="p-2 rounded-lg text-zinc-500 hover:quorum-text-primary hover:quorum-surface-strong"
                 >
                   <Edit2 className="w-4 h-4" />
                 </button>

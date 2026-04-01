@@ -29,7 +29,7 @@ export function AnalysisGoalSelector({
 }) {
   return (
     <div className="space-y-3">
-      <p className="text-sm text-zinc-400">
+      <p className="text-sm quorum-text-muted">
         Étape 1 — Choisis l’objectif principal de l’analyse
       </p>
       <div className="grid md:grid-cols-3 gap-3">
@@ -37,17 +37,17 @@ export function AnalysisGoalSelector({
           <button
             key={c.key}
             onClick={() => onChange(c.key)}
-            className={`text-left rounded-xl border p-4 transition-all ${
+            className={`text-left rounded-2xl border p-4 transition-all ${
               value === c.key
-                ? 'border-cyan-500/40 bg-cyan-500/10'
-                : 'border-white/10 hover:bg-white/5'
+                ? 'quorum-border-strong quorum-surface-strong'
+                : 'quorum-border-default quorum-surface-strong hover:quorum-surface'
             }`}
           >
             <div className="flex items-center justify-between">
-              <h4 className="font-semibold">{c.title}</h4>
+              <h4 className="font-semibold quorum-text-primary">{c.title}</h4>
               <PromptBadge category={c.key} />
             </div>
-            <p className="text-xs text-zinc-400 mt-2">{c.description}</p>
+            <p className="mt-2 text-xs quorum-text-muted">{c.description}</p>
           </button>
         ))}
       </div>

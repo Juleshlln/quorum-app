@@ -127,7 +127,7 @@ export function StartRunButton({ projectId, projectName, projectIndustry, projec
           setRunCount(getRunsForPlan());
         }}
         disabled={loading}
-        className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-500 via-cyan-500 to-violet-500 text-white text-sm font-medium rounded-xl hover:opacity-90 transition-all hover:shadow-lg hover:shadow-blue-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="quorum-btn-primary"
       >
         {loading ? (
           <>
@@ -143,18 +143,18 @@ export function StartRunButton({ projectId, projectName, projectIndustry, projec
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 bg-black/60 p-4 overflow-y-auto">
-          <div className="mx-auto my-6 w-full max-w-3xl rounded-2xl border border-white/10 bg-zinc-900/90 p-6 text-white">
+        <div className="fixed inset-0 z-50 quorum-backdrop p-4 overflow-y-auto">
+          <div className="quorum-panel-strong mx-auto my-6 w-full max-w-3xl p-6 quorum-text-primary">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h3 className="text-lg font-semibold">Nouvelle analyse</h3>
-                <p className="text-sm text-zinc-400 mt-1">
+                <p className="mt-1 text-sm quorum-text-muted">
                   Choisis l’objectif, le mode, puis tes prompts avant de lancer.
                 </p>
               </div>
               <button
                 onClick={() => setOpen(false)}
-                className="p-1.5 rounded-lg hover:bg-white/5 text-zinc-400"
+                className="rounded-xl p-1.5 quorum-text-muted hover:quorum-surface"
                 aria-label="Fermer"
               >
                 <X className="w-4 h-4" />
@@ -165,7 +165,7 @@ export function StartRunButton({ projectId, projectName, projectIndustry, projec
               {step === 1 && (
                 <>
                   <AnalysisGoalSelector value={category} onChange={setCategory} />
-                  <p className="mt-3 text-xs text-zinc-500">
+                  <p className="mt-3 text-xs quorum-text-subtle">
                     Cet objectif pré-filtre les prompts suggérés et pré-sélectionne la catégorie par défaut.
                   </p>
                 </>
@@ -184,14 +184,14 @@ export function StartRunButton({ projectId, projectName, projectIndustry, projec
                       }
                     }}
                   />
-                  <p className="mt-3 text-xs text-zinc-500">
+                  <p className="mt-3 text-xs quorum-text-subtle">
                     Les runs sont contrôlés par ton plan. Tu ne peux pas les modifier ici.
                   </p>
                 </>
               )}
               {step === 3 && (
                 <div className="space-y-6">
-                  <div className="flex items-center justify-between text-xs text-zinc-500">
+                  <div className="flex items-center justify-between text-xs quorum-text-subtle">
                     <span>Prompts sélectionnés</span>
                     <span>{selectedPrompts.length}/{MAX_PROMPTS}</span>
                   </div>
@@ -210,9 +210,9 @@ export function StartRunButton({ projectId, projectName, projectIndustry, projec
                     onToggle={onTogglePrompt}
                   />
                   {selectedPrompts.length > 0 && (
-                    <div className="rounded-xl border border-white/10 bg-zinc-900/40 p-3">
-                      <p className="text-xs text-zinc-400 mb-2">Sélectionnés (aperçu)</p>
-                      <ul className="space-y-1 text-sm text-zinc-200">
+                    <div className="quorum-panel-soft p-3">
+                      <p className="mb-2 text-xs quorum-text-muted">Sélectionnés (aperçu)</p>
+                      <ul className="space-y-1 text-sm quorum-text-primary">
                         {selectedPrompts.slice(0, 5).map((p) => (
                           <li key={p.id} className="truncate">• {p.text}</li>
                         ))}
@@ -232,15 +232,15 @@ export function StartRunButton({ projectId, projectName, projectIndustry, projec
               )}
             </div>
 
-            {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
+            {error && <p className="mt-3 text-sm text-red-300">{error}</p>}
 
             <div className="mt-5 flex items-center justify-between gap-3">
-              <p className="text-xs text-zinc-500">Projet: {projectName}</p>
+              <p className="text-xs quorum-text-subtle">Projet: {projectName}</p>
               <div className="flex items-center gap-2">
                 {step > 1 && (
                   <button
                     onClick={() => setStep((s) => (s === 2 ? 1 : s === 3 ? 2 : 3))}
-                    className="px-3 py-2 rounded-xl border border-white/10 text-sm text-zinc-300 hover:bg-white/5"
+                    className="quorum-btn-secondary"
                   >
                     Retour
                   </button>
@@ -248,7 +248,7 @@ export function StartRunButton({ projectId, projectName, projectIndustry, projec
                 {step < 4 && (
                   <button
                     onClick={() => setStep((s) => (s === 1 ? 2 : s === 2 ? 3 : 4))}
-                    className="px-4 py-2 rounded-xl bg-white text-black text-sm font-medium hover:opacity-90"
+                    className="quorum-btn-primary"
                   >
                     Continuer
                   </button>
@@ -257,7 +257,7 @@ export function StartRunButton({ projectId, projectName, projectIndustry, projec
                   <button
                     onClick={handleStartRun}
                     disabled={loading}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white text-black text-sm font-medium hover:opacity-90 disabled:opacity-60"
+                    className="quorum-btn-primary"
                   >
                     {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
                     Lancer

@@ -26,7 +26,7 @@ export function InfoTip({ text, className }: InfoTipProps) {
         ref={ref}
         type="button"
         aria-label={text}
-        className={`inline-flex items-center text-[11px] text-zinc-500 hover:text-zinc-300 cursor-help ${className ?? ''}`}
+        className={`inline-flex cursor-help items-center text-[11px] quorum-text-subtle hover:quorum-text-primary ${className ?? ''}`}
         onMouseEnter={show}
         onMouseLeave={hide}
         onFocus={show}
@@ -39,7 +39,7 @@ export function InfoTip({ text, className }: InfoTipProps) {
         typeof document !== 'undefined' &&
         createPortal(
           <div
-            className="fixed z-[90] max-w-xs -translate-x-1/2 rounded-lg border border-white/[0.12] bg-zinc-900 px-2.5 py-2 text-[11px] text-zinc-200 shadow-xl pointer-events-none"
+            className="pointer-events-none fixed z-[90] max-w-xs -translate-x-1/2 rounded-2xl border quorum-border-strong quorum-surface-strong px-3 py-2 text-[11px] quorum-text-primary shadow-[0_24px_70px_rgba(0,0,0,0.35)] backdrop-blur-xl"
             style={{ left: `${pos.x}px`, top: `${pos.y}px` }}
           >
             {text}

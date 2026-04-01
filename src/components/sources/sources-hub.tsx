@@ -173,7 +173,7 @@ function HeaderWithInfo({
         <button
           type="button"
           aria-label={tooltip}
-          className="text-[11px] text-zinc-500 hover:text-zinc-300 cursor-help"
+          className="cursor-help text-[11px] quorum-text-subtle hover:quorum-text-primary"
           onMouseEnter={(event) => onShowInfo?.(tooltip, event.currentTarget)}
           onMouseLeave={() => onHideInfo?.()}
           onFocus={(event) => onShowInfo?.(tooltip, event.currentTarget)}
@@ -192,7 +192,7 @@ function HeaderWithInfo({
     <span
       role="button"
       tabIndex={0}
-      className="inline-flex items-center cursor-pointer hover:text-zinc-300 transition-colors"
+      className="inline-flex items-center cursor-pointer transition-colors hover:quorum-text-primary"
       onClick={onClick}
       onKeyDown={(event) => {
         if (event.key === 'Enter' || event.key === ' ') {
@@ -225,7 +225,7 @@ function toConfidencePercent(value: number) {
 
 function SkeletonBlock({ className }: { className?: string }) {
   return (
-    <div className={`animate-pulse rounded-2xl bg-zinc-900/40 border border-white/[0.06] ${className ?? ''}`} />
+    <div className={`animate-pulse rounded-[28px] border quorum-border-default quorum-surface ${className ?? ''}`} />
   );
 }
 
@@ -252,9 +252,9 @@ function SourcesSkeleton() {
 function ChartTooltip({ active, payload, label }: any) {
   if (!active || !payload?.[0]) return null;
   return (
-    <div className="rounded-xl border border-white/[0.08] bg-zinc-900/95 backdrop-blur-sm px-3 py-2 shadow-xl">
-      <p className="text-xs text-zinc-400 mb-0.5">{label}</p>
-      <p className="text-sm font-semibold text-white">{payload[0].value} citations</p>
+    <div className="rounded-2xl border quorum-border-default quorum-surface-strong px-3 py-2 shadow-[0_24px_70px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+      <p className="mb-0.5 text-xs quorum-text-muted">{label}</p>
+      <p className="text-sm font-semibold quorum-text-primary">{payload[0].value} citations</p>
     </div>
   );
 }
@@ -273,10 +273,10 @@ function FilterChip({
   return (
     <button
       onClick={onClick}
-      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+      className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all duration-200 ${
         active
-          ? 'bg-white/[0.08] text-white border border-white/[0.12]'
-          : 'text-zinc-500 border border-transparent hover:text-zinc-300 hover:bg-white/[0.04]'
+          ? 'border quorum-border-strong quorum-surface-strong quorum-text-primary'
+          : 'border border-transparent quorum-text-muted hover:quorum-surface hover:quorum-text-primary'
       }`}
     >
       {children}
@@ -300,11 +300,11 @@ function FilterSelect({
       <select
         value={value}
         onChange={(e: React.ChangeEvent<HTMLSelectElement>) => onChange(e.target.value)}
-        className="appearance-none rounded-lg border border-white/[0.08] bg-zinc-900/60 pl-3 pr-7 py-1.5 text-xs text-zinc-300 outline-none transition-colors hover:border-white/[0.12] focus:border-white/[0.16]"
+        className="appearance-none rounded-full border quorum-border-default quorum-surface-strong pl-3 pr-7 py-1.5 text-xs quorum-text-primary outline-none transition-colors hover:quorum-border-strong focus:quorum-border-strong"
       >
         {children}
       </select>
-      <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-500 pointer-events-none" />
+      <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 quorum-text-subtle" />
     </div>
   );
 }
@@ -313,8 +313,8 @@ function FilterSelect({
 
 function OpportunityBadge() {
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-violet-500/10 border border-violet-500/20 text-[10px] font-medium text-violet-400">
-      <Sparkles className="w-2.5 h-2.5" />
+    <span className="inline-flex items-center gap-1 rounded-full border quorum-border-default quorum-surface px-2 py-0.5 text-[10px] font-medium quorum-text-muted">
+      <Sparkles className="h-2.5 w-2.5" />
       Opportunité
     </span>
   );
@@ -569,15 +569,16 @@ export function SourcesHub({ topics, projectId }: { topics: TopicOption[]; proje
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-semibold text-white tracking-tight">Sources</h1>
-            <p className="text-zinc-500 text-sm mt-1">
+            <p className="quorum-kicker">Sources</p>
+            <h1 className="mt-2 text-4xl font-bold tracking-[-0.05em] quorum-text-primary">Influence éditoriale des réponses IA</h1>
+            <p className="mt-2 text-sm quorum-text-muted">
               Quelles sources influencent les réponses IA sur votre marché.
             </p>
           </div>
           <button
             onClick={exportCsv}
             disabled={!hasData}
-            className="hidden md:inline-flex items-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.03] px-4 py-2 text-xs text-zinc-300 transition-all duration-200 hover:bg-white/[0.06] hover:border-white/[0.12] disabled:opacity-30"
+            className="quorum-btn-secondary hidden md:inline-flex"
           >
             <Download className="h-3.5 w-3.5" />
             Exporter
@@ -600,24 +601,24 @@ export function SourcesHub({ topics, projectId }: { topics: TopicOption[]; proje
 
       {/* ── Error ───────────────────────────────────────────── */}
       {error && (
-        <div className="rounded-2xl border border-red-500/20 bg-red-500/[0.06] p-5 text-sm text-red-300">
+        <div className="rounded-2xl border border-red-500/20 bg-red-500/[0.06] p-5 text-sm text-red-200">
           {error}
         </div>
       )}
 
       {/* ── Empty state ─────────────────────────────────────── */}
       {payload && !hasData && (
-        <div className="rounded-3xl border border-white/[0.08] bg-zinc-900/40 p-12 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500/20 via-cyan-500/20 to-violet-500/20 border border-white/[0.08] flex items-center justify-center mx-auto mb-5">
-            <Globe className="w-6 h-6 text-cyan-400" />
+        <div className="quorum-panel-strong p-12 text-center">
+          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border quorum-border-default quorum-surface-strong">
+            <Globe className="h-6 w-6 quorum-text-primary" />
           </div>
-          <h3 className="text-lg font-medium text-white mb-2">Aucune donnée de monitoring</h3>
-          <p className="text-sm text-zinc-500 max-w-sm mx-auto mb-6">
+          <h3 className="text-lg font-medium quorum-text-primary mb-2">Aucune donnée de monitoring</h3>
+          <p className="mx-auto mb-6 max-w-sm text-sm quorum-text-muted">
             Les sources s'alimentent via les exécutions automatiques. Configurez des enjeux et des questions pour lancer le monitoring.
           </p>
           <a
             href="/monitoring"
-            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 via-cyan-500 to-violet-500 px-5 py-2.5 text-sm font-medium text-white transition-all hover:shadow-lg hover:shadow-cyan-500/20"
+            className="quorum-btn-primary"
           >
             Configurer le monitoring
             <ExternalLink className="w-3.5 h-3.5" />
@@ -677,7 +678,7 @@ export function SourcesHub({ topics, projectId }: { topics: TopicOption[]; proje
           {metrics.owned_share === 0 && (
             <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.06] px-4 py-3 text-xs text-amber-300 leading-relaxed">
               Part propriétaires à 0%. Vérifiez que le site de votre marque est renseigné dans
-              <a href="/brand-settings" className="underline underline-offset-2 ml-1 text-amber-200 hover:text-white">Brand settings</a>.
+              <a href="/brand-settings" className="underline underline-offset-2 ml-1 text-amber-200 hover:quorum-text-primary">Brand settings</a>.
             </div>
           )}
 
@@ -690,10 +691,10 @@ export function SourcesHub({ topics, projectId }: { topics: TopicOption[]; proje
             />
 
             {/* Trend chart */}
-            <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-6">
+            <div className="quorum-panel p-6">
               <div className="mb-4">
-                <h3 className="text-sm font-medium text-white">Évolution des citations</h3>
-                <p className="text-xs text-zinc-500 mt-0.5">Volume quotidien sur {range} jours</p>
+                <h3 className="text-sm font-medium quorum-text-primary">Évolution des citations</h3>
+                <p className="mt-0.5 text-xs quorum-text-subtle">Volume quotidien sur {range} jours</p>
               </div>
               {chartData.length > 0 ? (
                 <div className="h-44">
@@ -702,12 +703,12 @@ export function SourcesHub({ topics, projectId }: { topics: TopicOption[]; proje
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
                       <XAxis
                         dataKey="label"
-                        tick={{ fill: '#52525b', fontSize: 10 }}
+                        tick={{ fill: 'rgba(255,255,255,0.38)', fontSize: 10 }}
                         axisLine={{ stroke: 'rgba(255,255,255,0.06)' }}
                         tickLine={false}
                       />
                       <YAxis
-                        tick={{ fill: '#52525b', fontSize: 10 }}
+                        tick={{ fill: 'rgba(255,255,255,0.38)', fontSize: 10 }}
                         axisLine={false}
                         tickLine={false}
                         width={30}
@@ -716,27 +717,27 @@ export function SourcesHub({ topics, projectId }: { topics: TopicOption[]; proje
                       <Line
                         type="monotone"
                         dataKey="total_citations"
-                        stroke="#22d3ee"
+                        stroke="#f3efe6"
                         strokeWidth={2}
                         dot={false}
-                        activeDot={{ r: 4, strokeWidth: 0, fill: '#22d3ee' }}
+                        activeDot={{ r: 4, strokeWidth: 0, fill: '#f3efe6' }}
                       />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
               ) : (
-                <p className="text-sm text-zinc-500 py-12 text-center">Pas encore de données de tendance.</p>
+                <p className="py-12 text-center text-sm quorum-text-muted">Pas encore de données de tendance.</p>
               )}
             </div>
           </div>
 
           {/* ── D. Sources table ─────────────────────────────── */}
-          <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40">
+          <div className="quorum-panel overflow-hidden">
             {/* Table header with filters */}
-            <div className="p-5 border-b border-white/[0.06]">
+            <div className="p-5 border-b quorum-border-default">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-medium text-white">
+                  <h3 className="text-sm font-medium quorum-text-primary">
                     Top {tab === 'domains' ? 'domaines' : 'URLs'}
                   </h3>
                   {gapOnly && <OpportunityBadge />}
@@ -744,7 +745,7 @@ export function SourcesHub({ topics, projectId }: { topics: TopicOption[]; proje
 
                 <div className="flex flex-wrap items-center gap-2">
                   {/* Tab switch */}
-                  <div className="flex items-center rounded-lg border border-white/[0.08] bg-zinc-900/60 p-0.5">
+                  <div className="flex items-center rounded-full border quorum-border-default quorum-surface-strong p-0.5">
                     <FilterChip active={tab === 'domains'} onClick={() => setTab('domains')}>
                       Domaines
                     </FilterChip>
@@ -787,10 +788,10 @@ export function SourcesHub({ topics, projectId }: { topics: TopicOption[]; proje
                   {/* Opportunities toggle */}
                   <button
                     onClick={() => setGapOnly((prev: boolean) => !prev)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+                    className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all duration-200 ${
                       gapOnly
-                        ? 'bg-violet-500/10 text-violet-400 border border-violet-500/20'
-                        : 'text-zinc-500 border border-white/[0.08] hover:text-zinc-300'
+                        ? 'border quorum-border-strong quorum-surface-strong quorum-text-primary'
+                        : 'border quorum-border-default quorum-text-muted hover:quorum-text-primary'
                     }`}
                   >
                     <Sparkles className="w-3 h-3" />
@@ -799,12 +800,12 @@ export function SourcesHub({ topics, projectId }: { topics: TopicOption[]; proje
 
                   {/* Search */}
                   <div className="relative">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 quorum-text-subtle" />
                     <input
                       value={search}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
                       placeholder="Rechercher…"
-                      className="rounded-lg border border-white/[0.08] bg-zinc-900/60 pl-8 pr-3 py-1.5 text-xs text-zinc-200 outline-none transition-colors placeholder:text-zinc-600 hover:border-white/[0.12] focus:border-white/[0.16] w-36"
+                      className="w-36 rounded-full border quorum-border-default quorum-surface-strong py-1.5 pl-8 pr-3 text-xs quorum-text-primary outline-none transition-colors placeholder:quorum-text-subtle hover:quorum-border-strong focus:quorum-border-strong"
                     />
                   </div>
                 </div>
@@ -814,17 +815,17 @@ export function SourcesHub({ topics, projectId }: { topics: TopicOption[]; proje
             {/* Table content */}
             {payload?.table?.length === 0 ? (
               <div className="p-12 text-center">
-                <p className="text-sm text-zinc-500">Aucune source détectée avec ces filtres.</p>
+                <p className="text-sm quorum-text-muted">Aucune source détectée avec ces filtres.</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-white/[0.06]">
-                      <th className="text-left px-5 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider">
+                    <tr className="border-b quorum-border-default">
+                      <th className="text-left px-5 py-3 text-xs font-medium quorum-text-subtle uppercase tracking-wider">
                         Source
                       </th>
-                      <th className="text-left px-4 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider">
+                      <th className="text-left px-4 py-3 text-xs font-medium quorum-text-subtle uppercase tracking-wider">
                         <HeaderWithInfo
                           label="Type"
                           tooltip="Catégorie éditoriale de la source (Éditorial, UGC, Institutionnel, etc.)"
@@ -833,7 +834,7 @@ export function SourcesHub({ topics, projectId }: { topics: TopicOption[]; proje
                         />
                       </th>
                       <th
-                        className="text-left px-4 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider"
+                        className="text-left px-4 py-3 text-xs font-medium quorum-text-subtle uppercase tracking-wider"
                       >
                         <HeaderWithInfo
                           label="Usage"
@@ -847,7 +848,7 @@ export function SourcesHub({ topics, projectId }: { topics: TopicOption[]; proje
                         />
                       </th>
                       <th
-                        className="text-left px-4 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider"
+                        className="text-left px-4 py-3 text-xs font-medium quorum-text-subtle uppercase tracking-wider"
                       >
                         <HeaderWithInfo
                           label="Part"
@@ -861,7 +862,7 @@ export function SourcesHub({ topics, projectId }: { topics: TopicOption[]; proje
                         />
                       </th>
                       <th
-                        className="text-left px-4 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider"
+                        className="text-left px-4 py-3 text-xs font-medium quorum-text-subtle uppercase tracking-wider"
                       >
                         <HeaderWithInfo
                           label="Marque"
@@ -875,7 +876,7 @@ export function SourcesHub({ topics, projectId }: { topics: TopicOption[]; proje
                         />
                       </th>
                       <th
-                        className="text-left px-4 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider"
+                        className="text-left px-4 py-3 text-xs font-medium quorum-text-subtle uppercase tracking-wider"
                       >
                         <HeaderWithInfo
                           label="Qualité"
@@ -889,7 +890,7 @@ export function SourcesHub({ topics, projectId }: { topics: TopicOption[]; proje
                         />
                       </th>
                       <th
-                        className="text-left px-4 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider"
+                        className="text-left px-4 py-3 text-xs font-medium quorum-text-subtle uppercase tracking-wider"
                       >
                         <HeaderWithInfo
                           label="Dernière vue"
@@ -909,55 +910,55 @@ export function SourcesHub({ topics, projectId }: { topics: TopicOption[]; proje
                     {sortedTable.map((row: SourceTableRow) => (
                       <tr
                         key={row.key}
-                        className="border-t border-white/[0.04] transition-colors hover:bg-white/[0.02] group"
+                        className="border-t quorum-border-default transition-colors hover:quorum-surface group"
                       >
                         <td className="px-5 py-3">
                           <div className="flex items-center gap-2.5">
                             {row.is_owned ? (
-                              <Shield className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                              <Shield className="h-3.5 w-3.5 shrink-0 text-emerald-300" />
                             ) : (
-                              <Users className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                              <Users className="h-3.5 w-3.5 shrink-0 quorum-text-subtle" />
                             )}
-                            <span className="text-zinc-200 font-medium truncate max-w-[240px]">{row.key}</span>
+                            <span className="max-w-[240px] truncate font-medium quorum-text-primary">{row.key}</span>
                             {row.opportunity && <OpportunityBadge />}
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-zinc-500">{TYPE_LABELS[row.type] ?? row.type}</td>
-                        <td className="px-4 py-3 text-zinc-300 tabular-nums">{row.used_total}</td>
+                        <td className="px-4 py-3 quorum-text-muted">{TYPE_LABELS[row.type] ?? row.type}</td>
+                        <td className="px-4 py-3 quorum-text-primary tabular-nums">{row.used_total}</td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
-                            <div className="w-16 h-1.5 rounded-full bg-zinc-800 overflow-hidden">
+                            <div className="h-1.5 w-16 overflow-hidden rounded-full quorum-surface-strong">
                               <div
-                                className="h-full rounded-full bg-cyan-500/60 transition-all duration-500"
+                                className="h-full rounded-full bg-white/75 transition-all duration-500"
                                 style={{ width: `${Math.min(row.used_share, 100)}%` }}
                               />
                             </div>
-                            <span className="text-zinc-400 tabular-nums text-xs">{row.used_share}%</span>
+                            <span className="quorum-text-muted tabular-nums text-xs">{row.used_share}%</span>
                           </div>
                         </td>
                         <td className="px-4 py-3">
                           <span className={`tabular-nums ${
                             row.brand_mentioned_rate >= 50
-                              ? 'text-emerald-400'
+                              ? 'text-emerald-300'
                               : row.brand_mentioned_rate >= 20
-                                ? 'text-amber-400'
-                                : 'text-zinc-500'
+                                ? 'text-amber-300'
+                                : 'quorum-text-subtle'
                           }`}>
                             {row.brand_mentioned_rate}%
                           </span>
                         </td>
                         <td className="px-4 py-3">
                           <span className={`tabular-nums ${
-                            row.quality_score >= 60 ? 'text-white' : 'text-zinc-400'
+                            row.quality_score >= 60 ? 'quorum-text-primary' : 'quorum-text-muted'
                           }`}>
                             {row.quality_score}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-zinc-500 text-xs tabular-nums">{formatShortDate(row.last_seen)}</td>
+                        <td className="px-4 py-3 text-xs quorum-text-subtle tabular-nums">{formatShortDate(row.last_seen)}</td>
                         <td className="px-4 py-3">
                           <button
                             onClick={() => openEvidence(tab === 'domains' ? 'domain' : 'url', row.key)}
-                            className="opacity-0 group-hover:opacity-100 rounded-md bg-white/[0.06] px-2.5 py-1 text-[11px] text-zinc-400 transition-all hover:bg-white/[0.1] hover:text-white"
+                            className="rounded-full quorum-surface-strong px-2.5 py-1 text-[11px] quorum-text-muted opacity-0 transition-all hover:quorum-surface hover:quorum-text-primary group-hover:opacity-100"
                           >
                             Voir
                           </button>
@@ -974,7 +975,7 @@ export function SourcesHub({ topics, projectId }: { topics: TopicOption[]; proje
 
       {headerTooltip && (
         <div
-          className="fixed z-[90] max-w-xs -translate-x-1/2 rounded-lg border border-white/[0.12] bg-zinc-900 px-2.5 py-2 text-[11px] text-zinc-200 shadow-xl"
+          className="fixed z-[90] max-w-xs -translate-x-1/2 rounded-2xl border quorum-border-strong quorum-surface-strong px-3 py-2 text-[11px] quorum-text-primary shadow-[0_24px_70px_rgba(0,0,0,0.35)] backdrop-blur-xl"
           style={{ left: `${headerTooltip.x}px`, top: `${headerTooltip.y}px` }}
         >
           {headerTooltip.text}
@@ -983,49 +984,49 @@ export function SourcesHub({ topics, projectId }: { topics: TopicOption[]; proje
 
       {/* ── Evidence modal ──────────────────────────────────── */}
       {evidence && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-          <div className="w-full max-w-3xl rounded-2xl border border-white/[0.08] bg-zinc-950 shadow-2xl">
-            <div className="flex items-center justify-between p-5 border-b border-white/[0.06]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center quorum-backdrop backdrop-blur-sm px-4">
+          <div className="w-full max-w-3xl rounded-[30px] border quorum-border-default quorum-surface-strong shadow-[0_40px_120px_rgba(0,0,0,0.42)] backdrop-blur-2xl">
+            <div className="flex items-center justify-between p-5 border-b quorum-border-default">
               <div>
-                <h3 className="text-base font-semibold text-white">Evidence</h3>
-                <p className="text-xs text-zinc-500 mt-0.5">
+                <h3 className="text-base font-semibold quorum-text-primary">Evidence</h3>
+                <p className="text-xs quorum-text-subtle mt-0.5">
                   {evidence.scope === 'domain' ? 'Domaine' : 'URL'} : {evidence.key}
                 </p>
               </div>
               <button
                 onClick={() => setEvidence(null)}
-                className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-xs text-zinc-400 transition-colors hover:text-white hover:bg-white/[0.06]"
+                className="quorum-btn-secondary px-3 py-1.5 text-xs"
               >
                 Fermer
               </button>
             </div>
             <div className="p-5 space-y-3 max-h-[60vh] overflow-auto">
               {evidence.items.length === 0 && (
-                <p className="text-sm text-zinc-500 text-center py-8">Aucune evidence disponible.</p>
+                <p className="py-8 text-center text-sm quorum-text-muted">Aucune evidence disponible.</p>
               )}
               {evidence.items.map((item: EvidenceItem, idx: number) => (
                 <div key={`${item.id || item.response_id || 'r'}-${idx}`} className="relative pl-6">
-                  <div className="absolute left-2 top-2 bottom-0 w-px bg-white/[0.08]" />
-                  <div className="absolute left-[5px] top-2 h-3 w-3 rounded-full border border-zinc-800 bg-cyan-400/80" />
-                  <div className="rounded-xl border border-white/[0.08] bg-zinc-900/40 p-4 space-y-3">
+                  <div className="absolute left-2 top-2 bottom-0 w-px quorum-surface-strong" />
+                  <div className="absolute left-[5px] top-2 h-3 w-3 rounded-full border quorum-border-default bg-white/80" />
+                  <div className="quorum-panel-soft p-4 space-y-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-2">
                         <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
                           item.method === 'observed'
-                            ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-400/20'
-                            : 'bg-amber-500/15 text-amber-300 border border-amber-400/20'
+                            ? 'border border-emerald-400/20 bg-emerald-500/15 text-emerald-300'
+                            : 'border border-amber-400/20 bg-amber-500/15 text-amber-300'
                         }`}>
                           {item.method === 'observed' ? 'Observée' : 'Probable'}
                         </span>
                       </div>
-                      <div className="text-right text-[11px] text-zinc-500">
+                      <div className="text-right text-[11px] quorum-text-subtle">
                         <div>{new Date(item.cited_at).toLocaleString('fr-FR')}</div>
                         <div>{item.ai_model || 'modèle inconnu'}</div>
                       </div>
                     </div>
 
                     {item.prompt_text && (
-                      <p className="text-base md:text-lg font-semibold text-white leading-snug">{item.prompt_text}</p>
+                      <p className="text-base md:text-lg font-semibold quorum-text-primary leading-snug">{item.prompt_text}</p>
                     )}
 
                     {typeof item.confidence === 'number' && (
@@ -1034,17 +1035,17 @@ export function SourcesHub({ topics, projectId }: { topics: TopicOption[]; proje
                           const confidenceScore = toConfidencePercent(item.confidence);
                           return (
                             <>
-                              <div className="flex items-center justify-between text-[11px] text-zinc-400">
+                              <div className="flex items-center justify-between text-[11px] quorum-text-muted">
                                 <span>Score de confiance</span>
                                 <span>{confidenceScore}%</span>
                               </div>
                               <div style={{ width: '100%', backgroundColor: '#374151', borderRadius: '9999px', height: '6px' }}>
                                 <div style={{
                                   width: `${confidenceScore}%`,
-                                  backgroundColor: '#3b82f6',
-                                  borderRadius: '9999px',
-                                  height: '6px',
-                                }} />
+                                backgroundColor: '#f3efe6',
+                                borderRadius: '9999px',
+                                height: '6px',
+                              }} />
                               </div>
                             </>
                           );
@@ -1060,7 +1061,7 @@ export function SourcesHub({ topics, projectId }: { topics: TopicOption[]; proje
                             href={sourceUrl}
                             target="_blank"
                             rel="noreferrer"
-                            className="rounded-full border border-white/[0.1] bg-white/[0.04] px-2.5 py-1 text-[11px] text-zinc-300 hover:text-white hover:bg-white/[0.08]"
+                            className="rounded-full border quorum-border-default quorum-surface px-2.5 py-1 text-[11px] quorum-text-muted hover:quorum-surface hover:quorum-text-primary"
                           >
                             {sourceUrl}
                           </a>
@@ -1069,10 +1070,10 @@ export function SourcesHub({ topics, projectId }: { topics: TopicOption[]; proje
                     )}
 
                     {cleanEvidenceSnippet(item.response_snippet) && (
-                      <p className="text-xs text-zinc-500 leading-relaxed whitespace-pre-wrap">{cleanEvidenceSnippet(item.response_snippet)}</p>
+                      <p className="whitespace-pre-wrap text-xs leading-relaxed quorum-text-muted">{cleanEvidenceSnippet(item.response_snippet)}</p>
                     )}
                     {item.rationale && (
-                      <p className="text-[11px] text-zinc-600 italic">Rationale : {item.rationale}</p>
+                      <p className="text-[11px] italic quorum-text-subtle">Rationale : {item.rationale}</p>
                     )}
                   </div>
                 </div>
