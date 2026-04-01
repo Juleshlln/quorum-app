@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import {
   ArrowRight,
-  Sparkles,
   BarChart3,
   TrendingUp,
   FileText,
@@ -14,6 +13,9 @@ import {
   Check,
   MessageCircle,
   EyeOff,
+  Eye,
+  Users,
+  BadgeEuro,
 } from 'lucide-react';
 import { QuorumLogo } from '@/components/logo';
 import { ThemeToggle } from '@/components/theme/theme-toggle';
@@ -24,6 +26,12 @@ import { ThemeToggle } from '@/components/theme/theme-toggle';
 export default function HomePage() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const navItems = [
+    { label: 'Le problème', href: '#probleme' },
+    { label: 'Solution', href: '#solution' },
+    { label: 'Fonctionnalités', href: '#features' },
+    { label: 'Tarifs', href: '#tarifs' },
+  ];
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 30);
@@ -48,12 +56,14 @@ export default function HomePage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-transparent quorum-text-primary overflow-x-hidden">
+    <div className="min-h-screen overflow-x-hidden bg-transparent quorum-text-primary">
       {/* Ambient glows */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
-        <div className="absolute -top-60 left-1/4 w-[800px] h-[800px] bg-blue-600/[0.08] rounded-full blur-[160px]" />
-        <div className="absolute top-1/2 -right-60 w-[600px] h-[600px] bg-indigo-600/[0.06] rounded-full blur-[140px]" />
-        <div className="absolute bottom-20 -left-40 w-[500px] h-[500px] bg-blue-500/[0.04] rounded-full blur-[120px]" />
+        <div className="quorum-ambient-grid absolute inset-0 opacity-[0.08]" />
+        <div className="absolute -top-52 left-[18%] h-[44rem] w-[44rem] rounded-full bg-blue-600/[0.12] blur-[190px]" />
+        <div className="absolute top-[42%] -right-44 h-[34rem] w-[34rem] rounded-full bg-indigo-500/[0.12] blur-[170px]" />
+        <div className="absolute bottom-6 -left-32 h-[28rem] w-[28rem] rounded-full bg-blue-500/[0.08] blur-[150px]" />
+        <div className="absolute inset-x-[26%] top-[8%] h-[18rem] rounded-full bg-white/[0.04] blur-[120px]" />
       </div>
 
       {/* ════════════════════════════════════
@@ -62,22 +72,21 @@ export default function HomePage() {
       <header
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
           scrolled
-            ? 'quorum-shell-panel-strong border-b quorum-border-default'
+            ? 'quorum-shell-panel-strong border-b'
             : 'bg-transparent'
         }`}
+        style={scrolled ? {
+          borderBottomColor: 'var(--quorum-shell-border)',
+        } : undefined}
       >
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="mx-auto flex max-w-[1440px] items-center justify-between px-6 py-4">
           <Link href="/" className="flex-shrink-0">
             <QuorumLogo adaptive className="h-8 w-[168px]" priority />
           </Link>
 
           {/* Desktop nav — hidden on mobile */}
-          <nav className="hidden md:flex items-center gap-8">
-            {[
-              { label: 'Fonctionnalités', href: '#features' },
-              { label: 'Tarifs', href: '#pricing' },
-              { label: 'À propos', href: '#about' },
-            ].map(({ label, href }) => (
+          <nav className="hidden items-center gap-10 md:flex">
+            {navItems.map(({ label, href }) => (
               <Link
                 key={href}
                 href={href}
@@ -89,8 +98,8 @@ export default function HomePage() {
           </nav>
 
           {/* Desktop CTAs — hidden on mobile */}
-          <div className="hidden md:flex items-center gap-4">
-            <ThemeToggle />
+          <div className="hidden items-center gap-3 md:flex">
+            <ThemeToggle className="theme-toggle--header" />
             <Link
               href="/login"
               className="text-sm quorum-text-muted hover:quorum-text-primary transition-colors duration-200"
@@ -99,15 +108,15 @@ export default function HomePage() {
             </Link>
             <Link
               href="/signup"
-              className="bg-blue-600 hover:bg-blue-500 quorum-text-primary text-sm font-semibold px-5 py-2.5 rounded-xl transition-all duration-200 hover:shadow-[0_0_28px_rgba(59,130,246,0.5)]"
+              className="quorum-btn-primary h-11 rounded-2xl px-5"
             >
-              Démarrer gratuitement
+              Demander une démo
             </Link>
           </div>
 
           {/* Hamburger — mobile only */}
           <div className="md:hidden flex items-center gap-2">
-            <ThemeToggle />
+            <ThemeToggle className="theme-toggle--header" />
             <button
               className="quorum-text-muted hover:quorum-text-primary transition-colors p-1.5"
               onClick={() => setMobileOpen(!mobileOpen)}
@@ -120,13 +129,8 @@ export default function HomePage() {
 
         {/* Mobile menu */}
         {mobileOpen && (
-          <div className="md:hidden quorum-surface-strong border-b quorum-border-default px-6 py-5 space-y-1">
-
-            {[
-              { label: 'Fonctionnalités', href: '#features' },
-              { label: 'Tarifs', href: '#pricing' },
-              { label: 'À propos', href: '#about' },
-            ].map(({ label, href }) => (
+          <div className="md:hidden quorum-shell-panel-strong border-b px-6 py-5 space-y-1" style={{ borderBottomColor: 'var(--quorum-shell-border)' }}>
+            {navItems.map(({ label, href }) => (
               <Link
                 key={href}
                 href={href}
@@ -146,10 +150,10 @@ export default function HomePage() {
               </Link>
               <Link
                 href="/signup"
-                className="block text-center bg-blue-600 quorum-text-primary text-sm font-semibold px-5 py-3 rounded-xl hover:bg-blue-500 transition-colors"
+                className="quorum-btn-primary block h-12 rounded-2xl px-5 py-3 text-center text-sm"
                 onClick={() => setMobileOpen(false)}
               >
-                Démarrer gratuitement
+                Demander une démo
               </Link>
             </div>
           </div>
@@ -159,125 +163,170 @@ export default function HomePage() {
       {/* ════════════════════════════════════
           2. HERO
       ════════════════════════════════════ */}
-      <section className="relative min-h-screen flex flex-col items-center justify-center px-6 pt-32 pb-20 text-center">
-        <div className="max-w-5xl mx-auto w-full">
-          {/* Badge */}
-          <div
-            data-lp-animate
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/[0.25] mb-8 delay-0"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
-            <span className="text-xs text-blue-300 font-medium tracking-wide">
-              Nouveau — Tracking IA pour les marques B2B
-            </span>
+      <section className="relative px-6 pb-24 pt-32 md:pt-36">
+        <div className="mx-auto w-full max-w-[1280px]">
+          <div className="quorum-dashboard-hero px-6 py-12 md:px-10 md:py-14 lg:px-16 lg:py-16">
+            <div className="relative z-[1] mx-auto max-w-5xl text-center">
+              <div
+                data-lp-animate
+                className="quorum-soft-badge mb-8 delay-0"
+              >
+                <span>
+                  Generative Engine Optimization
+                </span>
+              </div>
+
+              <h1
+                data-lp-animate
+                className="mb-6 text-5xl font-black leading-[0.94] tracking-[-0.065em] delay-100 md:text-7xl lg:text-[5.4rem]"
+              >
+                Savez-vous ce que l&apos;IA
+                <br className="hidden sm:block" />
+                <span className="quorum-gradient-text">
+                  {' '}dit de votre marque&nbsp;?
+                </span>
+              </h1>
+
+              <p
+                data-lp-animate
+                className="mx-auto mb-10 max-w-3xl text-lg leading-relaxed quorum-text-muted delay-150 md:text-xl"
+              >
+                58 % des recherches se terminent sans un seul clic. Les réponses IA
+                remplacent les résultats classiques. Quorum vous montre si votre marque
+                est citée et comment reprendre le contrôle.
+              </p>
+
+              <div
+                data-lp-animate
+                className="flex flex-wrap items-center justify-center gap-3 delay-200"
+              >
+                <Link
+                  href="/signup"
+                  className="quorum-btn-primary h-14 rounded-2xl px-8 text-lg"
+                >
+                  Demander une démo
+                  <ArrowRight className="w-5 h-5" />
+                </Link>
+                <Link
+                  href="#solution"
+                  className="quorum-btn-secondary h-14 rounded-2xl px-8 text-lg"
+                >
+                  Comment ça marche
+                </Link>
+              </div>
+            </div>
           </div>
-
-          {/* H1 */}
-          <h1
-            data-lp-animate
-            className="text-5xl md:text-7xl font-black leading-tight tracking-tight mb-6 delay-100"
-          >
-            Votre marque apparaît-elle quand
-            <br className="hidden sm:block" />
-            <span className="text-blue-500">
-              {' '}vos clients interrogent l&apos;IA&nbsp;?
-            </span>
-          </h1>
-
-          {/* Subtitle */}
-          <p
-            data-lp-animate
-            className="text-lg md:text-xl quorum-text-muted max-w-2xl mx-auto leading-relaxed mb-10 delay-150"
-          >
-            Quorum mesure votre visibilité dans ChatGPT, Claude et Perplexity.
-            <br className="hidden md:block" />
-            Suivez vos concurrents. Optimisez votre présence IA.
-          </p>
-
-          {/* CTAs — même taille, même hauteur */}
-          <div
-            data-lp-animate
-            className="flex flex-wrap gap-4 justify-center items-center mb-10 delay-200"
-          >
-            <Link
-              href="/signup"
-              className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 quorum-text-primary px-8 py-4 rounded-xl text-lg font-semibold transition-all duration-200 hover:shadow-[0_0_44px_rgba(59,130,246,0.55)]"
-            >
-              Démarrer gratuitement
-              <ArrowRight className="w-5 h-5" />
-            </Link>
-            <Link
-              href="/dashboard"
-              className="flex items-center justify-center px-8 py-4 rounded-xl text-lg font-semibold quorum-text-primary border quorum-border-strong hover:quorum-surface transition-all duration-200"
-            >
-              Voir la démo
-            </Link>
-          </div>
-
-          {/* Social proof */}
-          <p data-lp-animate className="text-sm quorum-text-subtle delay-300">
-            Déjà utilisé par des équipes marketing B2B
-          </p>
-        </div>
-
-        {/* Dashboard mockup avec frame glow */}
-        <div
-          data-lp-animate
-          className="max-w-5xl mx-auto w-full mt-20 rounded-2xl border quorum-border-default quorum-panel-soft overflow-hidden shadow-2xl shadow-blue-500/10 p-1"
-          style={{ transitionDelay: '400ms' }}
-        >
-          <DashboardMockup />
         </div>
       </section>
 
       {/* ════════════════════════════════════
-          3. METRICS BAR
+          3. LE PROBLEME
       ════════════════════════════════════ */}
-      <section className="py-14 px-6 quorum-surface-strong border-y quorum-border-default">
-        <div
-          data-lp-animate
-          className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center"
-        >
-          <MetricStat value="500+" label="Prompts analysés" />
-          <MetricStat value="10+" label="Modèles IA trackés" />
-          <MetricStat value="5 min" label="Setup initial" />
-          <MetricStat value="24 h" label="Premiers résultats" />
-        </div>
-      </section>
-
-      {/* ════════════════════════════════════
-          4. PAIN POINTS
-      ════════════════════════════════════ */}
-      <section className="py-24 px-6 border-t quorum-border-default">
-        <div className="max-w-6xl mx-auto">
-          <div data-lp-animate className="text-center mb-16">
-            <h2 className="text-3xl md:text-[2.6rem] font-bold tracking-tight leading-tight mb-4">
-              L&apos;IA change comment vos clients vous trouvent
+      <section id="probleme" className="px-6 py-24 border-t quorum-border-default quorum-surface-strong">
+        <div className="mx-auto max-w-[1440px]">
+          <div data-lp-animate className="mb-16">
+            <h2 className="mb-5 text-3xl font-black leading-tight tracking-[-0.05em] md:text-[3.2rem]">
+              L&apos;IA a changé les règles du jeu
             </h2>
-            <p className="quorum-text-muted max-w-xl mx-auto">
-              Les comportements de recherche évoluent. Êtes-vous visible là où ça compte&nbsp;?
+            <p className="max-w-xl text-lg quorum-text-muted">
+              Vos clients ne cherchent plus comme avant. Votre stratégie de visibilité
+              doit évoluer.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid gap-6 md:grid-cols-3">
             <PainCard
               icon={<MessageCircle className="w-5 h-5 text-blue-400" />}
-              title="Vos clients demandent à ChatGPT, pas à Google"
-              description="40 % des recherches B2B passent maintenant par des assistants IA. Google n'est plus le seul canal à optimiser."
+              title="“Quel est le meilleur fournisseur pour…”"
+              description="Vos prospects posent cette question à ChatGPT, Gemini ou Perplexity. Si l&apos;IA ne vous cite pas, vous n&apos;existez pas dans ce nouveau canal."
               delay={0}
             />
             <PainCard
               icon={<TrendingUp className="w-5 h-5 text-blue-400" />}
-              title="Vos concurrents sont cités, vous non"
-              description="Pendant que vous optimisez votre SEO, vos concurrents capturent les recommandations des IA génératives."
+              title="Vos concurrents captent les recommandations IA"
+              description="Pendant que vous optimisez votre SEO classique, vos rivaux sont déjà cités en première position dans les réponses génératives."
               delay={100}
             />
             <PainCard
               icon={<EyeOff className="w-5 h-5 text-blue-400" />}
-              title="Vous ne savez pas ce que l'IA dit de vous"
-              description="Sans monitoring, vous pilotez à l'aveugle. L'IA peut décrire votre marque très différemment de ce que vous pensez."
+              title="Vous pilotez à l&apos;aveugle"
+              description="Aucun outil ne vous dit comment l&apos;IA décrit votre marque, ni quels leviers actionner pour améliorer votre position."
               delay={200}
             />
+          </div>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════
+          4. IMPACT
+      ════════════════════════════════════ */}
+      <section className="px-6 py-24 border-t quorum-border-default">
+        <div className="mx-auto max-w-[1440px]">
+          <div data-lp-animate className="mb-16 text-center">
+            <h2 className="mb-5 text-3xl font-black leading-tight tracking-[-0.05em] md:text-[3.2rem]">
+              Suivez l&apos;impact réel de l&apos;IA sur votre business
+            </h2>
+            <p className="mx-auto max-w-3xl text-lg quorum-text-muted">
+              Les marques citées par les IA reçoivent un trafic qui convertit jusqu&apos;à 4× mieux.
+              Quorum mesure cette corrélation pour votre entreprise, du score de visibilité IA
+              jusqu&apos;à son impact sur votre trafic et votre chiffre d&apos;affaires.
+            </p>
+          </div>
+
+          <div className="relative mx-auto mb-16 grid max-w-5xl gap-10 md:grid-cols-3">
+            <div
+              className="absolute top-10 hidden border-t border-dashed quorum-border-default md:block"
+              style={{ left: 'calc(16.7% + 2.5rem)', right: 'calc(16.7% + 2.5rem)' }}
+              aria-hidden="true"
+            />
+            <ImpactStep
+              icon={<Eye className="h-7 w-7 text-blue-300" />}
+              title="Score de visibilité"
+              description="Quorum mesure votre taux d&apos;apparition dans chaque moteur IA, prompt par prompt."
+              delay={0}
+            />
+            <ImpactStep
+              icon={<Users className="h-7 w-7 text-blue-300" />}
+              title="Trafic attribué à l&apos;IA"
+              description="Identifiez le volume de visiteurs qui arrivent sur votre site grâce aux recommandations des IA."
+              delay={120}
+            />
+            <ImpactStep
+              icon={<BadgeEuro className="h-7 w-7 text-blue-300" />}
+              title="Revenue attribué"
+              description="Mesurez le chiffre d&apos;affaires généré par le canal IA et prouvez le ROI de votre stratégie GEO."
+              delay={240}
+            />
+          </div>
+
+          <div className="mx-auto grid max-w-5xl gap-6 md:grid-cols-3">
+            <ProofStat
+              value="4.4×"
+              label="taux de conversion des visiteurs venant des IA vs SEO classique"
+              source="Source : Semrush 2026"
+            />
+            <ProofStat
+              value="+68 %"
+              label="de temps passé sur les sites par les visiteurs provenant des IA"
+              source="Source : SE Ranking 2026"
+            />
+            <ProofStat
+              value="2×"
+              label="plus de clics sortants depuis ChatGPT que depuis une page Google"
+              source="Source : Semrush 2026"
+            />
+          </div>
+
+          <div data-lp-animate className="mt-14 text-center">
+            <p className="mx-auto mb-8 max-w-3xl text-lg quorum-text-muted">
+              Contrairement aux outils concurrents qui s&apos;arrêtent au monitoring, Quorum trace
+              le chemin complet : visibilité IA, trafic sur votre site, conversions, chiffre d&apos;affaires.
+              Vous ne pilotez plus un score, vous pilotez un canal d&apos;acquisition.
+            </p>
+            <Link href="/signup" className="quorum-btn-primary inline-flex h-14 rounded-2xl px-8 text-base">
+              Découvrir le suivi d&apos;impact
+              <ArrowRight className="w-5 h-5" />
+            </Link>
           </div>
         </div>
       </section>
@@ -286,13 +335,13 @@ export default function HomePage() {
           5. FEATURES (alternating)
       ════════════════════════════════════ */}
       <section id="features" className="py-24 px-6 border-t quorum-border-default quorum-surface-strong">
-        <div className="max-w-6xl mx-auto">
-          <div data-lp-animate className="text-center mb-20">
-            <h2 className="text-3xl md:text-[2.6rem] font-bold tracking-tight leading-tight mb-4">
+        <div className="mx-auto max-w-[1440px]">
+          <div data-lp-animate className="mb-20">
+            <h2 className="mb-4 text-3xl font-black leading-tight tracking-[-0.05em] md:text-[3rem]">
               Quorum vous donne la visibilité complète
             </h2>
-            <p className="quorum-text-muted max-w-xl mx-auto">
-              Tout ce qu&apos;il faut pour piloter votre présence IA au quotidien
+            <p className="max-w-xl text-lg quorum-text-muted">
+              Tout ce qu&apos;il faut pour piloter votre présence IA au quotidien.
             </p>
           </div>
 
@@ -332,15 +381,17 @@ export default function HomePage() {
       </section>
 
       {/* ════════════════════════════════════
-          6. HOW IT WORKS
+          6. SOLUTION
       ════════════════════════════════════ */}
-      <section id="how-it-works" className="py-24 px-6 border-t quorum-border-default">
-        <div className="max-w-5xl mx-auto">
+      <section id="solution" className="px-6 py-24 border-t quorum-border-default">
+        <div className="mx-auto max-w-[1320px]">
           <div data-lp-animate className="text-center mb-20">
-            <h2 className="text-3xl md:text-[2.6rem] font-bold tracking-tight leading-tight mb-4">
-              Opérationnel en 3 étapes
+            <h2 className="mb-4 text-3xl font-black leading-tight tracking-[-0.05em] md:text-[3rem]">
+              Quorum, votre copilote GEO
             </h2>
-            <p className="quorum-text-muted">Setup en 5 minutes, résultats dès le lendemain matin</p>
+            <p className="mx-auto max-w-xl text-lg quorum-text-muted">
+              Mesurez, comparez et optimisez votre visibilité dans les moteurs IA, en continu.
+            </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-10 relative">
@@ -352,20 +403,128 @@ export default function HomePage() {
             />
             <HowStep
               number={1}
-              title="Configurez vos prompts"
-              description="Ajoutez les questions que posent vos clients à l'IA — ciblées sur votre secteur et vos cas d'usage B2B."
+              title="Monitoring quotidien"
+              description="Quorum interroge ChatGPT, Claude, Gemini, Perplexity, DeepSeek, Mistral et Llama chaque jour avec vos prompts métier."
               delay={0}
             />
             <HowStep
               number={2}
-              title="Quorum analyse"
-              description="Interrogation quotidienne automatique de ChatGPT, Claude et Perplexity. Aucune intervention de votre part."
+              title="Benchmark concurrentiel"
+              description="Comparez votre visibilité IA à celle de vos concurrents. Identifiez les prompts où vous perdez et ceux où vous dominez."
               delay={150}
             />
             <HowStep
               number={3}
-              title="Pilotez votre visibilité"
-              description="Dashboard temps réel, alertes e-mail et exports PDF. Agissez vite sur ce qui compte vraiment."
+              title="Actions prescriptives"
+              description="Recevez des recommandations concrètes pour améliorer votre positionnement IA, priorisées par impact sur votre pipeline."
+              delay={300}
+            />
+          </div>
+
+          <div data-lp-animate className="mt-16 text-center">
+            <Link href="/signup" className="quorum-btn-primary inline-flex h-14 rounded-2xl px-8 text-lg">
+              Voir Quorum en action
+              <ArrowRight className="w-5 h-5" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════
+          7. STATS
+      ════════════════════════════════════ */}
+      <section className="border-y quorum-border-default px-6 py-16">
+        <div
+          data-lp-animate
+          className="mx-auto grid max-w-[1440px] grid-cols-2 gap-10 text-center md:grid-cols-4"
+        >
+          <MetricStat value="7+" label="Moteurs IA couverts" />
+          <MetricStat value="58 %" label="De recherches sans clic" />
+          <MetricStat value="80 %" label="Des URLs IA hors top 100 Google" />
+          <MetricStat value="500+" label="Prompts analysables" />
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════
+          8. PRICING
+      ════════════════════════════════════ */}
+      <section id="tarifs" className="px-6 py-24 quorum-surface-strong">
+        <div className="mx-auto max-w-[1440px]">
+          <div data-lp-animate className="mb-16">
+            <h2 className="mb-4 text-3xl font-black leading-tight tracking-[-0.05em] md:text-[3rem]">
+              Des plans adaptés à chaque étape
+            </h2>
+            <p className="text-lg quorum-text-muted">
+              De la première mesure au déploiement multi-marques.
+            </p>
+          </div>
+
+          <div className="mx-auto grid max-w-6xl items-start gap-6 md:grid-cols-2 xl:grid-cols-4">
+            <PricingCard
+              name="Starter"
+              price="89€"
+              period="/mois"
+              description="Pour les équipes qui démarrent leur veille IA."
+              features={[
+                '15 prompts',
+                '2 modèles IA au choix',
+                'Tracking quotidien',
+                '1 marque',
+                'Utilisateurs illimités',
+              ]}
+              ctaLabel="Demander une démo"
+              ctaHref="/signup"
+              delay={0}
+            />
+            <PricingCard
+              name="Growth"
+              price="229€"
+              period="/mois"
+              description="Pour les équipes qui pilotent activement leur visibilité IA."
+              features={[
+                '50 prompts',
+                '4 modèles IA au choix',
+                'Tracking quotidien',
+                '2 marques',
+                'Utilisateurs illimités',
+              ]}
+              ctaLabel="Demander une démo"
+              ctaHref="/signup"
+              highlighted
+              badge="Recommandé"
+              delay={100}
+            />
+            <PricingCard
+              name="Pro"
+              price="449€"
+              period="/mois"
+              description="Pour les équipes multi-marques avec un reporting avancé."
+              features={[
+                '150 prompts',
+                '4 modèles IA au choix',
+                'Tracking quotidien',
+                '3 marques',
+                'Support prioritaire',
+              ]}
+              ctaLabel="Demander une démo"
+              ctaHref="/signup"
+              delay={200}
+            />
+            <PricingCard
+              name="Enterprise"
+              price="Sur devis"
+              description="Pour les organisations qui ont besoin d&apos;un déploiement sur mesure."
+              features={[
+                'Prompts illimités',
+                'Marques illimitées',
+                'Tous les modèles IA',
+                'Accès API avancé',
+                'SSO / SAML',
+                'SLA garanti',
+                'Onboarding personnalisé',
+              ]}
+              ctaLabel="Nous contacter"
+              ctaHref="/signup"
               delay={300}
             />
           </div>
@@ -373,99 +532,28 @@ export default function HomePage() {
       </section>
 
       {/* ════════════════════════════════════
-          7. PRICING
+          9. FINAL CTA
       ════════════════════════════════════ */}
-      <section id="pricing" className="py-24 px-6 border-t quorum-border-default quorum-surface-strong">
-        <div className="max-w-6xl mx-auto">
-          <div data-lp-animate className="text-center mb-16">
-            <h2 className="text-3xl md:text-[2.6rem] font-bold tracking-tight leading-tight mb-4">
-              Simple et transparent
-            </h2>
-            <p className="quorum-text-muted">Commencez gratuitement, évoluez selon vos besoins</p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto items-start">
-            <PricingCard
-              name="Starter"
-              price="Gratuit"
-              description="Pour découvrir Quorum"
-              features={[
-                '5 prompts',
-                '1 marque suivie',
-                'Rapport hebdomadaire',
-                'ChatGPT uniquement',
-              ]}
-              ctaLabel="Commencer gratuitement"
-              ctaHref="/signup"
-              delay={0}
-            />
-            <PricingCard
-              name="Pro"
-              price="€99"
-              period="/mois"
-              description="Pour les équipes marketing ambitieuses"
-              features={[
-                '25 prompts',
-                '5 concurrents trackés',
-                'Rapport quotidien + PDF',
-                'Export CSV',
-                'ChatGPT, Claude & Perplexity',
-                'Alertes par e-mail',
-              ]}
-              ctaLabel="Démarrer l'essai"
-              ctaHref="/signup"
-              highlighted
-              badge="Populaire"
-              delay={100}
-            />
-            <PricingCard
-              name="Enterprise"
-              price="Sur devis"
-              description="Pour les grandes organisations"
-              features={[
-                'Prompts illimités',
-                'Multi-marques',
-                'Accès API',
-                'Support dédié',
-                'SSO / SAML',
-                'SLA garanti',
-              ]}
-              ctaLabel="Nous contacter"
-              ctaHref="/contact"
-              delay={200}
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* ════════════════════════════════════
-          8. FINAL CTA
-      ════════════════════════════════════ */}
-      <section className="py-32 px-6 border-t quorum-border-default">
+      <section className="px-6 py-28 border-t quorum-border-default">
         <div data-lp-animate className="max-w-4xl mx-auto">
-          <div className="relative rounded-3xl overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-700" />
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_20%_20%,rgba(255,255,255,0.15),transparent)]" />
-
-            <div className="relative px-8 py-24 text-center">
-              <h2 className="text-3xl md:text-5xl font-bold tracking-tight quorum-text-primary mb-5 leading-tight">
-                Commencez à tracker votre visibilité IA
+          <div className="quorum-dashboard-hero relative overflow-hidden rounded-[32px]">
+            <div className="relative z-[1] px-8 py-24 text-center">
+              <h2 className="mb-5 text-3xl font-black leading-tight tracking-[-0.06em] quorum-text-primary md:text-5xl">
+                Reprenez le contrôle de votre visibilité
                 <br className="hidden sm:block" />
-                dès aujourd&apos;hui
+                dans l&apos;IA
               </h2>
-              <p className="text-blue-100/80 text-lg mb-10 max-w-lg mx-auto">
-                Setup en 5 minutes. Premiers résultats dès demain matin.
+              <p className="mx-auto mb-10 max-w-2xl text-lg text-blue-100/80">
+                Réservez 30 minutes avec notre équipe. Nous vous montrons exactement
+                où votre marque se situe aujourd&apos;hui.
               </p>
               <Link
                 href="/signup"
-                className="group inline-flex items-center gap-2 bg-white text-blue-700 font-bold px-10 py-4 rounded-xl text-lg shadow-lg shadow-black/20 hover:bg-blue-50 transition-all duration-200"
+                className="quorum-btn-primary group inline-flex h-14 items-center gap-2 rounded-2xl px-10 text-lg font-bold"
               >
-                Créer mon compte gratuit
+                Planifier ma démo
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-200" />
               </Link>
-              <p className="mt-5 text-sm text-blue-200/50">
-                Aucune carte bancaire requise
-              </p>
             </div>
           </div>
         </div>
@@ -480,14 +568,14 @@ export default function HomePage() {
             <Link href="/" className="inline-block mb-2.5">
               <QuorumLogo adaptive className="h-7 w-[150px]" />
             </Link>
-            <p className="text-sm quorum-text-subtle">Visibilité IA pour les marques B2B</p>
+            <p className="text-sm quorum-text-subtle">Votre copilote GEO pour l&apos;IA générative</p>
           </div>
 
           <nav className="flex flex-wrap gap-x-8 gap-y-2 text-sm quorum-text-subtle">
+            <Link href="#probleme" className="hover:quorum-text-primary transition-colors">Le problème</Link>
+            <Link href="#solution" className="hover:quorum-text-primary transition-colors">Solution</Link>
             <Link href="#features" className="hover:quorum-text-primary transition-colors">Fonctionnalités</Link>
-            <Link href="#pricing" className="hover:quorum-text-primary transition-colors">Tarifs</Link>
-            <Link href="/blog" className="hover:quorum-text-primary transition-colors">Blog</Link>
-            <Link href="/contact" className="hover:quorum-text-primary transition-colors">Contact</Link>
+            <Link href="#tarifs" className="hover:quorum-text-primary transition-colors">Tarifs</Link>
           </nav>
 
           <p className="text-sm quorum-text-soft">© 2026 Quorum. Tous droits réservés.</p>
@@ -504,8 +592,8 @@ export default function HomePage() {
 function MetricStat({ value, label }: { value: string; label: string }) {
   return (
     <div>
-      <div className="text-3xl md:text-4xl font-bold quorum-text-primary mb-1.5 tabular-nums">{value}</div>
-      <div className="text-sm quorum-text-subtle">{label}</div>
+      <div className="mb-1.5 text-3xl font-black tabular-nums quorum-text-primary md:text-4xl">{value}</div>
+      <div className="text-sm text-blue-100/62">{label}</div>
     </div>
   );
 }
@@ -525,13 +613,57 @@ function PainCard({
     <div
       data-lp-animate
       style={{ transitionDelay: `${delay}ms` }}
-      className="quorum-panel-soft p-8 hover:quorum-border-strong transition-colors duration-300"
+      className="quorum-panel quorum-panel-hoverable p-8"
     >
-      <div className="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/20 flex items-center justify-center mb-5">
+      <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-2xl border border-blue-400/20 bg-blue-500/10 shadow-[0_12px_32px_rgba(37,99,235,0.12)]">
         {icon}
       </div>
       <h3 className="text-base font-semibold quorum-text-primary mb-2.5 leading-snug">{title}</h3>
       <p className="text-sm quorum-text-muted leading-relaxed">{description}</p>
+    </div>
+  );
+}
+
+function ImpactStep({
+  icon,
+  title,
+  description,
+  delay,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  delay: number;
+}) {
+  return (
+    <div
+      data-lp-animate
+      style={{ transitionDelay: `${delay}ms` }}
+      className="relative px-4 py-4 text-center"
+    >
+      <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full border border-blue-400/18 bg-blue-500/8 shadow-[0_20px_60px_rgba(37,99,235,0.14)]">
+        {icon}
+      </div>
+      <h3 className="mb-2 text-lg font-semibold quorum-text-primary">{title}</h3>
+      <p className="mx-auto max-w-xs text-sm leading-relaxed quorum-text-muted">{description}</p>
+    </div>
+  );
+}
+
+function ProofStat({
+  value,
+  label,
+  source,
+}: {
+  value: string;
+  label: string;
+  source: string;
+}) {
+  return (
+    <div data-lp-animate className="quorum-panel quorum-panel-hoverable p-6 text-center">
+      <div className="mb-2 text-3xl font-black tabular-nums quorum-text-primary">{value}</div>
+      <p className="text-sm leading-relaxed quorum-text-muted">{label}</p>
+      <p className="mt-2 text-xs quorum-text-subtle">{source}</p>
     </div>
   );
 }
@@ -559,13 +691,13 @@ function FeatureRow({
       }`}
     >
       <div className={reverse ? 'lg:order-2' : ''}>
-        <span className="text-xs font-bold tracking-widest text-blue-400 uppercase mb-3 block">
+        <span className="quorum-soft-badge mb-4">
           {eyebrow}
         </span>
-        <h3 className="text-3xl font-bold quorum-text-primary leading-snug mb-4">{title}</h3>
+        <h3 className="mb-4 text-3xl font-black leading-snug tracking-[-0.05em] quorum-text-primary">{title}</h3>
         <p className="quorum-text-muted text-lg leading-relaxed">{description}</p>
       </div>
-      <div className={`${reverse ? 'lg:order-1' : ''} quorum-panel-soft p-4 shadow-xl shadow-black/20`}>
+      <div className={`${reverse ? 'lg:order-1' : ''} quorum-panel-strong quorum-panel-hoverable rounded-[30px] p-5`}>
         {visual}
       </div>
     </div>
@@ -584,12 +716,12 @@ function HowStep({
   delay: number;
 }) {
   return (
-    <div data-lp-animate style={{ transitionDelay: `${delay}ms` }} className="text-center relative">
-      <div className="w-14 h-14 mx-auto rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center mb-6">
-        <span className="text-xl font-bold text-blue-400">{number}</span>
+    <div data-lp-animate style={{ transitionDelay: `${delay}ms` }} className="relative text-center">
+      <div className="mx-auto mb-7 flex h-16 w-16 items-center justify-center rounded-full border-2 border-blue-300/18 bg-white/[0.02]">
+        <span className="text-2xl font-black text-blue-200">{number}</span>
       </div>
-      <h3 className="text-lg font-semibold quorum-text-primary mb-3">{title}</h3>
-      <p className="text-sm quorum-text-muted leading-relaxed max-w-xs mx-auto">{description}</p>
+      <h3 className="mb-3 text-lg font-semibold quorum-text-primary">{title}</h3>
+      <p className="mx-auto max-w-xs text-sm leading-relaxed quorum-text-muted">{description}</p>
     </div>
   );
 }
@@ -621,14 +753,14 @@ function PricingCard({
     /* outer div carries the scroll animation; inner div carries the scale */
     <div data-lp-animate style={{ transitionDelay: `${delay}ms` }}>
       <div
-        className={`relative flex flex-col h-full p-8 rounded-2xl transition-all duration-300 ${
+        className={`relative flex h-full flex-col rounded-[28px] p-8 transition-all duration-300 ${
           highlighted
-            ? 'bg-gradient-to-b from-blue-950/80 to-zinc-900/80 border-2 border-blue-500/50 shadow-[0_0_60px_rgba(59,130,246,0.15)] scale-105'
-            : 'quorum-panel-soft hover:quorum-border-strong'
+            ? 'quorum-dashboard-hero scale-[1.03]'
+            : 'quorum-panel quorum-panel-hoverable'
         }`}
       >
         {badge && (
-          <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-blue-600 quorum-text-primary text-xs font-bold rounded-full shadow-[0_0_20px_rgba(59,130,246,0.5)] whitespace-nowrap">
+          <div className="absolute -top-4 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-blue-300/20 bg-blue-500 px-4 py-1 text-xs font-bold quorum-text-primary shadow-[0_0_20px_rgba(59,130,246,0.5)]">
             {badge}
           </div>
         )}
@@ -654,10 +786,10 @@ function PricingCard({
         </ul>
         <Link
           href={ctaHref}
-          className={`mt-auto block w-full text-center py-3 rounded-xl font-medium text-sm transition-all duration-200 ${
+          className={`mt-auto block w-full rounded-2xl py-3 text-center text-sm font-medium transition-all duration-200 ${
             highlighted
-              ? 'bg-blue-600 quorum-text-primary hover:bg-blue-500 hover:shadow-[0_0_30px_rgba(59,130,246,0.45)]'
-              : 'border quorum-border-strong quorum-text-primary hover:quorum-surface'
+              ? 'quorum-btn-primary'
+              : 'quorum-btn-secondary'
           }`}
         >
           {ctaLabel}
@@ -676,11 +808,11 @@ function DashboardMockup() {
   const competitors = [45, 48, 47, 50, 48, 50, 52, 50, 51, 54, 53, 55];
 
   return (
-    <div className="relative rounded-xl border quorum-border-default quorum-surface-strong overflow-hidden">
+    <div className="relative overflow-hidden rounded-[24px] border quorum-border-default quorum-surface-strong">
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-500/40 to-transparent" />
 
       {/* Browser chrome */}
-      <div className="flex items-center gap-2 px-4 py-3 border-b quorum-border-default bg-[#0D0D14]">
+      <div className="flex items-center gap-2 border-b quorum-border-default bg-[#090d16] px-4 py-3">
         <div className="flex gap-1.5">
           <div className="w-2.5 h-2.5 rounded-full bg-red-500/70" />
           <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/70" />
@@ -702,7 +834,7 @@ function DashboardMockup() {
             { label: 'Prompts actifs', value: '18', badge: 'stable', good: null },
             { label: 'Concurrents', value: '5', badge: '', good: null },
           ].map((kpi, i) => (
-            <div key={i} className="bg-transparent rounded-xl border quorum-border-default p-3.5">
+            <div key={i} className="rounded-2xl border quorum-border-default bg-[rgba(8,13,24,0.68)] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
               <p className="text-xs quorum-text-subtle mb-1.5">{kpi.label}</p>
               <p className="text-xl font-bold quorum-text-primary tabular-nums">{kpi.value}</p>
               {kpi.badge && (
@@ -715,7 +847,7 @@ function DashboardMockup() {
         </div>
 
         {/* Chart */}
-        <div className="bg-transparent rounded-xl border quorum-border-default p-4 md:p-5">
+        <div className="rounded-[24px] border quorum-border-default bg-[rgba(8,13,24,0.72)] p-4 md:p-5">
           <div className="flex items-center justify-between mb-4">
             <p className="text-sm font-medium quorum-text-primary">Visibilité vs Concurrents — 30 jours</p>
             <span className="text-xs quorum-text-subtle">Mise à jour il y a 2 h</span>
@@ -772,11 +904,11 @@ function TopicsCard() {
     { label: 'Mobilier ergonomique', score: 71, trend: '+11 %', up: true },
   ];
   return (
-    <div className="bg-transparent rounded-xl p-5">
+    <div className="rounded-xl bg-transparent p-5">
       <div className="flex items-center gap-2 mb-5">
         <BarChart3 className="w-4 h-4 text-blue-400" />
         <span className="text-sm font-medium quorum-text-primary">Topics actifs</span>
-        <span className="ml-auto text-xs text-green-400 bg-green-400/10 px-2.5 py-0.5 rounded-full">Live</span>
+        <span className="ml-auto rounded-full bg-green-400/10 px-2.5 py-0.5 text-xs text-green-400">Live</span>
       </div>
       <div className="space-y-4">
         {topics.map((t, i) => (
@@ -810,7 +942,7 @@ function CompetitiveChart() {
     { name: 'Concurrent D', score: 22, color: '#C4B5FD' },
   ];
   return (
-    <div className="bg-transparent rounded-xl p-5">
+    <div className="rounded-xl bg-transparent p-5">
       <div className="flex items-center gap-2 mb-5">
         <TrendingUp className="w-4 h-4 text-indigo-400" />
         <span className="text-sm font-medium quorum-text-primary">Competitive Snapshot</span>
@@ -840,13 +972,13 @@ function CompetitiveChart() {
 
 function PDFPreview() {
   return (
-    <div className="bg-transparent rounded-xl p-5">
+    <div className="rounded-xl bg-transparent p-5">
       <div className="flex items-center gap-2 mb-5">
         <FileText className="w-4 h-4 text-green-400" />
         <span className="text-sm font-medium quorum-text-primary">Rapport Mensuel — Manutan</span>
         <span className="ml-auto text-xs quorum-text-subtle quorum-surface-strong px-2 py-0.5 rounded font-mono">PDF</span>
       </div>
-      <div className="quorum-surface rounded-xl border quorum-border-default p-4 space-y-4">
+      <div className="quorum-surface rounded-[22px] border quorum-border-default p-4 space-y-4">
         <div className="flex items-center justify-between">
           <span className="text-xs quorum-text-subtle">Score global</span>
           <span className="text-2xl font-bold quorum-text-primary tabular-nums">74 / 100</span>
@@ -865,7 +997,7 @@ function PDFPreview() {
             </div>
           ))}
         </div>
-        <button className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border quorum-border-default text-xs quorum-text-muted hover:quorum-text-primary hover:quorum-border-strong transition-colors">
+        <button className="quorum-btn-secondary w-full rounded-xl py-2.5 text-xs">
           <FileText className="w-3.5 h-3.5" />
           Télécharger le PDF
         </button>
@@ -876,7 +1008,7 @@ function PDFPreview() {
 
 function InsightsCard() {
   return (
-    <div className="bg-transparent rounded-xl p-5">
+    <div className="rounded-xl bg-transparent p-5">
       <div className="flex items-center gap-2 mb-5">
         <Zap className="w-4 h-4 text-yellow-400" />
         <span className="text-sm font-medium quorum-text-primary">Pourquoi vous gagnez / perdez</span>
