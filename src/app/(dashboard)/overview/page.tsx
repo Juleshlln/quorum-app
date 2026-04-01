@@ -307,7 +307,7 @@ export default async function OverviewPage() {
   // --- Previous 7d rank (for KPI trend) ---
   const brandMentions7 = mentions7;
   const brandMentionsPrev7 = mentionsPrev7;
-  const competitorMentions7 = competitorNames.map((name: string) => {
+  const competitorMentions7: Array<{ name: string; m7: number; mPrev7: number }> = competitorNames.map((name: string) => {
     let m7 = 0;
     let mPrev7 = 0;
     for (const dr of dailyRows) {
