@@ -17,11 +17,9 @@ CREATE TABLE IF NOT EXISTS public.analyses (
     error_message TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
-
 CREATE INDEX IF NOT EXISTS idx_analyses_project_id ON public.analyses(project_id);
 CREATE INDEX IF NOT EXISTS idx_analyses_status ON public.analyses(status);
 CREATE INDEX IF NOT EXISTS idx_analyses_created_at ON public.analyses(created_at DESC);
-
 -- ============================================
 -- ANALYSIS ITEMS (raw AI responses)
 -- ============================================
@@ -40,9 +38,7 @@ CREATE TABLE IF NOT EXISTS public.analysis_items (
     response_time_ms INTEGER,
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
-
 CREATE INDEX IF NOT EXISTS idx_analysis_items_analysis_id ON public.analysis_items(analysis_id);
-
 -- ============================================
 -- MODULE RESULTS
 -- ============================================
@@ -55,17 +51,14 @@ CREATE TABLE IF NOT EXISTS public.analysis_module_results (
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     UNIQUE (analysis_id, module_key)
 );
-
 CREATE INDEX IF NOT EXISTS idx_analysis_module_results_analysis_id
   ON public.analysis_module_results(analysis_id);
-
 -- ============================================
 -- RLS
 -- ============================================
 ALTER TABLE public.analyses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.analysis_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.analysis_module_results ENABLE ROW LEVEL SECURITY;
-
 -- Analyses: access through project ownership
 CREATE POLICY "Users can view analyses of own projects" ON public.analyses
     FOR SELECT USING (
@@ -75,7 +68,6 @@ CREATE POLICY "Users can view analyses of own projects" ON public.analyses
             AND projects.user_id = auth.uid()
         )
     );
-
 CREATE POLICY "Users can insert analyses to own projects" ON public.analyses
     FOR INSERT WITH CHECK (
         EXISTS (
@@ -84,7 +76,6 @@ CREATE POLICY "Users can insert analyses to own projects" ON public.analyses
             AND projects.user_id = auth.uid()
         )
     );
-
 CREATE POLICY "Users can update analyses of own projects" ON public.analyses
     FOR UPDATE USING (
         EXISTS (
@@ -93,7 +84,6 @@ CREATE POLICY "Users can update analyses of own projects" ON public.analyses
             AND projects.user_id = auth.uid()
         )
     );
-
 -- Analysis items: access through analysis -> project ownership
 CREATE POLICY "Users can view analysis items of own projects" ON public.analysis_items
     FOR SELECT USING (
@@ -104,7 +94,6 @@ CREATE POLICY "Users can view analysis items of own projects" ON public.analysis
             AND projects.user_id = auth.uid()
         )
     );
-
 CREATE POLICY "Users can insert analysis items to own projects" ON public.analysis_items
     FOR INSERT WITH CHECK (
         EXISTS (
@@ -114,7 +103,6 @@ CREATE POLICY "Users can insert analysis items to own projects" ON public.analys
             AND projects.user_id = auth.uid()
         )
     );
-
 -- Module results: access through analysis -> project ownership
 CREATE POLICY "Users can view module results of own projects" ON public.analysis_module_results
     FOR SELECT USING (
@@ -125,7 +113,6 @@ CREATE POLICY "Users can view module results of own projects" ON public.analysis
             AND projects.user_id = auth.uid()
         )
     );
-
 CREATE POLICY "Users can insert module results to own projects" ON public.analysis_module_results
     FOR INSERT WITH CHECK (
         EXISTS (
@@ -135,7 +122,6 @@ CREATE POLICY "Users can insert module results to own projects" ON public.analys
             AND projects.user_id = auth.uid()
         )
     );
-
 CREATE POLICY "Users can update module results of own projects" ON public.analysis_module_results
     FOR UPDATE USING (
         EXISTS (

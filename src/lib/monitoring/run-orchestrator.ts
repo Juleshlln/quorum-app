@@ -73,10 +73,13 @@ export async function createMonitoringRun({
   force?: boolean;
 }) {
   const window = buildRunWindow(windowDays);
-  const modelsHash = hashModels(models);
+  const baseModelsHash = hashModels(models);
+  const modelsHash = force
+    ? `${baseModelsHash}:manual:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`
+    : baseModelsHash;
 
-  // When force=true (manual runs), skip dedup and always create a fresh run.
-  // Mark any existing run for the same window as 'superseded' to free the unique index.
+  // Manual runs intentionally bypass deduplication. They need their own
+  // models_hash because the DB uniquely indexes project/window/models_hash.
   if (!force) {
     const { data: existing } = await supabase
       .from('monitoring_runs')
@@ -114,27 +117,6 @@ export async function createMonitoringRun({
       }
       return { run: existing, reused: true };
     }
-  } else {
-    // Force mode: mark any existing run for this window as 'superseded'
-    // so the unique index slot is freed for the new insert.
-    await supabase
-      .from('monitoring_runs')
-      .update({ status: 'superseded', error_message: 'Superseded by forced manual re-run' })
-      .eq('project_id', projectId)
-      .eq('window_start', window.windowStart)
-      .eq('window_end', window.windowEnd)
-      .eq('models_hash', modelsHash)
-      .in('status', ['queued', 'running', 'partial', 'failed', 'empty', 'success']);
-
-    // Delete the superseded row to free the unique index constraint
-    await supabase
-      .from('monitoring_runs')
-      .delete()
-      .eq('project_id', projectId)
-      .eq('window_start', window.windowStart)
-      .eq('window_end', window.windowEnd)
-      .eq('models_hash', modelsHash)
-      .eq('status', 'superseded');
   }
 
   const { data: inserted, error } = await supabase
@@ -163,9 +145,13 @@ export async function createMonitoringRun({
 export async function executeMonitoringRun({
   supabase,
   runId,
+  promptIds,
 }: {
   supabase: any;
   runId: string;
+  // Restreint l'exécution à un sous-ensemble de prompts (ex: prompts produit).
+  // Quand omis : tous les prompts actifs du projet sont exécutés.
+  promptIds?: string[];
 }) {
   const { data: run } = await supabase
     .from('monitoring_runs')
@@ -271,9 +257,11 @@ export async function executeMonitoringRun({
       .from('monitoring_prompts')
       .select('id, topic_id, is_active')
       .eq('project_id', run.project_id);
+    const allowedPromptIds = promptIds && promptIds.length > 0 ? new Set(promptIds) : null;
     const activePrompts = (allPrompts || []).filter((p: any) => {
       if (p.is_active === false) return false;
       if (p.topic_id && !activeTopicIds.has(p.topic_id)) return false;
+      if (allowedPromptIds && !allowedPromptIds.has(p.id)) return false;
       return true;
     });
     const itemsTotal = activePrompts.length * models.length;
@@ -291,6 +279,7 @@ export async function executeMonitoringRun({
       runWindowStart: run.window_start,
       runWindowEnd: run.window_end,
       models,
+      promptIds,
     });
 
     // items_success = actual AI answers, not just processed prompt_runs

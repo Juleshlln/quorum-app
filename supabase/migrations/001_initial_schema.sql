@@ -6,14 +6,12 @@
 -- EXTENSIONS
 -- ============================================
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
 -- ============================================
 -- CUSTOM TYPES
 -- ============================================
 CREATE TYPE run_status AS ENUM ('pending', 'running', 'completed', 'failed');
 CREATE TYPE recommendation_priority AS ENUM ('high', 'medium', 'low');
 CREATE TYPE recommendation_category AS ENUM ('content', 'technical', 'pr', 'social', 'other');
-
 -- ============================================
 -- PROFILES (extends Supabase auth.users)
 -- ============================================
@@ -25,7 +23,6 @@ CREATE TABLE public.profiles (
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
-
 -- ============================================
 -- PROJECTS / BRANDS
 -- ============================================
@@ -51,9 +48,7 @@ CREATE TABLE public.projects (
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
-
 CREATE INDEX idx_projects_user_id ON public.projects(user_id);
-
 -- ============================================
 -- COMPETITORS
 -- ============================================
@@ -67,9 +62,7 @@ CREATE TABLE public.competitors (
     
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
-
 CREATE INDEX idx_competitors_project_id ON public.competitors(project_id);
-
 -- ============================================
 -- PROMPT TEMPLATES
 -- ============================================
@@ -91,9 +84,7 @@ CREATE TABLE public.prompt_templates (
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
-
 CREATE INDEX idx_prompt_templates_project_id ON public.prompt_templates(project_id);
-
 -- ============================================
 -- RUNS
 -- ============================================
@@ -122,11 +113,9 @@ CREATE TABLE public.runs (
     
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
-
 CREATE INDEX idx_runs_project_id ON public.runs(project_id);
 CREATE INDEX idx_runs_status ON public.runs(status);
 CREATE INDEX idx_runs_created_at ON public.runs(created_at DESC);
-
 -- ============================================
 -- RUN ITEMS (individual prompt results)
 -- ============================================
@@ -160,9 +149,7 @@ CREATE TABLE public.run_items (
     
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
-
 CREATE INDEX idx_run_items_run_id ON public.run_items(run_id);
-
 -- ============================================
 -- RECOMMENDATIONS
 -- ============================================
@@ -189,11 +176,9 @@ CREATE TABLE public.recommendations (
     
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
-
 CREATE INDEX idx_recommendations_run_id ON public.recommendations(run_id);
 CREATE INDEX idx_recommendations_project_id ON public.recommendations(project_id);
 CREATE INDEX idx_recommendations_priority ON public.recommendations(priority);
-
 -- ============================================
 -- ROW LEVEL SECURITY (RLS)
 -- ============================================
@@ -206,27 +191,20 @@ ALTER TABLE public.prompt_templates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.runs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.run_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.recommendations ENABLE ROW LEVEL SECURITY;
-
 -- Profiles: users can only see/edit their own profile
 CREATE POLICY "Users can view own profile" ON public.profiles
     FOR SELECT USING (auth.uid() = id);
-
 CREATE POLICY "Users can update own profile" ON public.profiles
     FOR UPDATE USING (auth.uid() = id);
-
 -- Projects: users can only access their own projects
 CREATE POLICY "Users can view own projects" ON public.projects
     FOR SELECT USING (auth.uid() = user_id);
-
 CREATE POLICY "Users can insert own projects" ON public.projects
     FOR INSERT WITH CHECK (auth.uid() = user_id);
-
 CREATE POLICY "Users can update own projects" ON public.projects
     FOR UPDATE USING (auth.uid() = user_id);
-
 CREATE POLICY "Users can delete own projects" ON public.projects
     FOR DELETE USING (auth.uid() = user_id);
-
 -- Competitors: access through project ownership
 CREATE POLICY "Users can view competitors of own projects" ON public.competitors
     FOR SELECT USING (
@@ -236,7 +214,6 @@ CREATE POLICY "Users can view competitors of own projects" ON public.competitors
             AND projects.user_id = auth.uid()
         )
     );
-
 CREATE POLICY "Users can insert competitors to own projects" ON public.competitors
     FOR INSERT WITH CHECK (
         EXISTS (
@@ -245,7 +222,6 @@ CREATE POLICY "Users can insert competitors to own projects" ON public.competito
             AND projects.user_id = auth.uid()
         )
     );
-
 CREATE POLICY "Users can update competitors of own projects" ON public.competitors
     FOR UPDATE USING (
         EXISTS (
@@ -254,7 +230,6 @@ CREATE POLICY "Users can update competitors of own projects" ON public.competito
             AND projects.user_id = auth.uid()
         )
     );
-
 CREATE POLICY "Users can delete competitors of own projects" ON public.competitors
     FOR DELETE USING (
         EXISTS (
@@ -263,7 +238,6 @@ CREATE POLICY "Users can delete competitors of own projects" ON public.competito
             AND projects.user_id = auth.uid()
         )
     );
-
 -- Prompt templates: access through project ownership
 CREATE POLICY "Users can view templates of own projects" ON public.prompt_templates
     FOR SELECT USING (
@@ -273,7 +247,6 @@ CREATE POLICY "Users can view templates of own projects" ON public.prompt_templa
             AND projects.user_id = auth.uid()
         )
     );
-
 CREATE POLICY "Users can insert templates to own projects" ON public.prompt_templates
     FOR INSERT WITH CHECK (
         EXISTS (
@@ -282,7 +255,6 @@ CREATE POLICY "Users can insert templates to own projects" ON public.prompt_temp
             AND projects.user_id = auth.uid()
         )
     );
-
 CREATE POLICY "Users can update templates of own projects" ON public.prompt_templates
     FOR UPDATE USING (
         EXISTS (
@@ -291,7 +263,6 @@ CREATE POLICY "Users can update templates of own projects" ON public.prompt_temp
             AND projects.user_id = auth.uid()
         )
     );
-
 CREATE POLICY "Users can delete templates of own projects" ON public.prompt_templates
     FOR DELETE USING (
         EXISTS (
@@ -300,7 +271,6 @@ CREATE POLICY "Users can delete templates of own projects" ON public.prompt_temp
             AND projects.user_id = auth.uid()
         )
     );
-
 -- Runs: access through project ownership
 CREATE POLICY "Users can view runs of own projects" ON public.runs
     FOR SELECT USING (
@@ -310,7 +280,6 @@ CREATE POLICY "Users can view runs of own projects" ON public.runs
             AND projects.user_id = auth.uid()
         )
     );
-
 CREATE POLICY "Users can insert runs to own projects" ON public.runs
     FOR INSERT WITH CHECK (
         EXISTS (
@@ -319,7 +288,6 @@ CREATE POLICY "Users can insert runs to own projects" ON public.runs
             AND projects.user_id = auth.uid()
         )
     );
-
 CREATE POLICY "Users can update runs of own projects" ON public.runs
     FOR UPDATE USING (
         EXISTS (
@@ -328,7 +296,6 @@ CREATE POLICY "Users can update runs of own projects" ON public.runs
             AND projects.user_id = auth.uid()
         )
     );
-
 -- Run items: access through run -> project ownership
 CREATE POLICY "Users can view run items of own projects" ON public.run_items
     FOR SELECT USING (
@@ -339,7 +306,6 @@ CREATE POLICY "Users can view run items of own projects" ON public.run_items
             AND projects.user_id = auth.uid()
         )
     );
-
 CREATE POLICY "Users can insert run items to own projects" ON public.run_items
     FOR INSERT WITH CHECK (
         EXISTS (
@@ -349,7 +315,6 @@ CREATE POLICY "Users can insert run items to own projects" ON public.run_items
             AND projects.user_id = auth.uid()
         )
     );
-
 -- Recommendations: access through project ownership
 CREATE POLICY "Users can view recommendations of own projects" ON public.recommendations
     FOR SELECT USING (
@@ -359,7 +324,6 @@ CREATE POLICY "Users can view recommendations of own projects" ON public.recomme
             AND projects.user_id = auth.uid()
         )
     );
-
 CREATE POLICY "Users can insert recommendations to own projects" ON public.recommendations
     FOR INSERT WITH CHECK (
         EXISTS (
@@ -368,7 +332,6 @@ CREATE POLICY "Users can insert recommendations to own projects" ON public.recom
             AND projects.user_id = auth.uid()
         )
     );
-
 CREATE POLICY "Users can update recommendations of own projects" ON public.recommendations
     FOR UPDATE USING (
         EXISTS (
@@ -377,7 +340,6 @@ CREATE POLICY "Users can update recommendations of own projects" ON public.recom
             AND projects.user_id = auth.uid()
         )
     );
-
 -- ============================================
 -- TRIGGERS
 -- ============================================
@@ -390,19 +352,15 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
-
 CREATE TRIGGER trigger_profiles_updated_at
     BEFORE UPDATE ON public.profiles
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-
 CREATE TRIGGER trigger_projects_updated_at
     BEFORE UPDATE ON public.projects
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-
 CREATE TRIGGER trigger_prompt_templates_updated_at
     BEFORE UPDATE ON public.prompt_templates
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-
 -- Auto-create profile on user signup
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
@@ -416,11 +374,9 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
-
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE FUNCTION handle_new_user();
-
 -- ============================================
 -- DEFAULT PROMPT TEMPLATES (inserted per project)
 -- ============================================

@@ -1,0 +1,42 @@
+import { createClient } from '@/lib/supabase/server';
+import { getActiveProjectForUser } from '@/lib/projects/get-active-project';
+import { SourcesHub } from '@/components/sources/sources-hub';
+
+export const metadata = {
+  title: 'Sources | Quorum',
+};
+
+export default async function SourcesPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-zinc-400">Veuillez vous connecter.</p>
+      </div>
+    );
+  }
+
+  const project = await getActiveProjectForUser(user.id);
+  if (!project) {
+    return (
+      <div className="rounded-3xl border quorum-border-default quorum-surface-strong p-10 text-center text-zinc-400">
+        Aucun projet actif. Créez votre marque pour commencer.
+      </div>
+    );
+  }
+
+  const { data: topicsData } = await supabase
+    .from('monitoring_topics')
+    .select('id, name')
+    .eq('project_id', project.id)
+    .order('created_at', { ascending: false });
+
+  return (
+    <SourcesHub
+  topics={(topicsData || []) as Array<{ id: string; name: string }>}
+  projectId={project.id}
+/>
+  );
+}

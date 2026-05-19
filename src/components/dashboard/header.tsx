@@ -24,19 +24,24 @@ interface HeaderProps {
 }
 
 const DASHBOARD_SECTIONS = [
-  { href: '/overview', label: 'Overview' },
-  { href: '/prompts', label: 'Monitoring' },
+  { href: '/overview', label: 'Vue d’ensemble' },
+  { href: '/prompts', label: 'Radar IA' },
+  { href: '/offers', label: 'Offres suivies' },
+  { href: '/product-visibility', label: 'Visibilité produit' },
   { href: '/sources', label: 'Sources' },
+  { href: '/business-impact', label: 'Impact business' },
+  { href: '/competitive-intelligence', label: 'Veille concurrentielle' },
+  { href: '/advisor', label: 'Actions recommandées' },
   { href: '/concurrents', label: 'Concurrents' },
   { href: '/analyses', label: 'Analyses' },
-  { href: '/brand', label: 'Brand settings' },
+  { href: '/brand', label: 'Marque' },
   { href: '/settings', label: 'Paramètres' },
-  { href: '/projects', label: 'Projects' },
+  { href: '/projects', label: 'Projets' },
 ] as const;
 
 function getActiveSection(pathname: string) {
   return DASHBOARD_SECTIONS.find(({ href }) => pathname === href || pathname.startsWith(`${href}/`))
-    ?.label ?? 'Workspace';
+    ?.label ?? 'Espace de travail';
 }
 
 export function DashboardHeader({ user }: HeaderProps) {
@@ -109,7 +114,7 @@ export function DashboardHeader({ user }: HeaderProps) {
                 style={{ background: '#6ee7b7', boxShadow: '0 0 10px rgba(110,231,183,0.45)' }}
               />
               <span className="text-[10px] font-semibold uppercase tracking-[0.24em] quorum-shell-subtle">
-                Control Room
+                Pilotage IA
               </span>
             </div>
             <p className="mt-1 truncate text-[14px] leading-none quorum-shell-muted">

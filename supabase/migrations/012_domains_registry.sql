@@ -10,27 +10,20 @@ CREATE TABLE IF NOT EXISTS public.domains_registry (
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
-
 CREATE UNIQUE INDEX IF NOT EXISTS idx_domains_registry_unique
   ON public.domains_registry(project_id, domain);
-
 CREATE INDEX IF NOT EXISTS idx_domains_registry_project_id
   ON public.domains_registry(project_id);
-
 ALTER TABLE public.sources_domains
   ADD COLUMN IF NOT EXISTS category TEXT,
   ADD COLUMN IF NOT EXISTS competitor_id UUID REFERENCES public.competitors(id) ON DELETE SET NULL;
-
 CREATE INDEX IF NOT EXISTS idx_sources_domains_category ON public.sources_domains(category);
-
 -- RLS
 ALTER TABLE public.domains_registry ENABLE ROW LEVEL SECURITY;
-
 DROP POLICY IF EXISTS "Users can view domain registry of own projects" ON public.domains_registry;
 DROP POLICY IF EXISTS "Users can insert domain registry to own projects" ON public.domains_registry;
 DROP POLICY IF EXISTS "Users can update domain registry of own projects" ON public.domains_registry;
 DROP POLICY IF EXISTS "Users can delete domain registry of own projects" ON public.domains_registry;
-
 CREATE POLICY "Users can view domain registry of own projects" ON public.domains_registry
   FOR SELECT USING (
     EXISTS (
@@ -39,7 +32,6 @@ CREATE POLICY "Users can view domain registry of own projects" ON public.domains
       AND projects.user_id = auth.uid()
     )
   );
-
 CREATE POLICY "Users can insert domain registry to own projects" ON public.domains_registry
   FOR INSERT WITH CHECK (
     EXISTS (
@@ -48,7 +40,6 @@ CREATE POLICY "Users can insert domain registry to own projects" ON public.domai
       AND projects.user_id = auth.uid()
     )
   );
-
 CREATE POLICY "Users can update domain registry of own projects" ON public.domains_registry
   FOR UPDATE USING (
     EXISTS (
@@ -57,7 +48,6 @@ CREATE POLICY "Users can update domain registry of own projects" ON public.domai
       AND projects.user_id = auth.uid()
     )
   );
-
 CREATE POLICY "Users can delete domain registry of own projects" ON public.domains_registry
   FOR DELETE USING (
     EXISTS (

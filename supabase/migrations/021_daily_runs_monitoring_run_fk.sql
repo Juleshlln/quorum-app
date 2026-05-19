@@ -25,8 +25,7 @@ CREATE INDEX IF NOT EXISTS idx_monitoring_daily_runs_monitoring_run_id
 -- Best-effort backfill for existing rows:
 -- match by same project + same run date (run_date/window_end/created_at::date)
 UPDATE public.monitoring_daily_runs d
-SET monitoring_run_id = r.id
-FROM LATERAL (
+SET monitoring_run_id = (
   SELECT mr.id
   FROM public.monitoring_runs mr
   WHERE mr.project_id = d.project_id
@@ -37,7 +36,7 @@ FROM LATERAL (
     )
   ORDER BY mr.created_at DESC
   LIMIT 1
-) r
+)
 WHERE d.monitoring_run_id IS NULL;
 
 -- New writes only: success/partial rows must point to a monitoring run

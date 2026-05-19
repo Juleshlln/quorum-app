@@ -2,6 +2,7 @@ import { queryOpenAI } from '@/lib/ai/providers';
 import { ingestCitations } from '@/lib/sources/ingest';
 import { getDomainFromUrl, normalizeUrl } from '@/lib/sources/normalize';
 import { logRun } from '@/lib/monitoring/run-logs';
+import { loadProductVisibilityContext, parseAndPersistProductVisibilityResult } from '@/lib/product-visibility/service';
 
 /**
  * After ingesting citations for a prompt_run, enrich `competitors_mentioned`
@@ -54,6 +55,9 @@ type MonitoringPrompt = {
   id: string;
   prompt_text: string;
   topic_id: string | null;
+  category_id: string | null;
+  buying_intent: string | null;
+  intent: string | null;
   project_id: string;
   is_active: boolean | null;
 };
@@ -118,6 +122,34 @@ function buildPromptWithSources(prompt: string, model: string) {
 
 function buildFollowupSourcesPrompt(prompt: string) {
   return `Donne uniquement 2 à 3 URLs exactes et pertinentes (https://...), sans autre texte, pour répondre à la question suivante:\n\n${prompt}\n\nSi tu ne peux pas, réponds exactement: NONE`;
+}
+
+function isMissingPromptMetadataColumnError(error: unknown) {
+  if (!error || typeof error !== 'object') return false;
+  const record = error as { code?: string; message?: string; details?: string };
+  const message = `${record.message || ''} ${record.details || ''}`.toLowerCase();
+
+  return record.code === '42703'
+    || message.includes('monitoring_prompts.intent')
+    || message.includes('monitoring_prompts.scope')
+    || message.includes('monitoring_prompts.prompt_origin')
+    || message.includes("'intent' column")
+    || message.includes("'scope' column")
+    || message.includes("'prompt_origin' column");
+}
+
+function errorMessage(error: unknown, fallback: string) {
+  if (!error) return fallback;
+  if (error instanceof Error && error.message.trim()) return error.message.trim();
+  if (typeof error === 'string' && error.trim()) return error.trim();
+  if (typeof error === 'object') {
+    const record = error as { message?: unknown; details?: unknown; hint?: unknown; code?: unknown };
+    const parts = [record.message, record.details, record.hint, record.code]
+      .map((part) => typeof part === 'string' ? part.trim() : '')
+      .filter(Boolean);
+    if (parts.length > 0) return parts.join(' · ');
+  }
+  return fallback;
 }
 
 function extractKeywords(text: string): string[] {
@@ -195,6 +227,7 @@ export async function runMonitoringForProject({
   runWindowEnd,
   runType = 'monitoring',
   models = DEFAULT_MODELS,
+  promptIds,
 }: {
   supabase: any;
   runId?: string | null;
@@ -208,6 +241,9 @@ export async function runMonitoringForProject({
   runWindowEnd?: string | null;
   runType?: 'monitoring' | 'sandbox';
   models?: string[];
+  // Restreint l'exécution à un sous-ensemble de prompts (ex: prompts produit only).
+  // Si non fourni : tous les prompts actifs du projet sont exécutés (comportement Radar IA).
+  promptIds?: string[];
 }) {
   if (runType === 'monitoring' && !runId) {
     await logRun({
@@ -232,10 +268,20 @@ export async function runMonitoringForProject({
     (topicsData || []).filter((t: any) => t.is_active !== false).map((t: any) => t.id)
   );
 
-  const { data: promptsData, error: promptsError } = await supabase
+  let promptsResult = await supabase
     .from('monitoring_prompts')
-    .select('id, prompt_text, topic_id, project_id, is_active')
+    .select('id, prompt_text, topic_id, category_id, buying_intent, intent, project_id, is_active')
     .eq('project_id', projectId);
+
+  if (promptsResult.error && isMissingPromptMetadataColumnError(promptsResult.error)) {
+    promptsResult = await supabase
+      .from('monitoring_prompts')
+      .select('id, prompt_text, topic_id, category_id, buying_intent, project_id, is_active')
+      .eq('project_id', projectId);
+  }
+
+  const promptsData = promptsResult.data;
+  const promptsError = promptsResult.error;
 
   if (promptsError) {
     await logRun({
@@ -245,14 +291,19 @@ export async function runMonitoringForProject({
       projectId,
       level: 'error',
       step: 'load_prompts',
-      message: promptsError.message,
+      message: errorMessage(promptsError, 'Unable to load monitoring prompts'),
     });
-    throw new Error(promptsError.message);
+    throw new Error(errorMessage(promptsError, 'Unable to load monitoring prompts'));
   }
+
+  const allowedPromptIds = promptIds && promptIds.length > 0
+    ? new Set(promptIds)
+    : null;
 
   const prompts = (promptsData as MonitoringPrompt[] || []).filter((p) => {
     if (p.is_active === false) return false;
     if (p.topic_id && !activeTopicIds.has(p.topic_id)) return false;
+    if (allowedPromptIds && !allowedPromptIds.has(p.id)) return false;
     return true;
   });
 
@@ -267,6 +318,24 @@ export async function runMonitoringForProject({
       message: 'No active monitoring prompts found.',
     });
     return { runs: 0, answers: 0 };
+  }
+
+  let productVisibilityContext: any = null;
+  try {
+    productVisibilityContext = await loadProductVisibilityContext({
+      supabase,
+      projectId,
+    });
+  } catch (contextError: any) {
+    await logRun({
+      supabase,
+      runId: logRunId,
+      monitoringRunId: runId,
+      projectId,
+      level: 'warn',
+      step: 'load_product_visibility_context',
+      message: contextError?.message || 'Unable to load product visibility context',
+    });
   }
 
   let runs = 0;
@@ -482,8 +551,10 @@ export async function runMonitoringForProject({
         }
 
         const responseId = responseRow?.id ?? null;
+        let detectedCitations: Array<{ url: string; domain: string; method?: string | null }> = [];
         let citations = extractCitations(result!.response);
         if (citations.length > 0) {
+          detectedCitations = citations.map((c) => ({ ...c, method: 'observed' }));
           observed += citations.length;
           await logRun({
             supabase,
@@ -566,6 +637,7 @@ export async function runMonitoringForProject({
           }
 
           if (citations.length > 0) {
+            detectedCitations = citations.map((c) => ({ ...c, method: 'probable' }));
             probable += citations.length;
             await ingestCitations({
               supabase,
@@ -597,17 +669,49 @@ export async function runMonitoringForProject({
               promptRunId: runRow.id,
               textBasedCompetitors: result!.competitors_mentioned ?? [],
             });
-            continue;
           }
 
+          if (citations.length === 0) {
+            await logRun({
+              supabase,
+              runId: logRunId,
+              monitoringRunId: runId,
+              projectId,
+              level: 'warn',
+              step: 'extract_sources',
+              message: 'No citations detected after follow-up; skipping citations insertion',
+              meta: { prompt_id: prompt.id, model },
+            });
+          }
+        }
+
+        try {
+          await parseAndPersistProductVisibilityResult({
+            supabase,
+            projectId,
+            brandName,
+            runId: runId || null,
+            promptId: prompt.id,
+            promptRunId: runRow.id,
+            aiModel: result!.model,
+            promptText: version.prompt_text,
+            rawAnswer: result!.response,
+            promptCategoryId: prompt.category_id,
+            promptBuyingIntent: prompt.buying_intent || prompt.intent || null,
+            fallbackSentimentLabel: result!.sentiment,
+            fallbackPosition: result!.position,
+            citations: detectedCitations,
+            context: productVisibilityContext || undefined,
+          });
+        } catch (productVisibilityError: any) {
           await logRun({
             supabase,
             runId: logRunId,
             monitoringRunId: runId,
             projectId,
             level: 'warn',
-            step: 'extract_sources',
-            message: 'No citations detected after follow-up; skipping citations insertion',
+            step: 'product_visibility_parse',
+            message: productVisibilityError?.message || 'Product visibility parsing failed',
             meta: { prompt_id: prompt.id, model },
           });
         }

@@ -18,9 +18,19 @@ DELETE FROM public.prompt_runs a
     AND a.id <> b.id
     AND a.executed_at < b.executed_at;
 
-ALTER TABLE public.prompt_runs
-  ADD CONSTRAINT uq_prompt_runs_run_prompt_model
-  UNIQUE (run_id, prompt_id, ai_model);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'uq_prompt_runs_run_prompt_model'
+      AND conrelid = 'public.prompt_runs'::regclass
+  ) THEN
+    ALTER TABLE public.prompt_runs
+      ADD CONSTRAINT uq_prompt_runs_run_prompt_model
+      UNIQUE (run_id, prompt_id, ai_model);
+  END IF;
+END $$;
 
 -- 2. Fix citations: drop the partial index from migration 016.
 -- The non-partial index idx_citations_unique_method from migration 011

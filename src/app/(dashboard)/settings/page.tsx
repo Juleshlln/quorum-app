@@ -1,6 +1,8 @@
-import { createClient } from '@/lib/supabase/server';
-import { User, Mail, Key, CreditCard, Bell, Shield, Sparkles, Check, ArrowRight } from 'lucide-react';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { getActiveProjectForUser } from '@/lib/projects/get-active-project';
+import { User, Mail, Key, CreditCard, Bell, Shield, Sparkles, Check, ArrowRight, BarChart3 } from 'lucide-react';
 import Link from 'next/link';
+import { AnalyticsConnections } from '@/components/settings/analytics-connections';
 
 export const metadata = {
   title: 'Paramètres | Quorum',
@@ -11,6 +13,33 @@ export default async function SettingsPage() {
   const { data: { user } } = await supabase.auth.getUser();
 
   const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Utilisateur';
+
+  // Fetch analytics connections for the active project
+  const project = user ? await getActiveProjectForUser(user.id) : null;
+  let analyticsConnections: Array<{
+    id: string;
+    provider: string;
+    property_id: string | null;
+    site_url: string | null;
+    status: string;
+    last_synced_at: string | null;
+    last_error: string | null;
+    metadata: Record<string, unknown> | null;
+  }> = [];
+
+  if (project) {
+    try {
+      const admin = createAdminClient();
+      const { data } = await admin
+        .from('analytics_connections')
+        .select('id, provider, property_id, site_url, status, last_synced_at, last_error, metadata')
+        .eq('project_id', project.id)
+        .order('provider', { ascending: true });
+      analyticsConnections = (data || []) as typeof analyticsConnections;
+    } catch {
+      // Tables may not exist yet — silently continue
+    }
+  }
 
   return (
     <div className="space-y-8 max-w-4xl">
@@ -121,6 +150,28 @@ export default async function SettingsPage() {
           </div>
         </div>
       </section>
+
+      {/* Analytics Connections Section */}
+      {project && (
+        <section className="quorum-panel overflow-hidden">
+          <div className="px-6 py-4 border-b quorum-border-default">
+            <h2 className="font-semibold quorum-text-primary flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 quorum-text-muted" />
+              Connecteurs Analytics
+            </h2>
+          </div>
+          <div className="p-6 space-y-4">
+            <p className="text-sm quorum-text-muted">
+              Connectez Google Analytics 4 et Google Search Console pour activer le suivi Business Impact et relier la visibilité IA au trafic réel.
+            </p>
+            <AnalyticsConnections
+              projectId={project.id}
+              projectWebsite={project.website}
+              initialConnections={analyticsConnections}
+            />
+          </div>
+        </section>
+      )}
 
       {/* API Keys Section */}
       <section className="quorum-panel overflow-hidden">

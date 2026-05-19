@@ -10,14 +10,10 @@ CREATE TABLE IF NOT EXISTS public.analysis_prompts (
     type TEXT NOT NULL, -- suggested | custom
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
-
 CREATE INDEX IF NOT EXISTS idx_analysis_prompts_analysis_id ON public.analysis_prompts(analysis_id);
-
 ALTER TABLE public.analysis_prompts ENABLE ROW LEVEL SECURITY;
-
 DROP POLICY IF EXISTS "Users can view analysis prompts of own projects" ON public.analysis_prompts;
 DROP POLICY IF EXISTS "Users can insert analysis prompts to own projects" ON public.analysis_prompts;
-
 CREATE POLICY "Users can view analysis prompts of own projects" ON public.analysis_prompts
     FOR SELECT USING (
         EXISTS (
@@ -27,7 +23,6 @@ CREATE POLICY "Users can view analysis prompts of own projects" ON public.analys
             AND projects.user_id = auth.uid()
         )
     );
-
 CREATE POLICY "Users can insert analysis prompts to own projects" ON public.analysis_prompts
     FOR INSERT WITH CHECK (
         EXISTS (

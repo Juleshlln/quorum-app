@@ -1,0 +1,337 @@
+import OpenAI from 'openai';
+
+// ---------------------------------------------------------------------------
+//  Retry helper — 3 attempts with exponential backoff.
+//  Skips retry for non-transient errors (auth, bad-request, not-found).
+// ---------------------------------------------------------------------------
+const MAX_RETRIES = 3;
+const INITIAL_BACKOFF_MS = 1000;
+const NON_RETRYABLE_STATUS = new Set([400, 401, 403, 404, 422]);
+
+async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
+  let lastError: any;
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      return await fn();
+    } catch (err: any) {
+      lastError = err;
+      const status: number = err?.status ?? err?.statusCode ?? 0;
+      if (NON_RETRYABLE_STATUS.has(status)) {
+        console.error(`[providers] Non-retryable error (HTTP ${status}): ${err.message}`);
+        throw err;
+      }
+      if (attempt < MAX_RETRIES) {
+        const delay = INITIAL_BACKOFF_MS * Math.pow(2, attempt - 1);
+        console.warn(`[providers] Attempt ${attempt}/${MAX_RETRIES} failed: ${err.message}. Retrying in ${delay}ms…`);
+        await new Promise(r => setTimeout(r, delay));
+      }
+    }
+  }
+  throw lastError;
+}
+
+// Types
+export interface AIProvider {
+  id: string;
+  name: string;
+  model: string;
+  available: boolean;
+}
+
+export interface AIQueryResult {
+  provider: string;
+  model: string;
+  prompt: string;
+  response: string;
+  params: {
+    temperature: number;
+    top_p: number;
+    max_tokens: number;
+  };
+  mentioned: boolean;
+  position: number | null;
+  sentiment: 'positive' | 'neutral' | 'negative' | null;
+  competitors_mentioned: string[];
+  sources_cited: string[];
+  response_time_ms: number;
+  error?: string;
+}
+
+// Available AI providers
+export const AI_PROVIDERS: AIProvider[] = [
+  { id: 'openai', name: 'ChatGPT', model: 'gpt-4o', available: true },
+  { id: 'anthropic', name: 'Claude', model: 'claude-3-haiku', available: false }, // Future
+  { id: 'google', name: 'Gemini', model: 'gemini-pro', available: false }, // Future
+  { id: 'perplexity', name: 'Perplexity', model: 'pplx-7b', available: false }, // Future
+];
+
+// Initialize OpenAI client
+function getOpenAIClient() {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error('OPENAI_API_KEY is not configured');
+  }
+  console.log('🔑 Creating OpenAI client with key:', apiKey.substring(0, 15) + '...');
+  return new OpenAI({ apiKey });
+}
+
+// Query OpenAI
+export async function queryOpenAI(
+  prompt: string,
+  brandName: string,
+  competitors: string[] = [],
+  context: string = '',
+  options?: {
+    model?: string;
+    temperature?: number;
+    top_p?: number;
+    max_tokens?: number;
+    require_sources?: boolean;
+  }
+): Promise<AIQueryResult> {
+  const startTime = Date.now();
+  console.log(`\n🤖 Querying OpenAI for prompt: "${prompt.substring(0, 50)}..."`);
+  const model = options?.model || 'gpt-4o';
+  const temperature = options?.temperature ?? 0;
+  const top_p = options?.top_p ?? 1;
+  const max_tokens = options?.max_tokens ?? 1200;
+  
+  // queryOpenAI throws on failure (after retries). Callers must catch.
+  const openai = getOpenAIClient();
+
+  const completion = await withRetry(async () => {
+    console.log('📤 Sending request to OpenAI…');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60_000);
+    try {
+      return await openai.chat.completions.create(
+        {
+          model,
+          messages: [
+            {
+              role: 'system',
+              content: [
+                'You are a helpful assistant. Answer questions naturally and thoroughly. When recommending products or services, be specific about names and features.',
+                options?.require_sources
+                  ? 'You MUST append a section titled "Sources (URLs)" with 2-3 exact https URLs. If you cannot, output "Sources (URLs): NONE".'
+                  : '',
+                context ? `Context: ${context}` : '',
+              ]
+                .filter(Boolean)
+                .join('\n'),
+            },
+            { role: 'user', content: prompt },
+          ],
+          max_tokens,
+          temperature,
+          top_p,
+        },
+        { signal: controller.signal },
+      );
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  });
+
+  const response = completion.choices[0]?.message?.content || '';
+  const responseTime = Date.now() - startTime;
+
+  console.log(`📥 Response received in ${responseTime}ms`);
+  console.log(`📝 Response preview: "${response.substring(0, 100)}..."`);
+
+  const analysis = analyzeResponse(response, brandName, competitors);
+  console.log(`📊 Analysis: mentioned=${analysis.mentioned}, position=${analysis.position}, sentiment=${analysis.sentiment}`);
+
+  return {
+    provider: 'openai',
+    model,
+    prompt,
+    response,
+    params: { temperature, top_p, max_tokens },
+    mentioned: analysis.mentioned,
+    position: analysis.position,
+    sentiment: analysis.sentiment,
+    competitors_mentioned: analysis.competitorsMentioned,
+    sources_cited: analysis.sourcesCited,
+    response_time_ms: responseTime,
+  };
+}
+
+// Analyze AI response for brand mentions
+function analyzeResponse(
+  response: string,
+  brandName: string,
+  competitors: string[]
+): {
+  mentioned: boolean;
+  position: number | null;
+  sentiment: 'positive' | 'neutral' | 'negative' | null;
+  competitorsMentioned: string[];
+  sourcesCited: string[];
+} {
+  const lowerResponse = response.toLowerCase();
+  const lowerBrand = brandName.toLowerCase();
+
+  // Check if brand is mentioned
+  const mentioned = lowerResponse.includes(lowerBrand);
+
+  // Find position (which recommendation number)
+  let position: number | null = null;
+  if (mentioned) {
+    // Try to find numbered lists (1., 2., etc.)
+    const lines = response.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].toLowerCase();
+      if (line.includes(lowerBrand)) {
+        // Check if it's in a numbered list
+        const match = lines[i].match(/^(\d+)[.\)]/);
+        if (match) {
+          position = parseInt(match[1]);
+          break;
+        }
+        // If not in numbered list, estimate position
+        position = i + 1;
+        break;
+      }
+    }
+  }
+
+  // Simple sentiment analysis
+  let sentiment: 'positive' | 'neutral' | 'negative' | null = null;
+  if (mentioned) {
+    // Find the sentence containing the brand
+    const sentences = response.split(/[.!?]+/);
+    const brandSentence = sentences.find(s => s.toLowerCase().includes(lowerBrand));
+    
+    if (brandSentence) {
+      const positiveWords = [
+        // English
+        'best', 'excellent', 'great', 'recommend', 'top', 'leading', 'popular', 'trusted', 'reliable', 'innovative',
+        'outstanding', 'preferred', 'ideal', 'strong', 'notable', 'renowned', 'reputable',
+        // French
+        'meilleur', 'excellent', 'recommandé', 'recommande', 'leader', 'populaire', 'fiable',
+        'performant', 'innovant', 'reconnu', 'réputé', 'idéal', 'privilégié', 'incontournable',
+        'référence', 'qualité', 'efficace', 'apprécié', 'plébiscité', 'notable', 'solide',
+      ];
+      const negativeWords = [
+        // English
+        'worst', 'bad', 'avoid', 'poor', 'limited', 'expensive', 'difficult', 'complex', 'issues',
+        'lacks', 'outdated', 'inferior',
+        // French
+        'mauvais', 'éviter', 'limité', 'cher', 'coûteux', 'complexe', 'difficile', 'problème',
+        'insuffisant', 'décevant', 'obsolète', 'inférieur', 'médiocre', 'faible',
+      ];
+      
+      const lowerSentence = brandSentence.toLowerCase();
+      const hasPositive = positiveWords.some(word => lowerSentence.includes(word));
+      const hasNegative = negativeWords.some(word => lowerSentence.includes(word));
+      
+      if (hasPositive && !hasNegative) sentiment = 'positive';
+      else if (hasNegative && !hasPositive) sentiment = 'negative';
+      else sentiment = 'neutral';
+    }
+  }
+
+  // Check for competitor mentions (by name and by domain)
+  const competitorsMentioned = competitors.filter(comp => {
+    const lowerComp = comp.toLowerCase();
+    // Direct name match
+    if (lowerResponse.includes(lowerComp)) return true;
+    // Also match domain-like references (e.g., "lyreco.com", "raja.fr")
+    // Extract a possible domain token from the competitor name
+    const domainToken = lowerComp
+      .replace(/\s+(group|sas|sarl|sa|inc|ltd|gmbh|ag)$/i, '')
+      .replace(/\s+/g, '');
+    if (domainToken !== lowerComp && lowerResponse.includes(domainToken)) return true;
+    return false;
+  });
+
+  // Extract cited sources (URLs)
+  const urlRegex = /https?:\/\/[^\s)]+/g;
+  const sourcesCited = response.match(urlRegex) || [];
+
+  return {
+    mentioned,
+    position,
+    sentiment,
+    competitorsMentioned,
+    sourcesCited,
+  };
+}
+
+// Run analysis with all available providers
+export async function runAnalysis(
+  prompts: string[],
+  brandName: string,
+  competitors: string[] = [],
+  context: string = ''
+): Promise<AIQueryResult[]> {
+  const results: AIQueryResult[] = [];
+
+  for (const prompt of prompts) {
+    // For now, only OpenAI is available
+    const result = await queryOpenAI(prompt, brandName, competitors, context);
+    results.push(result);
+    
+    // Small delay between requests to avoid rate limiting
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+
+  return results;
+}
+
+// Calculate overall scores from results
+export function calculateScores(results: AIQueryResult[]): {
+  visibility: number;
+  accuracy: number;
+  sentiment: number;
+  overall: number;
+} {
+  if (results.length === 0) {
+    return { visibility: 0, accuracy: 0, sentiment: 0, overall: 0 };
+  }
+
+  const validResults = results.filter(r => !r.error);
+  if (validResults.length === 0) {
+    return { visibility: 0, accuracy: 0, sentiment: 0, overall: 0 };
+  }
+
+  // Visibility: percentage of queries where brand was mentioned
+  const mentionedCount = validResults.filter(r => r.mentioned).length;
+  const visibility = Math.round((mentionedCount / validResults.length) * 100);
+
+  // Position score: average position when mentioned (lower is better, convert to 0-100)
+  const positionResults = validResults.filter(r => r.position !== null);
+  let positionScore = 50; // Default
+  if (positionResults.length > 0) {
+    const avgPosition = positionResults.reduce((sum, r) => sum + (r.position || 0), 0) / positionResults.length;
+    // Position 1 = 100, Position 5 = 50, Position 10+ = 0
+    positionScore = Math.max(0, Math.round(100 - (avgPosition - 1) * 12.5));
+  }
+
+  // Sentiment score: positive = 100, neutral = 50, negative = 0
+  const sentimentResults = validResults.filter(r => r.sentiment !== null);
+  let sentimentScore = 50;
+  if (sentimentResults.length > 0) {
+    const sentimentValues: number[] = sentimentResults.map(r => {
+      if (r.sentiment === 'positive') return 100;
+      if (r.sentiment === 'negative') return 0;
+      return 50;
+    });
+    sentimentScore = Math.round(sentimentValues.reduce((a, b) => a + b, 0) / sentimentValues.length);
+  }
+
+  // Overall score: weighted average
+  const overall = Math.round(
+    visibility * 0.4 +      // 40% weight on visibility
+    positionScore * 0.3 +   // 30% weight on position
+    sentimentScore * 0.3    // 30% weight on sentiment
+  );
+
+  return {
+    visibility,
+    accuracy: positionScore, // Using position as "accuracy" proxy
+    sentiment: sentimentScore,
+    overall,
+  };
+}

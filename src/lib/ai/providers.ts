@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import { analyzeBrandSentiment } from '@/lib/monitoring/brand-sentiment';
 
 // ---------------------------------------------------------------------------
 //  Retry helper — 3 attempts with exponential backoff.
@@ -196,41 +197,7 @@ function analyzeResponse(
     }
   }
 
-  // Simple sentiment analysis
-  let sentiment: 'positive' | 'neutral' | 'negative' | null = null;
-  if (mentioned) {
-    // Find the sentence containing the brand
-    const sentences = response.split(/[.!?]+/);
-    const brandSentence = sentences.find(s => s.toLowerCase().includes(lowerBrand));
-    
-    if (brandSentence) {
-      const positiveWords = [
-        // English
-        'best', 'excellent', 'great', 'recommend', 'top', 'leading', 'popular', 'trusted', 'reliable', 'innovative',
-        'outstanding', 'preferred', 'ideal', 'strong', 'notable', 'renowned', 'reputable',
-        // French
-        'meilleur', 'excellent', 'recommandé', 'recommande', 'leader', 'populaire', 'fiable',
-        'performant', 'innovant', 'reconnu', 'réputé', 'idéal', 'privilégié', 'incontournable',
-        'référence', 'qualité', 'efficace', 'apprécié', 'plébiscité', 'notable', 'solide',
-      ];
-      const negativeWords = [
-        // English
-        'worst', 'bad', 'avoid', 'poor', 'limited', 'expensive', 'difficult', 'complex', 'issues',
-        'lacks', 'outdated', 'inferior',
-        // French
-        'mauvais', 'éviter', 'limité', 'cher', 'coûteux', 'complexe', 'difficile', 'problème',
-        'insuffisant', 'décevant', 'obsolète', 'inférieur', 'médiocre', 'faible',
-      ];
-      
-      const lowerSentence = brandSentence.toLowerCase();
-      const hasPositive = positiveWords.some(word => lowerSentence.includes(word));
-      const hasNegative = negativeWords.some(word => lowerSentence.includes(word));
-      
-      if (hasPositive && !hasNegative) sentiment = 'positive';
-      else if (hasNegative && !hasPositive) sentiment = 'negative';
-      else sentiment = 'neutral';
-    }
-  }
+  const sentiment = analyzeBrandSentiment(response, brandName)?.label ?? null;
 
   // Check for competitor mentions (by name and by domain)
   const competitorsMentioned = competitors.filter(comp => {

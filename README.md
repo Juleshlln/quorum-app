@@ -1,5 +1,8 @@
 # Daily Export (CSV + Daily GEO Audit PDF)
 
+## Additional technical docs
+- Business Impact & Competitive Intelligence: [`README.business-impact.md`](/Users/juleshalluin/Library/CloudStorage/OneDrive-SKEMABusinessSchool/Quorum/quorum-mvp/README.business-impact.md)
+
 ## What is included
 - DB migration: `supabase/migrations/022_report_exports.sql`
 - New API routes:

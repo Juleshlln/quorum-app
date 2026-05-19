@@ -13,6 +13,10 @@ import {
   FlaskConical,
   Users,
   Building2,
+  BarChart3,
+  Radar,
+  Package,
+  Layers3,
   ChevronDown,
   Plus,
   Loader2,
@@ -22,12 +26,17 @@ import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
-  { href: '/overview', label: 'Overview', icon: LayoutDashboard },
-  { href: '/prompts', label: 'Monitoring', icon: ListChecks },
+  { href: '/overview', label: 'Vue d’ensemble', icon: LayoutDashboard },
+  { href: '/prompts', label: 'Radar IA', icon: ListChecks },
+  { href: '/offers', label: 'Offres suivies', icon: Layers3 },
+  { href: '/product-visibility', label: 'Visibilité produit', icon: Package },
   { href: '/sources', label: 'Sources', icon: Globe },
+  { href: '/business-impact', label: 'Impact business', icon: BarChart3 },
+  { href: '/competitive-intelligence', label: 'Veille concurrentielle', icon: Radar },
+  { href: '/advisor', label: 'Actions recommandées', icon: Sparkles },
   { href: '/concurrents', label: 'Concurrents', icon: Users },
   { href: '/analyses', label: 'Analyses', icon: FlaskConical },
-  { href: '/brand', label: 'Brand settings', icon: Sliders },
+  { href: '/brand', label: 'Marque', icon: Sliders },
   { href: '/settings', label: 'Paramètres', icon: Settings },
 ];
 

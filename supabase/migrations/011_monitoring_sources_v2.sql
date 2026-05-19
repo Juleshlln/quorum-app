@@ -14,13 +14,10 @@ CREATE TABLE IF NOT EXISTS public.monitoring_daily_runs (
   finished_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
-
 CREATE UNIQUE INDEX IF NOT EXISTS idx_monitoring_daily_runs_unique
   ON public.monitoring_daily_runs(project_id, run_date);
-
 CREATE INDEX IF NOT EXISTS idx_monitoring_daily_runs_project
   ON public.monitoring_daily_runs(project_id);
-
 -- Per-step run logs for observability
 CREATE TABLE IF NOT EXISTS public.run_logs (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -32,10 +29,8 @@ CREATE TABLE IF NOT EXISTS public.run_logs (
   meta_json JSONB DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
-
 CREATE INDEX IF NOT EXISTS idx_run_logs_run_id ON public.run_logs(run_id);
 CREATE INDEX IF NOT EXISTS idx_run_logs_project_id ON public.run_logs(project_id);
-
 -- Raw AI responses for traceability
 CREATE TABLE IF NOT EXISTS public.monitoring_responses (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -50,30 +45,24 @@ CREATE TABLE IF NOT EXISTS public.monitoring_responses (
   latency_ms INTEGER,
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
-
 CREATE INDEX IF NOT EXISTS idx_monitoring_responses_run_id ON public.monitoring_responses(prompt_run_id);
 CREATE INDEX IF NOT EXISTS idx_monitoring_responses_project_id ON public.monitoring_responses(project_id);
-
 -- Extend citations with method/confidence/rationale/response linkage
 ALTER TABLE public.citations
   ADD COLUMN IF NOT EXISTS method TEXT DEFAULT 'observed',
   ADD COLUMN IF NOT EXISTS confidence FLOAT DEFAULT 0.9,
   ADD COLUMN IF NOT EXISTS rationale TEXT,
   ADD COLUMN IF NOT EXISTS response_id UUID REFERENCES public.monitoring_responses(id) ON DELETE SET NULL;
-
 CREATE INDEX IF NOT EXISTS idx_citations_method ON public.citations(method);
 CREATE INDEX IF NOT EXISTS idx_citations_project_id ON public.citations(project_id);
 CREATE INDEX IF NOT EXISTS idx_citations_prompt_run_id ON public.citations(prompt_run_id);
 CREATE INDEX IF NOT EXISTS idx_citations_response_id ON public.citations(response_id);
-
 CREATE UNIQUE INDEX IF NOT EXISTS idx_citations_unique_method
   ON public.citations(project_id, prompt_run_id, url_id, method);
-
 -- RLS
 ALTER TABLE public.monitoring_daily_runs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.run_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.monitoring_responses ENABLE ROW LEVEL SECURITY;
-
 DROP POLICY IF EXISTS "Users can view daily runs of own projects" ON public.monitoring_daily_runs;
 CREATE POLICY "Users can view daily runs of own projects" ON public.monitoring_daily_runs
   FOR SELECT USING (
@@ -83,7 +72,6 @@ CREATE POLICY "Users can view daily runs of own projects" ON public.monitoring_d
       AND projects.user_id = auth.uid()
     )
   );
-
 DROP POLICY IF EXISTS "Users can insert daily runs to own projects" ON public.monitoring_daily_runs;
 CREATE POLICY "Users can insert daily runs to own projects" ON public.monitoring_daily_runs
   FOR INSERT WITH CHECK (
@@ -93,7 +81,6 @@ CREATE POLICY "Users can insert daily runs to own projects" ON public.monitoring
       AND projects.user_id = auth.uid()
     )
   );
-
 DROP POLICY IF EXISTS "Users can view run logs of own projects" ON public.run_logs;
 CREATE POLICY "Users can view run logs of own projects" ON public.run_logs
   FOR SELECT USING (
@@ -103,7 +90,6 @@ CREATE POLICY "Users can view run logs of own projects" ON public.run_logs
       AND projects.user_id = auth.uid()
     )
   );
-
 DROP POLICY IF EXISTS "Users can insert run logs to own projects" ON public.run_logs;
 CREATE POLICY "Users can insert run logs to own projects" ON public.run_logs
   FOR INSERT WITH CHECK (
@@ -113,7 +99,6 @@ CREATE POLICY "Users can insert run logs to own projects" ON public.run_logs
       AND projects.user_id = auth.uid()
     )
   );
-
 DROP POLICY IF EXISTS "Users can view monitoring responses of own projects" ON public.monitoring_responses;
 CREATE POLICY "Users can view monitoring responses of own projects" ON public.monitoring_responses
   FOR SELECT USING (
@@ -123,7 +108,6 @@ CREATE POLICY "Users can view monitoring responses of own projects" ON public.mo
       AND projects.user_id = auth.uid()
     )
   );
-
 DROP POLICY IF EXISTS "Users can insert monitoring responses to own projects" ON public.monitoring_responses;
 CREATE POLICY "Users can insert monitoring responses to own projects" ON public.monitoring_responses
   FOR INSERT WITH CHECK (

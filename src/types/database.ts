@@ -43,6 +43,147 @@ export type Database = {
           },
         ]
       }
+      ai_attribution_events: {
+        Row: {
+          assisted_sessions_estimate: number
+          attribution_confidence: string
+          attribution_version: string
+          cited_domain: string | null
+          cited_url: string
+          citation_count: number
+          conversions_observed: number
+          created_at: string
+          date: string
+          id: string
+          model: string | null
+          observed_ai_sessions: number
+          project_id: string
+          prompt_id: string | null
+          revenue_observed: number
+          source_detection_version: string
+          topic_id: string | null
+          updated_at: string
+          visibility_score: number
+        }
+        Insert: {
+          assisted_sessions_estimate?: number
+          attribution_confidence?: string
+          attribution_version?: string
+          cited_domain?: string | null
+          cited_url: string
+          citation_count?: number
+          conversions_observed?: number
+          created_at?: string
+          date: string
+          id?: string
+          model?: string | null
+          observed_ai_sessions?: number
+          project_id: string
+          prompt_id?: string | null
+          revenue_observed?: number
+          source_detection_version?: string
+          topic_id?: string | null
+          updated_at?: string
+          visibility_score?: number
+        }
+        Update: {
+          assisted_sessions_estimate?: number
+          attribution_confidence?: string
+          attribution_version?: string
+          cited_domain?: string | null
+          cited_url?: string
+          citation_count?: number
+          conversions_observed?: number
+          created_at?: string
+          date?: string
+          id?: string
+          model?: string | null
+          observed_ai_sessions?: number
+          project_id?: string
+          prompt_id?: string | null
+          revenue_observed?: number
+          source_detection_version?: string
+          topic_id?: string | null
+          updated_at?: string
+          visibility_score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_attribution_events_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_attribution_events_prompt_id_fkey"
+            columns: ["prompt_id"]
+            isOneToOne: false
+            referencedRelation: "monitoring_prompts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_attribution_events_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "monitoring_topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      analytics_connections: {
+        Row: {
+          created_at: string
+          credentials_encrypted: string | null
+          id: string
+          last_error: string | null
+          last_synced_at: string | null
+          metadata: Json
+          project_id: string
+          property_id: string | null
+          provider: string
+          site_url: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          credentials_encrypted?: string | null
+          id?: string
+          last_error?: string | null
+          last_synced_at?: string | null
+          metadata?: Json
+          project_id: string
+          property_id?: string | null
+          provider: string
+          site_url?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          credentials_encrypted?: string | null
+          id?: string
+          last_error?: string | null
+          last_synced_at?: string | null
+          metadata?: Json
+          project_id?: string
+          property_id?: string | null
+          provider?: string
+          site_url?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analytics_connections_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       analyses: {
         Row: {
           analysis_mode: string
@@ -509,6 +650,66 @@ export type Database = {
             columns: ["url_id"]
             isOneToOne: false
             referencedRelation: "sources_urls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_search_daily: {
+        Row: {
+          clicks: number
+          connection_id: string | null
+          created_at: string
+          ctr: number
+          date: string
+          id: string
+          impressions: number
+          position: number
+          project_id: string
+          provider: string
+          query: string
+          updated_at: string
+        }
+        Insert: {
+          clicks?: number
+          connection_id?: string | null
+          created_at?: string
+          ctr?: number
+          date: string
+          id?: string
+          impressions?: number
+          position?: number
+          project_id: string
+          provider?: string
+          query: string
+          updated_at?: string
+        }
+        Update: {
+          clicks?: number
+          connection_id?: string | null
+          created_at?: string
+          ctr?: number
+          date?: string
+          id?: string
+          impressions?: number
+          position?: number
+          project_id?: string
+          provider?: string
+          query?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_search_daily_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "analytics_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_search_daily_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -1617,6 +1818,75 @@ export type Database = {
           },
           {
             foreignKeyName: "sources_urls_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      traffic_daily_page_metrics: {
+        Row: {
+          connection_id: string | null
+          conversions: number
+          created_at: string
+          date: string
+          engaged_sessions: number
+          id: string
+          medium: string | null
+          page_url: string
+          project_id: string
+          provider: string
+          revenue: number
+          sessions: number
+          source: string | null
+          updated_at: string
+          users: number
+        }
+        Insert: {
+          connection_id?: string | null
+          conversions?: number
+          created_at?: string
+          date: string
+          engaged_sessions?: number
+          id?: string
+          medium?: string | null
+          page_url: string
+          project_id: string
+          provider?: string
+          revenue?: number
+          sessions?: number
+          source?: string | null
+          updated_at?: string
+          users?: number
+        }
+        Update: {
+          connection_id?: string | null
+          conversions?: number
+          created_at?: string
+          date?: string
+          engaged_sessions?: number
+          id?: string
+          medium?: string | null
+          page_url?: string
+          project_id?: string
+          provider?: string
+          revenue?: number
+          sessions?: number
+          source?: string | null
+          updated_at?: string
+          users?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "traffic_daily_page_metrics_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "analytics_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "traffic_daily_page_metrics_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"

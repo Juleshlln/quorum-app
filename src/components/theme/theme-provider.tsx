@@ -119,9 +119,41 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
 export function useTheme() {
   const context = useContext(ThemeContext);
+  const [fallbackTheme, setFallbackTheme] = useState<Theme>(DEFAULT_THEME);
+  const [fallbackMounted, setFallbackMounted] = useState(false);
+
+  useEffect(() => {
+    if (context) return;
+    const initialTheme = resolveInitialTheme();
+    applyTheme(initialTheme);
+    setFallbackTheme(initialTheme);
+    setFallbackMounted(true);
+  }, [context]);
+
+  useEffect(() => {
+    if (context || !fallbackMounted) return;
+    applyTheme(fallbackTheme);
+
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, fallbackTheme);
+    } catch {
+      // Ignore storage failures and keep the DOM theme active.
+    }
+  }, [context, fallbackMounted, fallbackTheme]);
 
   if (!context) {
-    throw new Error('useTheme must be used within a ThemeProvider.');
+    return {
+      mounted: fallbackMounted,
+      theme: fallbackTheme,
+      setTheme: (nextTheme: Theme) => {
+        startTransition(() => setFallbackTheme(nextTheme));
+      },
+      toggleTheme: () => {
+        startTransition(() => {
+          setFallbackTheme((currentTheme) => (currentTheme === 'dark' ? 'light' : 'dark'));
+        });
+      },
+    };
   }
 
   return context;

@@ -4,17 +4,14 @@
 -- Extend monitoring_topics to behave as Topics
 ALTER TABLE public.monitoring_topics
   ADD COLUMN IF NOT EXISTS description TEXT;
-
 -- Extend monitoring_prompts to behave as Prompts/Questions
 ALTER TABLE public.monitoring_prompts
   ADD COLUMN IF NOT EXISTS country TEXT,
   ADD COLUMN IF NOT EXISTS language TEXT,
   ADD COLUMN IF NOT EXISTS intent TEXT,
   ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}'::text[];
-
 CREATE INDEX IF NOT EXISTS idx_monitoring_prompts_topic_id ON public.monitoring_prompts(topic_id);
 CREATE INDEX IF NOT EXISTS idx_monitoring_prompts_intent ON public.monitoring_prompts(intent);
-
 -- Prompt runs (future ready)
 CREATE TABLE IF NOT EXISTS public.prompt_runs (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -26,17 +23,13 @@ CREATE TABLE IF NOT EXISTS public.prompt_runs (
   position_rank INTEGER,
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
-
 CREATE INDEX IF NOT EXISTS idx_prompt_runs_prompt_id ON public.prompt_runs(prompt_id);
 CREATE INDEX IF NOT EXISTS idx_prompt_runs_project_id ON public.prompt_runs(project_id);
 CREATE INDEX IF NOT EXISTS idx_prompt_runs_run_date ON public.prompt_runs(run_date);
-
 -- RLS for prompt_runs
 ALTER TABLE public.prompt_runs ENABLE ROW LEVEL SECURITY;
-
 DROP POLICY IF EXISTS "Users can view prompt runs of own projects" ON public.prompt_runs;
 DROP POLICY IF EXISTS "Users can insert prompt runs to own projects" ON public.prompt_runs;
-
 CREATE POLICY "Users can view prompt runs of own projects" ON public.prompt_runs
   FOR SELECT USING (
     EXISTS (
@@ -45,7 +38,6 @@ CREATE POLICY "Users can view prompt runs of own projects" ON public.prompt_runs
       AND projects.user_id = auth.uid()
     )
   );
-
 CREATE POLICY "Users can insert prompt runs to own projects" ON public.prompt_runs
   FOR INSERT WITH CHECK (
     EXISTS (

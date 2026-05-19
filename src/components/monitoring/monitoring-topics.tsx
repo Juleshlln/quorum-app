@@ -1,7 +1,19 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
-import { Plus, Trash2, CheckCircle2, CircleDashed, Search, Sparkles } from 'lucide-react';
+import Link from 'next/link';
+import { type ReactNode, useMemo, useState, useEffect } from 'react';
+import {
+  Bot,
+  Layers3,
+  Plus,
+  Search,
+  Sparkles,
+  Target,
+  Trash2,
+  CheckCircle2,
+  CircleDashed,
+  type LucideIcon,
+} from 'lucide-react';
 
 type Topic = {
   id: string;
@@ -28,6 +40,20 @@ type PromptTemplate = {
   topic_slug?: string | null;
 };
 
+type TrackedOffer = {
+  id: string;
+  name: string;
+  type: 'product_category' | 'service';
+  is_active: boolean;
+  business_priority?: string | null;
+};
+
+type AiProvider = {
+  id: string;
+  label: string;
+  isConfigured: boolean;
+};
+
 const INTENTS = [
   { value: 'information', label: 'Information' },
   { value: 'comparison', label: 'Comparaison' },
@@ -35,16 +61,26 @@ const INTENTS = [
   { value: 'purchase', label: 'Achat' },
 ];
 
+function formatIntentLabel(value: string | null | undefined) {
+  return INTENTS.find((intent) => intent.value === value)?.label || 'Information';
+}
+
 export function MonitoringTopics({
   projectId,
-  topics: initialTopics,
-  questions: initialQuestions,
-  templates,
+  topics: initialTopics = [],
+  questions: initialQuestions = [],
+  templates = [],
+  offers = [],
+  aiProviders = [],
+  frequencyLabel = 'Analyse quotidienne',
 }: {
   projectId: string;
   topics: Topic[];
   questions: Question[];
   templates: PromptTemplate[];
+  offers: TrackedOffer[];
+  aiProviders: AiProvider[];
+  frequencyLabel: string;
 }) {
   const [topics, setTopics] = useState<Topic[]>(initialTopics);
   const [questions, setQuestions] = useState<Question[]>(initialQuestions);
@@ -135,6 +171,13 @@ export function MonitoringTopics({
     return Math.min(100, Math.round((active / totalRecommended) * 100));
   }, [questions, templates]);
 
+  const activeQuestions = questions.filter((q) => q.is_active);
+  const activeOffers = offers.filter((offer) => offer.is_active);
+  const activeProductOffers = activeOffers.filter((offer) => offer.type === 'product_category').length;
+  const activeServiceOffers = activeOffers.filter((offer) => offer.type === 'service').length;
+  const configuredProviders = aiProviders.filter((provider) => provider.isConfigured);
+  const activeIntents = new Set(activeQuestions.map((question) => question.intent || 'information')).size;
+
   const addTopic = async () => {
     const name = newTopicName.trim();
     if (!name) return;
@@ -145,7 +188,7 @@ export function MonitoringTopics({
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      setMessage(data?.error || 'Impossible de créer l’enjeu.');
+      setMessage(data?.error || 'Impossible de créer la catégorie.');
       return;
     }
     const topic = { id: data.id, name, description: newTopicDesc || null, is_active: true };
@@ -156,10 +199,10 @@ export function MonitoringTopics({
   };
 
   const deleteTopic = async (topicId: string) => {
-    if (!confirm('Supprimer cet enjeu ? Les questions restent disponibles sans enjeu.')) return;
+    if (!confirm('Supprimer cette catégorie ? Les questions restent disponibles sans catégorie.')) return;
     const res = await fetch(`/api/monitoring/topics/${topicId}`, { method: 'DELETE' });
     if (!res.ok) {
-      setMessage('Impossible de supprimer l’enjeu.');
+      setMessage('Impossible de supprimer la catégorie.');
       return;
     }
     setTopics((prev) => prev.filter((t) => t.id !== topicId));
@@ -318,23 +361,149 @@ export function MonitoringTopics({
     count: (questionsByTopic.get(t.id) || []).length,
   }));
 
+  const radarReady = activeOffers.length > 0 && activeQuestions.length > 0 && configuredProviders.length > 0;
+  const nextStep = activeOffers.length === 0
+    ? {
+        title: 'Ajoutez au moins une offre',
+        description: 'Commencez par sélectionner les produits, services ou catégories que vos clients peuvent chercher dans une IA.',
+        href: '/offers?create=offer',
+        label: 'Ajouter une offre',
+      }
+    : activeQuestions.length === 0
+      ? {
+          title: 'Ajoutez vos questions d’achat',
+          description: 'Créez les questions que vos prospects pourraient poser à ChatGPT, Claude, Gemini ou Perplexity.',
+          label: 'Ajouter une question',
+        }
+      : configuredProviders.length === 0
+        ? {
+            title: 'Connectez au moins un moteur IA',
+            description: 'Ajoutez une clé API pour lancer le radar sur les moteurs IA prioritaires.',
+            href: '/settings',
+            label: 'Configurer les moteurs',
+          }
+        : {
+            title: 'Radar prêt',
+            description: 'Votre radar peut alimenter les scores de visibilité dans la vue d’ensemble.',
+            label: 'Ajouter une question',
+          };
+  const visibleQuestions = questions.slice(0, 8);
+
   return (
     <div className="space-y-6">
-      <div className="quorum-panel-strong p-6">
-        <p className="quorum-kicker">Monitoring</p>
-        <h1 className="mt-2 text-4xl font-bold tracking-[-0.05em] quorum-text-primary">Cadrez vos enjeux et vos prompts</h1>
-        <p className="mt-2 text-sm quorum-text-muted">
-          Surveillez des enjeux business via des questions analysées quotidiennement.
-        </p>
-        <p className="text-xs quorum-text-subtle mt-4">
-          {topics.length} enjeux • {questions.filter((q) => q.is_active).length} questions actives • Analyse quotidienne
-        </p>
+      <div className="quorum-panel-strong p-6 md:p-7">
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-end">
+          <div>
+            <p className="quorum-kicker">Radar IA</p>
+            <h1 className="mt-3 text-3xl font-semibold tracking-[-0.05em] quorum-text-primary md:text-4xl">
+              Configurez les tests que les IA doivent passer
+            </h1>
+            <p className="mt-3 max-w-3xl text-sm leading-relaxed quorum-text-muted">
+              Le Radar IA simule les questions de vos futurs clients pour vérifier si vos produits ou services sont recommandés, oubliés ou remplacés par des concurrents.
+            </p>
+          </div>
+          <div className="rounded-[26px] border border-[color:var(--quorum-border)] bg-[var(--quorum-surface)] p-5">
+            <div className="flex items-center justify-between gap-3">
+              <span className="quorum-soft-badge text-[11px]">
+                {radarReady ? 'Prêt' : 'À compléter'}
+              </span>
+              <span className="text-sm font-semibold quorum-text-primary">{coverage}%</span>
+            </div>
+            <p className="mt-4 text-lg font-semibold quorum-text-primary">{nextStep.title}</p>
+            <p className="mt-2 text-sm leading-relaxed quorum-text-muted">{nextStep.description}</p>
+            {nextStep.href ? (
+              <Link href={nextStep.href} className="quorum-btn-primary mt-5 w-full justify-center text-sm">
+                {nextStep.label}
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setModalOpen(true)}
+                className="quorum-btn-primary mt-5 w-full justify-center text-sm"
+              >
+                <Plus className="h-4 w-4" />
+                {nextStep.label}
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
-      <div className="quorum-panel flex items-center justify-between p-4 text-sm quorum-text-muted">
-        <span>Couverture du monitoring</span>
-        <span className="text-2xl font-bold tracking-[-0.04em] quorum-text-primary">{coverage}%</span>
-      </div>
+      <section className="grid gap-4 xl:grid-cols-3">
+        <RadarStepCard
+          index="1"
+          icon={Layers3}
+          title="Offres à tester"
+          status={activeOffers.length > 0 ? 'Configuré' : 'À faire'}
+          value={`${activeOffers.length} offre${activeOffers.length > 1 ? 's' : ''}`}
+          description={`${activeProductOffers} produits · ${activeServiceOffers} services`}
+          help="Ajoutez ici ce que vos clients peuvent réellement acheter : une catégorie produit, un service, une offre ou une prestation. Quorum reliera ensuite les réponses IA à ces offres concrètes."
+          action={
+            <Link href={activeOffers.length > 0 ? '/offers' : '/offers?create=offer'} className="quorum-btn-secondary text-sm">
+              {activeOffers.length > 0 ? 'Gérer les offres' : 'Ajouter une offre'}
+            </Link>
+          }
+        >
+          {activeOffers.length > 0 ? (
+            <div className="space-y-2">
+              {activeOffers.slice(0, 3).map((offer) => (
+                <div key={offer.id} className="flex items-center justify-between gap-3 rounded-2xl border border-[color:var(--quorum-border)] bg-[var(--quorum-panel)] px-3 py-2">
+                  <span className="truncate text-sm font-medium quorum-text-primary">{offer.name}</span>
+                  <span className="text-xs quorum-text-muted">{offer.type === 'service' ? 'Service' : 'Produit'}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm quorum-text-muted">Aucune offre suivie. C’est la première chose à configurer.</p>
+          )}
+        </RadarStepCard>
+
+        <RadarStepCard
+          index="2"
+          icon={Search}
+          title="Questions d’achat"
+          status={activeQuestions.length > 0 ? 'Configuré' : 'À faire'}
+          value={`${activeQuestions.length} active${activeQuestions.length > 1 ? 's' : ''}`}
+          description={`${questions.length} questions au total · ${activeIntents} intentions`}
+          help="Écrivez les questions comme vos prospects les poseraient à une IA, sans citer votre marque. Exemple : “Quel est le meilleur fournisseur de matériel industriel pour PME ?”"
+          action={<button type="button" onClick={() => setModalOpen(true)} className="quorum-btn-secondary text-sm">Ajouter</button>}
+        >
+          {activeQuestions.length > 0 ? (
+            <div className="space-y-2">
+              {activeQuestions.slice(0, 3).map((question) => (
+                <div key={question.id} className="rounded-2xl border border-[color:var(--quorum-border)] bg-[var(--quorum-panel)] px-3 py-2">
+                  <p className="line-clamp-1 text-sm font-medium quorum-text-primary">{question.prompt_text}</p>
+                  <p className="mt-1 text-xs quorum-text-muted">{formatIntentLabel(question.intent)}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm quorum-text-muted">Ajoutez des questions comme “meilleur fournisseur...” ou “quelle solution choisir...”.</p>
+          )}
+        </RadarStepCard>
+
+        <RadarStepCard
+          index="3"
+          icon={Bot}
+          title="Moteurs et cadence"
+          status={configuredProviders.length > 0 ? 'Configuré' : 'À faire'}
+          value={aiProviders.length > 0 ? `${configuredProviders.length}/${aiProviders.length} moteurs` : '—'}
+          description={frequencyLabel}
+          help="Sélectionnez les moteurs IA que vous voulez surveiller. Plus vous testez de moteurs, plus vous comprenez où vos offres sont visibles ou remplacées par des concurrents."
+          action={<Link href="/settings" className="quorum-btn-secondary text-sm">Configurer</Link>}
+        >
+          <div className="flex flex-wrap gap-2">
+            {aiProviders.map((provider) => (
+              <span
+                key={provider.id}
+                className={`rounded-full border px-3 py-1 text-xs ${provider.isConfigured ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200' : 'border-[color:var(--quorum-border)] bg-[var(--quorum-panel)] quorum-text-muted'}`}
+              >
+                {provider.label}
+              </span>
+            ))}
+          </div>
+        </RadarStepCard>
+      </section>
 
       {message && (
         <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
@@ -342,37 +511,85 @@ export function MonitoringTopics({
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
-        <aside className="quorum-panel p-4 space-y-5">
-          <div className="space-y-2">
-            <p className="quorum-kicker">Enjeux</p>
-            <button
-              onClick={() => setSelectedTopicId('unassigned')}
-              className={`w-full rounded-2xl px-3 py-3 text-left text-sm transition-all ${
-                selectedTopicId === 'unassigned' ? 'border quorum-border-strong quorum-surface-strong quorum-text-primary' : 'quorum-text-muted hover:quorum-surface hover:quorum-text-primary'
-              }`}
-            >
-              Questions sans enjeu ({unassigned.length})
-            </button>
-            {topicsWithCounts.map((topic) => (
-              <button
-                key={topic.id}
-                onClick={() => setSelectedTopicId(topic.id)}
-                className={`w-full rounded-2xl px-3 py-3 text-left text-sm transition-all ${
-                  selectedTopicId === topic.id ? 'border quorum-border-strong quorum-surface-strong quorum-text-primary' : 'quorum-text-muted hover:quorum-surface hover:quorum-text-primary'
-                }`}
-              >
-                {topic.name} <span className="text-xs quorum-text-subtle">({topic.count})</span>
-              </button>
-            ))}
+      <section className="quorum-panel-strong p-5 md:p-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="quorum-kicker">Questions suivies</p>
+            <h2 className="mt-2 text-xl font-semibold quorum-text-primary">Les demandes que Quorum pose aux IA</h2>
+            <p className="mt-2 text-sm quorum-text-muted">Ces questions doivent ressembler aux recherches réelles de vos prospects.</p>
           </div>
+          <button type="button" onClick={() => setModalOpen(true)} className="quorum-btn-primary text-sm">
+            <Plus className="h-4 w-4" />
+            Ajouter une question
+          </button>
+        </div>
 
-          <div className="border-t quorum-border-default pt-4 space-y-3">
-            <p className="quorum-kicker">Créer un enjeu</p>
+        <div className="mt-5 space-y-3">
+          {visibleQuestions.length > 0 ? visibleQuestions.map((question) => (
+            <div key={question.id} className="grid gap-3 rounded-2xl border border-[color:var(--quorum-border)] bg-[var(--quorum-surface)] px-4 py-3 lg:grid-cols-[minmax(0,1fr)_150px_120px] lg:items-center">
+              <div className="min-w-0">
+                <p className="line-clamp-2 text-sm font-medium quorum-text-primary">{question.prompt_text}</p>
+                <p className="mt-1 text-xs quorum-text-muted">{question.country || 'France'} · {question.language || 'Français'}</p>
+              </div>
+              <span className="text-xs font-medium quorum-text-muted">{formatIntentLabel(question.intent)}</span>
+              <label className="inline-flex items-center gap-2 text-xs quorum-text-muted">
+                <input
+                  type="checkbox"
+                  checked={question.is_active}
+                  onChange={(event) => toggleQuestion(question.id, event.target.checked)}
+                />
+                {question.is_active ? 'Active' : 'Inactive'}
+              </label>
+            </div>
+          )) : (
+            <div className="rounded-2xl border border-dashed border-[color:var(--quorum-border)] px-4 py-8 text-center">
+              <p className="text-sm font-medium quorum-text-primary">Aucune question suivie.</p>
+              <p className="mt-1 text-sm quorum-text-muted">Ajoutez une première question d’achat pour commencer à tester votre visibilité IA.</p>
+              <button type="button" onClick={() => setModalOpen(true)} className="quorum-btn-primary mt-4 text-sm">
+                Ajouter une question
+              </button>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <details className="quorum-panel p-5">
+        <summary className="cursor-pointer text-sm font-semibold quorum-text-primary">
+          Réglages avancés : catégories et suggestions
+        </summary>
+        <div className="mt-5 grid gap-6 lg:grid-cols-[300px_1fr]">
+          <aside className="space-y-5">
+            <div>
+              <p className="quorum-kicker">Catégories</p>
+              <div className="mt-3 space-y-2">
+                <button
+                  onClick={() => setSelectedTopicId('unassigned')}
+                  className={`w-full rounded-2xl px-3 py-3 text-left text-sm transition-all ${
+                    selectedTopicId === 'unassigned' ? 'border quorum-border-strong quorum-surface-strong quorum-text-primary' : 'quorum-text-muted hover:quorum-surface hover:quorum-text-primary'
+                  }`}
+                >
+                  Questions sans catégorie ({unassigned.length})
+                </button>
+                {topicsWithCounts.map((topic) => (
+                  <button
+                    key={topic.id}
+                    onClick={() => setSelectedTopicId(topic.id)}
+                    className={`w-full rounded-2xl px-3 py-3 text-left text-sm transition-all ${
+                      selectedTopicId === topic.id ? 'border quorum-border-strong quorum-surface-strong quorum-text-primary' : 'quorum-text-muted hover:quorum-surface hover:quorum-text-primary'
+                    }`}
+                  >
+                    {topic.name} <span className="text-xs quorum-text-subtle">({topic.count})</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="border-t quorum-border-default pt-4 space-y-3">
+            <p className="quorum-kicker">Créer une catégorie</p>
             <input
               value={newTopicName}
               onChange={(e) => setNewTopicName(e.target.value)}
-              placeholder="Nom de l’enjeu"
+              placeholder="Nom de la catégorie"
               className="quorum-input"
             />
             <input
@@ -386,19 +603,19 @@ export function MonitoringTopics({
               className="quorum-btn-primary w-full"
             >
               <Plus className="h-4 w-4" />
-              Créer l’enjeu
+              Créer la catégorie
             </button>
           </div>
         </aside>
 
-        <section className="quorum-panel-strong p-6 space-y-5">
+        <section className="quorum-panel-strong p-5 space-y-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="quorum-kicker">Détail de l’enjeu</p>
+              <p className="quorum-kicker">Questions suivies</p>
               <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] quorum-text-primary">
                 {selectedTopicId === 'unassigned'
-                  ? 'Questions sans enjeu'
-                  : topics.find((t) => t.id === selectedTopicId)?.name || 'Enjeu'}
+                  ? 'Questions sans catégorie'
+                  : topics.find((t) => t.id === selectedTopicId)?.name || 'Catégorie'}
               </h2>
             </div>
             {selectedTopicId && selectedTopicId !== 'unassigned' && (
@@ -456,7 +673,7 @@ export function MonitoringTopics({
           <div className="space-y-3">
             {filterTab !== 'suggested' && filteredQuestions.length === 0 && (
               <div className="quorum-panel-soft p-6 text-sm quorum-text-muted">
-                Aucune question pour cet enjeu pour le moment.
+                Aucune question pour cette catégorie pour le moment.
               </div>
             )}
             {filterTab !== 'suggested' && filteredQuestions.map((q) => (
@@ -464,7 +681,7 @@ export function MonitoringTopics({
                 <div>
                   <p className="text-sm quorum-text-primary">{q.prompt_text}</p>
                   <p className="text-xs quorum-text-muted">
-                    {q.intent || 'Information'} · {q.language || 'Français'} · {q.country || 'France'}
+                    {formatIntentLabel(q.intent)} · {q.language || 'Français'} · {q.country || 'France'}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -522,7 +739,7 @@ export function MonitoringTopics({
                         }}
                         className="quorum-btn-primary px-3 py-1.5 text-xs"
                       >
-                        Activer dans le monitoring
+                        Activer dans le radar
                       </button>
                     </div>
                   </div>
@@ -548,12 +765,13 @@ export function MonitoringTopics({
                 onClick={() => setSelectedTopicId('unassigned')}
                 className="quorum-btn-secondary"
               >
-                Voir les questions sans enjeu
+                Voir les questions sans catégorie
               </button>
             )}
           </div>
         </section>
-      </div>
+        </div>
+      </details>
 
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center quorum-backdrop px-4">
@@ -573,7 +791,7 @@ export function MonitoringTopics({
                 onClick={() => setModalTab('bulk')}
                 className={`quorum-chip ${modalTab === 'bulk' ? 'quorum-chip-active' : ''}`}
               >
-                Bulk upload
+                Import par lot
               </button>
             </div>
             {modalTab === 'single' ? (
@@ -596,12 +814,13 @@ export function MonitoringTopics({
             </p>
             <div className="grid gap-3 md:grid-cols-2">
               <div>
-                <label className="quorum-label text-xs">Enjeu</label>
+                <label className="quorum-label text-xs">Catégorie</label>
                 <select
                   value={form.topicId}
                   onChange={(e) => setForm({ ...form, topicId: e.target.value })}
                   className="quorum-select"
                 >
+                  <option value="">Sans catégorie</option>
                   {topics.map((t) => (
                     <option key={t.id} value={t.id}>
                       {t.name}
@@ -681,7 +900,7 @@ export function MonitoringTopics({
                     onClick={() => addQuestion()}
                     className="quorum-btn-primary"
                   >
-                    Ajouter au monitoring
+                    Ajouter au radar
                   </button>
                 ) : (
                   <button
@@ -697,5 +916,65 @@ export function MonitoringTopics({
         </div>
       )}
     </div>
+  );
+}
+
+function RadarStepCard({
+  index,
+  icon: Icon,
+  title,
+  status,
+  value,
+  description,
+  help,
+  action,
+  children,
+}: {
+  index: string;
+  icon: LucideIcon;
+  title: string;
+  status: string;
+  value: string;
+  description: string;
+  help: string;
+  action: ReactNode;
+  children: ReactNode;
+}) {
+  const isDone = status === 'Configuré';
+
+  return (
+    <article className="quorum-panel p-5">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[color:var(--quorum-border)] bg-[var(--quorum-surface)]">
+            <Icon className="h-4 w-4 quorum-text-primary" />
+          </div>
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] quorum-text-muted">Étape {index}</p>
+            <h2 className="mt-1 text-lg font-semibold quorum-text-primary">{title}</h2>
+          </div>
+        </div>
+        <span className={`rounded-full border px-3 py-1 text-xs ${isDone ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200' : 'border-amber-400/30 bg-amber-400/10 text-amber-200'}`}>
+          {status}
+        </span>
+      </div>
+
+      <div className="mt-5">
+        <p className="text-3xl font-semibold tracking-[-0.05em] quorum-text-primary">{value}</p>
+        <p className="mt-1 text-sm quorum-text-muted">{description}</p>
+      </div>
+
+      <p className="mt-4 rounded-2xl border border-[color:var(--quorum-border)] bg-[var(--quorum-surface)] px-3 py-3 text-sm leading-relaxed quorum-text-muted">
+        {help}
+      </p>
+
+      <div className="mt-5 min-h-[96px]">
+        {children}
+      </div>
+
+      <div className="mt-5">
+        {action}
+      </div>
+    </article>
   );
 }

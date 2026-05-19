@@ -6,7 +6,6 @@ DO $$ BEGIN
 EXCEPTION
   WHEN duplicate_object THEN null;
 END $$;
-
 CREATE TABLE IF NOT EXISTS public.concurrents (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   project_id UUID NOT NULL REFERENCES public.projects(id) ON DELETE CASCADE,
@@ -20,24 +19,18 @@ CREATE TABLE IF NOT EXISTS public.concurrents (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CONSTRAINT concurrents_score_range CHECK (score_proximite >= 0 AND score_proximite <= 100)
 );
-
 CREATE INDEX IF NOT EXISTS idx_concurrents_project_id
   ON public.concurrents(project_id);
-
 CREATE UNIQUE INDEX IF NOT EXISTS idx_concurrents_unique_domain
   ON public.concurrents(project_id, domaine)
   WHERE domaine IS NOT NULL;
-
 CREATE UNIQUE INDEX IF NOT EXISTS idx_concurrents_unique_name
   ON public.concurrents(project_id, lower(nom));
-
 ALTER TABLE public.concurrents ENABLE ROW LEVEL SECURITY;
-
 DROP POLICY IF EXISTS "Users can view concurrents of own projects" ON public.concurrents;
 DROP POLICY IF EXISTS "Users can insert concurrents to own projects" ON public.concurrents;
 DROP POLICY IF EXISTS "Users can update concurrents of own projects" ON public.concurrents;
 DROP POLICY IF EXISTS "Users can delete concurrents of own projects" ON public.concurrents;
-
 CREATE POLICY "Users can view concurrents of own projects" ON public.concurrents
   FOR SELECT USING (
     EXISTS (
@@ -46,7 +39,6 @@ CREATE POLICY "Users can view concurrents of own projects" ON public.concurrents
       AND projects.user_id = auth.uid()
     )
   );
-
 CREATE POLICY "Users can insert concurrents to own projects" ON public.concurrents
   FOR INSERT WITH CHECK (
     EXISTS (
@@ -55,7 +47,6 @@ CREATE POLICY "Users can insert concurrents to own projects" ON public.concurren
       AND projects.user_id = auth.uid()
     )
   );
-
 CREATE POLICY "Users can update concurrents of own projects" ON public.concurrents
   FOR UPDATE USING (
     EXISTS (
@@ -64,7 +55,6 @@ CREATE POLICY "Users can update concurrents of own projects" ON public.concurren
       AND projects.user_id = auth.uid()
     )
   );
-
 CREATE POLICY "Users can delete concurrents of own projects" ON public.concurrents
   FOR DELETE USING (
     EXISTS (
@@ -73,5 +63,4 @@ CREATE POLICY "Users can delete concurrents of own projects" ON public.concurren
       AND projects.user_id = auth.uid()
     )
   );
-
 COMMENT ON TABLE public.concurrents IS 'Concurrents détectés ou ajoutés manuellement par projet';
