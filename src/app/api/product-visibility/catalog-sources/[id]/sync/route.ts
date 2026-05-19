@@ -6,10 +6,10 @@ import { runCatalogSync } from '@/lib/product-catalog/sync';
 export const runtime = 'nodejs';
 export const maxDuration = 300;
 
-type RouteContext = { params: Promise<{ id: string }> | { id: string } };
+type RouteContext = { params: Promise<{ id: string }> };
 
 async function resolveId(context: RouteContext): Promise<string> {
-  const params = 'then' in context.params ? await context.params : context.params;
+  const params = await context.params;
   return params.id;
 }
 

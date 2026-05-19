@@ -23,8 +23,9 @@ type SearchParams = { range?: string };
 export default async function ProductVisibilityOverviewPage({
   searchParams,
 }: {
-  searchParams?: SearchParams;
+  searchParams?: Promise<SearchParams>;
 }) {
+  const params = await searchParams;
   const supabaseUser = await createClient();
   const {
     data: { user },
@@ -44,7 +45,7 @@ export default async function ProductVisibilityOverviewPage({
     );
   }
 
-  const range: ProductVisibilityRange = parseRange(searchParams?.range, '30d');
+  const range: ProductVisibilityRange = parseRange(params?.range, '30d');
   const window = buildWindowFromDays(rangeToDays(range));
   const previousWindow = buildPreviousWindow(window);
   const supabase = createAdminClient();

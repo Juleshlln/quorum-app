@@ -2,10 +2,27 @@
 
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
+import type { AnalysisObjective } from '@/lib/constants/prompt-templates';
+
+export type { AnalysisObjective };
+export type CategoryKey = AnalysisObjective;
+export type AnalysisMode = 'trend' | 'simulation';
+export type PromptSelection = {
+  id: string;
+  text: string;
+  category: AnalysisObjective;
+  type: 'suggested' | 'custom';
+  templateId?: string;
+  primaryObjective?: AnalysisObjective;
+  secondaryObjectives?: AnalysisObjective[];
+};
 
 type Props = {
   projectId: string;
   projectName?: string; // optionnel (utile plus tard, mais ne casse pas)
+  projectIndustry?: string | null;
+  projectLocation?: string | null;
+  projectDescription?: string | null;
   className?: string;
   label?: string;
 };
